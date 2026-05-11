@@ -1,0 +1,222 @@
+# malgn-noti (사용자단)
+
+맑은소프트의 NHN Cloud Notification Hub 기반 통합 알림 서비스 "**맑은 메시징**" — **고객(테넌트) 사용자가 사용하는 웹 콘솔**.
+
+> 형제 프로젝트: [`malgn-noti-admin`](../malgn-noti-admin) (운영자 콘솔) · [`malgn-noti-api`](../malgn-noti-api) (백엔드 API)
+>
+> **디자인/IA 참조 시안**: https://malgn-notifications.pages.dev/#/pagelists (총 263 페이지/팝업, 16 카테고리. 이 시안이 IA의 단일 정본(SoT)임.)
+
+---
+
+## 1. 프로젝트 목적
+
+맑은소프트가 NHN Cloud Notification Hub를 래핑하여 고객사가 자체 브랜드로 다음 채널의 메시지를 발송·관리할 수 있게 하는 **멀티 테넌트 SaaS "맑은 메시징"** 의 사용자단(테넌트 콘솔).
+
+### 지원 채널 (5 + Flow)
+
+| 채널 | 비고 |
+| --- | --- |
+| SMS / LMS / MMS | 단문/장문/멀티미디어 |
+| **RCS** | 1급 채널 — 별도 발송, 이력, 템플릿, 브랜드 |
+| 알림톡 / 친구톡 | KakaoTalk Bizmessage |
+| Email | 트랜잭션 + 마케팅 |
+| Push | iOS / Android / Web |
+| **복합 (Flow)** | 위 채널을 노드로 묶은 폴백/순서 발송 (예: 알림톡 → 친구톡 → LMS) |
+
+### 1급 도메인 (시안에서 추출)
+
+- **단발 발송** — 채널별 발송 폼 (수신자 입력/주소록/광고수신/컨펌/초기화 팝업 풀세트)
+- **캠페인** — 수신자 그룹 + 채널/메시지 + 발송 시점 + 시뮬레이션 + 테스트 발송 + 복제/중지
+- **이력/통계** — 채널별 이력 + 일괄 취소(예약) + 비동기 다운로드 요청 + 통계 대시보드
+- **주소록** — 연락처/그룹/수신거부
+- **발신 정보** — 발신번호(SMS) / RCS 브랜드 / 이메일 도메인(+DKIM) / PUSH 인증서(FCM·APNs) / 카카오 발신 프로필 / **080 수신거부 번호**
+- **메시지(템플릿) 관리** — 채널별 카테고리/템플릿 + **샘플 템플릿** + **AI 템플릿 생성** + 상세 설정(대체문자 등)
+- **크레딧** — 충전(카드)·내역·영수증·취소·결제 카드 관리
+- **계정/인증** — 회원가입(OTP·휴대폰·약관) / 로그인(이메일+비번, OTP/이메일 보안인증) / 비밀번호 재설정 / 전자 서명 / 약관 뷰어
+- **문의** — 1:1 문의 작성 + 내 문의 내역
+- **시스템 페이지** — 404 / 시스템 에러 / 네트워크 에러 / 점검(긴급·정기) / 인증 메일 템플릿
+
+---
+
+## 2. 기술 스택
+
+- **프레임워크**: Nuxt 3 (Vue 3, `<script setup>`, TypeScript)
+- **상태 관리**: Pinia
+- **UI / 스타일**: **Nuxt UI v3** (MIT, Reka UI + Tailwind CSS v4 기반). `@nuxtjs/tailwindcss`는 **설치하지 않는다** — Nuxt UI 모듈이 Tailwind를 통합 관리.
+- **아이콘**: Iconify — 기본 `heroicons`/`lucide`, 시안 매핑용으로 `@iconify-json/bi`(Bootstrap Icons) 추가
+- **폰트**: Noto Sans KR — Nuxt UI 테마 토큰(`--ui-font-family`)으로 주입
+- **API 통신**: `$fetch` / `useFetch` — 항상 [`malgn-noti-api`](../malgn-noti-api) 경유
+- **인증**: 백엔드 발급 JWT를 HttpOnly 쿠키에 저장, OTP/2FA 보조
+- **차트**: Chart.js (통계 화면 — Nuxt UI에 차트 컴포넌트 없음)
+- **에디터**: 템플릿 작성용 리치/슬롯 변수 에디터 (선정 미정)
+- **테스트**: Vitest + @nuxt/test-utils
+- **린트/포맷**: ESLint + Prettier
+- **패키지 매니저**: pnpm (확정 시 갱신)
+
+---
+
+## 3. 라우트/페이지 트리 (시안 기준)
+
+> 정확한 263개 페이지 목록은 시안 `pagelists` 페이지가 정본. 여기서는 라우트 그룹만 정리.
+
+```
+/login                       # 로그인
+/login/security              # OTP/이메일 보안인증
+/reset-password              # 재설정 요청
+/reset-password/new          # 새 비밀번호 입력
+/signup                      # 회원가입 (OTP/휴대폰/약관)
+
+/home                        # 대시보드(랜딩)
+
+/send/sms                    # SMS/LMS/MMS 발송
+/send/rcs                    # RCS 발송
+/send/kakao                  # 알림톡/친구톡 발송
+/send/email                  # 이메일 발송
+/send/push                   # PUSH 발송
+/send/flow                   # 복합(플로우) 발송
+
+/history/sms                 # 채널별 발송 이력
+/history/rcs
+/history/kakao
+/history/email
+/history/push
+/history/stats               # 통계 대시보드
+
+/contacts/list               # 연락처
+/contacts/groups             # 그룹
+/contacts/optout             # 수신거부
+
+/sender/numbers              # 발신번호(SMS)
+/sender/brands               # RCS 브랜드
+/sender/domains              # 이메일 도메인 + DKIM
+/sender/push-cert            # FCM/APNs 인증서
+/sender/profiles             # 카카오 발신 프로필
+/sender/optout-080           # 080 수신거부 번호
+
+/manage/sms                  # 채널별 템플릿
+/manage/rcs
+/manage/kakao
+/manage/email
+/manage/push
+/manage/settings             # 메시지 발송 상세 설정(대체문자 등)
+
+/campaign                    # 캠페인 목록/생성/수정
+/campaign3                   # 변형 디자인 (검토용)
+
+/charge                      # 크레딧 충전
+/charge/result               # 충전 결과
+/account/credit              # 크레딧 내역/영수증
+
+/account/settings            # 계정 설정 / 결제 이메일 / 전자서명 / 약관 뷰어
+/account/inquiries           # 내 문의 내역
+/account/inquiries/detail    # 문의 상세
+
+/inquiry                     # 1:1 문의 작성
+/inquiry/complete
+
+/templete/error/system       # (시안 철자 유지)
+/templete/error/not-found
+/templete/error/network
+/templete/inspection/emergency
+/templete/inspection/scheduled
+/templete/email/verify       # 이메일 인증 메일 템플릿
+/templete/email/reset-password
+/404                         # 단독 404 (layout 없음)
+/error                       # 단독 시스템 에러 (layout 없음)
+```
+
+> 시안에 "쏠쏠 브랜드"로 표기된 단독 404/에러 페이지는 **맑은 메시징 브랜드로 재작업** 필요.
+
+---
+
+## 4. UI 패턴 (시안에서 반복) → Nuxt UI 매핑
+
+거의 모든 화면이 다음 패턴 조합이므로, 일찍 표준화하면 263 페이지를 빠르게 흡수할 수 있다.
+
+- **PU(팝업) 풀세트**: 발송 화면마다 `수신자 정보 / 수신자 선택 / 광고 수신 알림 / 발송 컨펌 / 초기화 확인` 반복. → 상세/편집 류는 **`USlideover`**, 단순 컨펌은 **`UModal`** 로 표준화. 채널 무관 공용 컴포넌트로 추출.
+- **다운로드 요청 패턴**: `다운로드 요청 PU` + `다운로드 요청 목록 PU` 짝. → `useExportJob()` composable로 백엔드 ExportJob 호출 + **`UNotification`** 으로 완료 알림.
+- **AI 템플릿 PU**: 모든 채널 템플릿에서 동일. → `useAiTemplate(channel)` 단일 훅, **`UModal`** 안에 채널별 프롬프트 폼.
+- **샘플 템플릿 PU**: 시스템 제공 마스터 갤러리(읽기 전용). → API page-cached + 클라이언트 캐싱, **`UCard`** 그리드.
+- **카테고리(트리) 관리**: 모든 채널의 템플릿 화면이 카테고리 트리. → 공용 `AppCategoryTree` 컴포넌트.
+- **위험 액션 컨펌**: `삭제 / 취소 / 일괄 취소 / 중지` → 단일 `AppConfirmDialog`(내부 `UModal`)로 통일.
+- **목록/필터/정렬/페이징**: 거의 모든 이력·관리 화면 → **`UTable`** + **`UPagination`** + 공용 `AppFilterBar`.
+- **폼 + 검증**: → **`UForm` + `UFormField`** + Zod 스키마. 백엔드와 동일 스키마 사용 검토.
+- **사이드바/탑바 레이아웃**: 무료판엔 Dashboard 레이아웃이 없으므로 `AppShell`(좌측 `UNavigationMenu` 사이드바 + 상단 `UCommandPalette`/사용자 메뉴)을 직접 조립.
+
+---
+
+## 5. NHN Notification Hub 통합
+
+이 프론트엔드는 NHN API를 **직접 호출하지 않는다.** 모든 요청은 `malgn-noti-api`를 경유. 이유:
+
+1. NHN AppKey / SecretKey가 브라우저에 노출되면 안 됨
+2. 테넌트별 발송 한도·**크레딧 차감**·과금·감사 로그를 백엔드에서 통제
+3. 채널 폴백 Flow는 백엔드에서 실행 (이력/감사 통합)
+4. AI 템플릿 호출도 백엔드 게이트웨이를 통해 통제 (비용·남용·로그)
+
+따라서 이 레포는 **NHN SDK 의존성을 갖지 않는다.** 공개 API 타입은 `malgn-noti-api`가 정의해 제공.
+
+---
+
+## 6. 환경 변수
+
+```
+NUXT_PUBLIC_API_BASE_URL=https://api.noti.malgn.example
+NUXT_SESSION_SECRET=...          # 세션 쿠키 서명
+```
+
+> NHN/AWS/카드사 키 등 시크릿은 절대 이 레포에 두지 말 것.
+
+---
+
+## 7. 개발 명령어 (계획)
+
+```bash
+pnpm install
+pnpm dev              # http://localhost:3000
+pnpm build
+pnpm preview
+pnpm typecheck
+pnpm lint
+pnpm test
+```
+
+---
+
+## 8. 코드 규칙
+
+- **Vue**: `<script setup lang="ts">`. Options API 금지.
+- **컴포넌트**: PascalCase 파일명, 한 파일에 한 컴포넌트.
+- **컴포넌트 네이밍 규칙**: Nuxt UI 컴포넌트는 `U*` 접두사(자동), **자체 컴포넌트는 `App*`** 접두사로 구분 (`AppShell`, `AppConfirmDialog`, `AppFilterBar`, `AppCategoryTree` 등).
+- **Nuxt UI 우선 사용**: 새 UI는 먼저 Nuxt UI에 동등 컴포넌트가 있는지 확인. 없을 때만 자체 작성. 스타일은 Nuxt UI 테마 토큰(`primary`/`neutral`/`success` 등) 사용, 커스텀 색상 하드코딩 지양.
+- **Tailwind 사용**: 임의 클래스 OK. 단 `@nuxtjs/tailwindcss`는 절대 추가 설치 금지(중복 구성으로 충돌). 전역 토큰/플러그인은 `app.config.ts` 또는 `assets/css/main.css`의 `@theme`에서 관리.
+- **API 호출**: 직접 `$fetch` 호출 대신 `composables/useApi.ts` 래퍼 사용 (인증·에러 표준화).
+- **타입**: `any` 금지. 도메인 응답 타입은 `types/`에 정의 (백엔드와 형상 일치).
+- **i18n**: 한국어 우선, 추후 다국어 대비 키 기반 텍스트로 작성. Nuxt UI 내장 컴포넌트 문구는 `app.config.ts`의 `ui.locale`로 한국어 적용.
+- **접근성**: Nuxt UI(Reka UI) 컴포넌트의 ARIA 동작 유지. label·focus ring·키보드 조작 검증.
+
+---
+
+## 9. 다른 프로젝트와의 관계
+
+| 항목 | 이 레포 | malgn-noti-admin | malgn-noti-api |
+| --- | --- | --- | --- |
+| 대상 사용자 | 고객사 테넌트 사용자 | 맑은소프트 운영자 | (서버 간 통신) |
+| 권한 모델 | 테넌트 스코프 | 글로벌 어드민 + RBAC | 토큰별 검증 |
+| NHN/외부 API 호출 | ❌ | ❌ | ✅ |
+| 인증 | 테넌트 JWT | 어드민 JWT (별도) | 토큰 검증 |
+
+UI 컴포넌트와 도메인 타입은 admin과 상당 부분 공유 가능 — 추후 공용 패키지 추출 검토.
+
+---
+
+## 10. 미정 / TODO
+
+- [ ] 패키지 매니저 확정 (pnpm 가정)
+- [ ] 멀티 테넌트 라우팅 방식 (서브도메인 vs. 경로 prefix)
+- [ ] 다국어 지원 시점
+- [ ] 캠페인 변형 v3 (`#/campaign3`)와 본 캠페인 화면의 최종 결정
+- [ ] 결제 게이트웨이 선정 (토스/포트원/나이스 등)
+- [ ] AI 템플릿 백엔드 모델/프롬프트 정책
+- [ ] 시안의 "쏠쏠 브랜드" 단독 404/에러를 맑은 브랜드로 재작업
+- [ ] 공용 컴포넌트/타입을 별도 패키지로 추출할지 결정
