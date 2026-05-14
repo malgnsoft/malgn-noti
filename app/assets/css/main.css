@@ -5,12 +5,68 @@
   --font-sans: "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-html, body, #__nuxt {
+/* 시안 디자인 토큰 (malgn-notifications 정본) */
+:root {
+  --primary-color: #6366f1;
+  --primary-hover: #4f46e5;
+
+  --gray-50:  #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+
+  --color-sky: #4FC0FC;
+  --color-sky-vivid: #027CFA;
+  --color-sky-soft: #E5F4FE;
+  --color-indigo: #6756ED;
+
+  --gnb-height: 64px;
+  --gnb-utility-height: 32px;
+  --content-max: 1200px;
+}
+
+html,
+body,
+#__nuxt {
   height: 100%;
-  font-family: var(--font-sans);
 }
 
 body {
+  margin: 0;
+  background-color: var(--gray-50);
+  color: var(--gray-800);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 콘텐츠 표준 컨테이너 (모든 페이지 공통) */
+.app-container {
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+/* 2단 콘텐츠 레이아웃: 메인 + 우측 보조 360px */
+.content-2col {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .content-2col {
+    grid-template-columns: 1fr;
+  }
+  .content-2col > .content-2col-aside {
+    order: -1;
+    position: static !important;
+  }
 }

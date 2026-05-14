@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="p-6 lg:p-8">
+  <div class="app-container py-8 lg:py-10">
     <div class="mb-6">
       <div v-if="category" class="text-xs text-primary-600 dark:text-primary-400 font-medium mb-1">
         {{ category }}
