@@ -1,407 +1,177 @@
 <script setup lang="ts">
-export interface AddressBookItem {
-  id: string
-  alias: string
-  keyValue: string
-}
-
-export interface AddressBookGroup {
-  id: string
-  name: string
-  count: number
-}
+import type { Recipient } from '~/types/recipient'
 
 const props = withDefaults(defineProps<{
-  items: AddressBookItem[]
-  groups: AddressBookGroup[]
-  keyColumnLabel: string
-  rightPanel?: 'edit' | 'preview'
-  page?: number
-  pageCount?: number
-  loading?: boolean
-}>(), {
-  page: 1,
-  pageCount: 1,
+  open: boolean
+  keyColumn?: 'phone' | 'email' | 'token'
+}>(), { keyColumn: 'phone' })
+
+const emit = defineEmits<{ close: [], confirm: [Recipient[]] }>()
+
+const individual = [
+  { id: 101, name: '이수민', phone: '010-2345-6789', email: 'soomin.lee@example.com', group: 'VIP 고객' },
+  { id: 102, name: '박지훈', phone: '010-9876-5432', email: 'park.jihoon@example.com', group: '신규 가입' },
+  { id: 103, name: '최예진', phone: '010-3344-5566', email: 'yejin.choi@example.com', group: 'VIP 고객' },
+  { id: 104, name: '정민호', phone: '010-7788-9900', email: 'minho.jeong@example.com', group: '휴면 회원' },
+  { id: 105, name: '한지영', phone: '010-2233-4455', email: 'jiyoung.han@example.com', group: '신규 가입' },
+  { id: 106, name: '김도현', phone: '010-5566-7788', email: 'dohyun.kim@example.com', group: 'VIP 고객' },
+  { id: 107, name: '윤서연', phone: '010-1122-3344', email: 'seoyeon.yoon@example.com', group: '활성 고객' },
+  { id: 108, name: '강민재', phone: '010-9988-7766', email: 'minjae.kang@example.com', group: '활성 고객' }
+]
+const groups = [
+  { id: 1, name: 'VIP 고객', count: 142, desc: '최근 30일 내 3회 이상 구매' },
+  { id: 2, name: '신규 가입', count: 38, desc: '지난 7일간 가입' },
+  { id: 3, name: '휴면 회원', count: 267, desc: '90일간 미접속' },
+  { id: 4, name: '활성 고객', count: 1024, desc: '월 1회 이상 접속' },
+  { id: 5, name: '장바구니 보유', count: 89, desc: '결제 미완료 항목 있음' }
+]
+
+const tab = ref<'individual' | 'group'>('individual')
+const search = ref('')
+const picked = ref<number[]>([])
+const pickedGroups = ref<number[]>([])
+
+watch(() => props.open, (v) => {
+  if (v) { picked.value = []; pickedGroups.value = []; search.value = '' }
 })
 
-const open = defineModel<boolean>('open', { default: false })
-const selectedItemIds = defineModel<string[]>('selectedItemIds', { default: () => [] })
-const selectedGroupIds = defineModel<string[]>('selectedGroupIds', { default: () => [] })
-const searchQuery = defineModel<string>('searchQuery', { default: '' })
+const filteredIndividual = computed(() => individual.filter(i =>
+  !search.value || (i.name + i.phone + i.email).toLowerCase().includes(search.value.toLowerCase())))
+const filteredGroups = computed(() => groups.filter(g =>
+  !search.value || (g.name + g.desc).toLowerCase().includes(search.value.toLowerCase())))
 
-const emit = defineEmits<{
-  confirm: []
-  cancel: []
-  'update:page': [page: number]
-  search: []
-}>()
+const total = computed(() => tab.value === 'individual'
+  ? picked.value.length
+  : pickedGroups.value.reduce((s, gid) => s + (groups.find(g => g.id === gid)?.count || 0), 0))
 
-const activeTab = ref<'individual' | 'group'>('individual')
-
-const totalSelected = computed(() => {
-  if (activeTab.value === 'individual') return selectedItemIds.value.length
-  return props.groups
-    .filter(g => selectedGroupIds.value.includes(g.id))
-    .reduce((sum, g) => sum + g.count, 0)
-})
-
-const allItemsChecked = computed(
-  () => props.items.length > 0 && props.items.every(i => selectedItemIds.value.includes(i.id)),
-)
-const allGroupsChecked = computed(
-  () => props.groups.length > 0 && props.groups.every(g => selectedGroupIds.value.includes(g.id)),
-)
-
-function toggleAllItems(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked
-  selectedItemIds.value = checked ? props.items.map(i => i.id) : []
-}
-function toggleItem(id: string, e: Event) {
-  const checked = (e.target as HTMLInputElement).checked
-  if (checked) {
-    if (!selectedItemIds.value.includes(id))
-      selectedItemIds.value = [...selectedItemIds.value, id]
-  } else {
-    selectedItemIds.value = selectedItemIds.value.filter(s => s !== id)
+function togglePick(id: number) {
+  if (tab.value === 'individual') {
+    picked.value = picked.value.includes(id) ? picked.value.filter(x => x !== id) : [...picked.value, id]
+  }
+  else {
+    pickedGroups.value = pickedGroups.value.includes(id) ? pickedGroups.value.filter(x => x !== id) : [...pickedGroups.value, id]
   }
 }
-function toggleAllGroups(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked
-  selectedGroupIds.value = checked ? props.groups.map(g => g.id) : []
-}
-function toggleGroup(id: string, e: Event) {
-  const checked = (e.target as HTMLInputElement).checked
-  if (checked) {
-    if (!selectedGroupIds.value.includes(id))
-      selectedGroupIds.value = [...selectedGroupIds.value, id]
-  } else {
-    selectedGroupIds.value = selectedGroupIds.value.filter(s => s !== id)
+function confirm() {
+  let chosen: Recipient[] = []
+  if (tab.value === 'individual') {
+    chosen = individual.filter(i => picked.value.includes(i.id)).map(i => ({ ...i, id: `ab-${i.id}-${Date.now()}` }))
   }
+  else {
+    chosen = pickedGroups.value.flatMap((gid) => {
+      const g = groups.find(x => x.id === gid)
+      if (!g) return []
+      return Array.from({ length: Math.min(g.count, 5) }, (_, i) => ({
+        id: `g-${gid}-${i}-${Date.now()}`,
+        name: `${g.name} #${i + 1}`,
+        phone: `010-${1000 + Math.floor(Math.random() * 9000)}-${1000 + Math.floor(Math.random() * 9000)}`,
+        email: `${g.name.replace(/ /g, '').toLowerCase()}${i + 1}@example.com`
+      }))
+    })
+  }
+  emit('confirm', chosen)
+  emit('close')
 }
-
-function onConfirm() {
-  emit('confirm')
-  open.value = false
-}
-function onCancel() {
-  emit('cancel')
-  open.value = false
-}
-function goToPage(p: number) {
-  if (p >= 1 && p <= props.pageCount && p !== props.page) emit('update:page', p)
-}
-
-const visiblePages = computed(() => {
-  const pages = []
-  const total = props.pageCount
-  for (let i = 1; i <= Math.min(total, 5); i++) pages.push(i)
-  return pages
-})
 </script>
 
 <template>
-  <UModal v-model:open="open" :ui="{ content: 'sm:max-w-3xl' }">
-    <template #body>
-      <div class="address-book-body">
-        <h4 class="modal-title">수신자 선택</h4>
-
-        <div class="tabs" role="tablist">
-          <button
-            type="button"
-            class="tab"
-            :class="{ 'is-active': activeTab === 'individual' }"
-            @click="activeTab = 'individual'"
-          >
-            개별선택
-          </button>
-          <button
-            type="button"
-            class="tab"
-            :class="{ 'is-active': activeTab === 'group' }"
-            @click="activeTab = 'group'"
-          >
-            그룹선택
-          </button>
-        </div>
-
-        <div class="grid" :class="{ 'with-panel': !!rightPanel }">
-          <div class="list-col">
-            <div class="search-row">
-              <div class="search-box">
-                <UInput
-                  v-model="searchQuery"
-                  :placeholder="activeTab === 'individual' ? '수신자 별칭을 입력하세요.' : '그룹명을 입력하세요.'"
-                  @keydown.enter="emit('search')"
-                />
-                <UButton color="neutral" variant="ghost" icon="i-lucide-search" @click="emit('search')" />
-              </div>
-              <div class="count">
-                총 <strong>{{ totalSelected }}</strong>{{ activeTab === 'group' ? '명' : '개' }} 선택
-              </div>
-            </div>
-
-            <table v-if="activeTab === 'individual'" class="data-table">
-              <thead>
-                <tr>
-                  <th class="th-check">
-                    <input type="checkbox" :checked="allItemsChecked" @change="toggleAllItems">
-                  </th>
-                  <th>수신자 별칭</th>
-                  <th>{{ keyColumnLabel }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in items" :key="item.id">
-                  <td class="th-check">
-                    <input
-                      type="checkbox"
-                      :checked="selectedItemIds.includes(item.id)"
-                      @change="toggleItem(item.id, $event)"
-                    >
-                  </td>
-                  <td>{{ item.alias }}</td>
-                  <td>{{ item.keyValue }}</td>
-                </tr>
-                <tr v-if="!items.length">
-                  <td colspan="3" class="empty-row">검색 결과가 없습니다.</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <table v-else class="data-table">
-              <thead>
-                <tr>
-                  <th class="th-check">
-                    <input type="checkbox" :checked="allGroupsChecked" @change="toggleAllGroups">
-                  </th>
-                  <th>그룹명</th>
-                  <th>연락처 수</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="g in groups" :key="g.id">
-                  <td class="th-check">
-                    <input
-                      type="checkbox"
-                      :checked="selectedGroupIds.includes(g.id)"
-                      @change="toggleGroup(g.id, $event)"
-                    >
-                  </td>
-                  <td>{{ g.name }}</td>
-                  <td>{{ g.count }}명</td>
-                </tr>
-                <tr v-if="!groups.length">
-                  <td colspan="3" class="empty-row">검색 결과가 없습니다.</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div v-if="activeTab === 'individual' && pageCount > 1" class="pagination">
-              <button
-                type="button"
-                :disabled="page === 1"
-                @click="goToPage(1)"
-              >
-                «
-              </button>
-              <button
-                type="button"
-                :disabled="page === 1"
-                @click="goToPage(page - 1)"
-              >
-                ‹
-              </button>
-              <button
-                v-for="p in visiblePages"
-                :key="p"
-                type="button"
-                :class="{ 'is-active': p === page }"
-                @click="goToPage(p)"
-              >
-                {{ p }}
-              </button>
-              <button
-                type="button"
-                :disabled="page === pageCount"
-                @click="goToPage(page + 1)"
-              >
-                ›
-              </button>
-              <button
-                type="button"
-                :disabled="page === pageCount"
-                @click="goToPage(pageCount)"
-              >
-                »
-              </button>
-            </div>
-          </div>
-
-          <div v-if="rightPanel" class="right-panel">
-            <slot name="rightPanel">
-              <div class="right-panel-empty">
-                <UIcon name="i-lucide-info" class="size-4" />
-                <span>좌측에서 수신자를 선택해 주세요.</span>
-              </div>
-            </slot>
-          </div>
-        </div>
+  <AppModal :open="open" title="주소록 선택" :width="800" @close="emit('close')">
+    <div class="tabs" style="margin-bottom: 16px">
+      <div :class="['tab', { active: tab === 'individual' }]" @click="tab = 'individual'">
+        개별 선택
       </div>
-    </template>
+      <div :class="['tab', { active: tab === 'group' }]" @click="tab = 'group'">
+        그룹 선택
+      </div>
+    </div>
+    <div class="row" style="margin-bottom: 12px">
+      <div style="position: relative; flex: 1; max-width: 320px">
+        <UIcon
+          name="i-lucide-search"
+          class="text-sm"
+          style="position: absolute; left: 10px; top: 11px; color: var(--ink-400)"
+        />
+        <input
+          v-model="search"
+          class="input"
+          style="padding-left: 32px"
+          :placeholder="tab === 'individual' ? '이름 / 전화번호 / 이메일 검색' : '그룹명 검색'"
+        >
+      </div>
+    </div>
+    <div class="table-wrap" style="max-height: 360px; overflow: auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 36px" />
+            <template v-if="tab === 'individual'">
+              <th>이름</th>
+              <th>{{ keyColumn === 'phone' ? '휴대폰' : '이메일' }}</th>
+              <th>소속 그룹</th>
+            </template>
+            <template v-else>
+              <th>그룹명</th>
+              <th>연락처 수</th>
+              <th>설명</th>
+            </template>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-if="tab === 'individual'">
+            <tr
+              v-for="item in filteredIndividual"
+              :key="item.id"
+              :class="{ selected: picked.includes(item.id) }"
+              style="cursor: pointer"
+              @click="togglePick(item.id)"
+            >
+              <td>
+                <label class="checkbox">
+                  <input type="checkbox" :checked="picked.includes(item.id)" @click.prevent>
+                </label>
+              </td>
+              <td>{{ item.name }}</td>
+              <td class="cell-mono">
+                {{ keyColumn === 'phone' ? item.phone : item.email }}
+              </td>
+              <td><AppBadge tone="sky">{{ item.group }}</AppBadge></td>
+            </tr>
+          </template>
+          <template v-else>
+            <tr
+              v-for="g in filteredGroups"
+              :key="g.id"
+              :class="{ selected: pickedGroups.includes(g.id) }"
+              style="cursor: pointer"
+              @click="togglePick(g.id)"
+            >
+              <td>
+                <label class="checkbox">
+                  <input type="checkbox" :checked="pickedGroups.includes(g.id)" @click.prevent>
+                </label>
+              </td>
+              <td>{{ g.name }}</td>
+              <td class="cell-mono">
+                <strong>{{ g.count.toLocaleString() }}</strong>명
+              </td>
+              <td class="muted">
+                {{ g.desc }}
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
     <template #footer>
-      <div class="footer-actions">
-        <UButton color="neutral" variant="outline" @click="onCancel">취소</UButton>
-        <UButton class="btn-confirm" :disabled="totalSelected === 0" @click="onConfirm">확인</UButton>
+      <div class="muted" style="margin-right: auto; font-size: 13px">
+        선택: <strong style="color: var(--accent-ink)">{{ total.toLocaleString() }}명</strong>
       </div>
+      <button type="button" class="btn btn-outline-dark" @click="emit('close')">
+        취소
+      </button>
+      <button type="button" class="btn btn-sky" :disabled="total === 0" @click="confirm">
+        확인
+      </button>
     </template>
-  </UModal>
+  </AppModal>
 </template>
-
-<style scoped>
-.address-book-body {
-  padding: 8px 0 16px;
-}
-.modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gray-900);
-  margin-bottom: 16px;
-}
-.tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--gray-200);
-  margin-bottom: 16px;
-}
-.tab {
-  padding: 10px 20px;
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--gray-500);
-  cursor: pointer;
-}
-.tab.is-active {
-  color: var(--color-sky-vivid);
-  border-bottom-color: var(--color-sky-vivid);
-  font-weight: 700;
-}
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-.grid.with-panel {
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.search-box {
-  display: flex;
-  flex: 1;
-  gap: 4px;
-}
-.search-box :deep(.u-input) {
-  flex: 1;
-}
-.count {
-  font-size: 13px;
-  color: var(--gray-700);
-}
-.count strong {
-  color: var(--color-sky-vivid);
-  font-weight: 700;
-}
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.data-table thead th {
-  background: var(--gray-50);
-  border-top: 1px solid var(--gray-200);
-  border-bottom: 1px solid var(--gray-200);
-  padding: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-700);
-  text-align: center;
-}
-.data-table tbody td {
-  border-bottom: 1px solid var(--gray-200);
-  padding: 10px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--gray-700);
-}
-.empty-row {
-  text-align: center;
-  color: var(--gray-500);
-  padding: 32px !important;
-}
-.th-check {
-  width: 40px;
-}
-.pagination {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 16px;
-}
-.pagination button {
-  min-width: 32px;
-  height: 32px;
-  background: white;
-  border: 1px solid var(--gray-200);
-  color: var(--gray-700);
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.pagination button.is-active {
-  background: var(--color-sky-vivid);
-  color: white;
-  border-color: var(--color-sky-vivid);
-}
-.pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.right-panel {
-  background: var(--gray-50);
-  border-radius: 8px;
-  padding: 16px;
-  min-height: 240px;
-}
-.right-panel-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 100%;
-  color: var(--gray-500);
-  font-size: 13px;
-}
-.footer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  width: 100%;
-}
-.btn-confirm {
-  background: var(--color-sky-vivid);
-  color: white;
-}
-.btn-confirm:hover:not(:disabled) {
-  background: #016bda;
-}
-.btn-confirm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

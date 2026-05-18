@@ -1,7 +1,7 @@
 <template>
   <div class="layout-default">
     <AppGnb />
-    <main class="page-content">
+    <main class="layout-main">
       <slot />
     </main>
     <AppFooter />
@@ -13,9 +13,9 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: var(--paper);
 }
-
-.page-content {
+.layout-main {
   flex: 1;
   width: 100%;
 }

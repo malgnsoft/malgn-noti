@@ -1,201 +1,90 @@
 <script setup lang="ts">
-import type { ChannelMeta } from '~/types/channel'
+const props = withDefaults(defineProps<{
+  open: boolean
+  channel?: string
+  count?: number
+  pricePerUnit?: number
+  currentBalance?: number
+  scheduleAt?: string | null
+}>(), { channel: 'SMS', count: 0, pricePerUnit: 9.9, currentBalance: 245800, scheduleAt: null })
 
-const props = defineProps<{
-  channels: ChannelMeta[]            // Flow는 multi-channel, 단일 발송은 1개
-  groupNames?: string[]
-  recipientCount: number
-  estimatedCost: number
-  currentBalance: number
-}>()
+const emit = defineEmits<{ close: [], confirm: [] }>()
 
-const open = defineModel<boolean>('open', { default: false })
+const total = computed(() => Math.round(props.count * props.pricePerUnit * 10) / 10)
+const after = computed(() => props.currentBalance - total.value)
 
-const emit = defineEmits<{
-  confirm: []
-  cancel: []
-}>()
-
-const afterBalance = computed(() => props.currentBalance - props.estimatedCost)
-const lacksCredit = computed(() => afterBalance.value < 0)
-
-const channelLabel = computed(() => props.channels.map(c => c.label).join(', '))
-const pricingLabel = computed(() =>
-  props.channels.map(c => `${c.label} : ${c.pricePerUnit} C`).join('   '),
-)
-
-function fmt(n: number) {
-  return n.toLocaleString('ko-KR')
-}
+const cells = computed(() => [
+  { label: '채널', value: props.channel },
+  { label: '수신자', value: `${props.count.toLocaleString()}명` },
+  { label: '예상 비용', value: `${total.value.toLocaleString()} C`, accent: true }
+])
 </script>
 
 <template>
-  <UModal v-model:open="open" :ui="{ content: 'sm:max-w-3xl' }">
-    <template #body>
-      <div class="confirm-body">
-        <h4 class="confirm-title">발송 확인</h4>
-        <div class="info-block">
-          <div v-if="groupNames?.length" class="info-row">
-            <span class="info-label">선택된 그룹</span>
-            <span class="info-value">{{ groupNames.join(', ') }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">총 수신자 수</span>
-            <span class="info-value">{{ fmt(recipientCount) }}명</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">채널</span>
-            <span class="info-value">{{ channelLabel }}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">건당 단가</span>
-            <span class="info-value">{{ pricingLabel }}</span>
-          </div>
+  <AppModal :open="open" title="발송 확인" :width="480" @close="emit('close')">
+    <div class="scd-notice">
+      <UIcon name="i-lucide-info" class="text-base" style="color: var(--accent-ink)" />
+      <span>
+        <template v-if="scheduleAt"><strong>{{ scheduleAt }}</strong>에 발송 예약됩니다.</template>
+        <template v-else>즉시 발송됩니다. 한 번 시작하면 취소할 수 없습니다.</template>
+      </span>
+    </div>
+    <div class="scd-grid">
+      <div v-for="(c, i) in cells" :key="i" class="scd-cell" :class="{ 'scd-cell-br': i < 2 }">
+        <div class="scd-label">
+          {{ c.label }}
         </div>
-
-        <div class="cost-block">
-          <div class="cost-cell">
-            <span class="cost-label">예상 비용</span>
-            <span class="cost-value">{{ fmt(estimatedCost) }} <i class="cost-c">C</i></span>
-          </div>
-          <div class="cost-cell">
-            <span class="cost-label">현재 잔액</span>
-            <span class="cost-value">{{ fmt(currentBalance) }} <i class="cost-c">C</i></span>
-          </div>
-          <div class="cost-cell">
-            <span class="cost-label">발송 후 잔액</span>
-            <span class="cost-value" :class="{ warn: lacksCredit }">
-              {{ fmt(afterBalance) }} <i class="cost-c">C</i>
-            </span>
-          </div>
+        <div class="scd-value num" :style="{ color: c.accent ? 'var(--accent-ink)' : 'var(--ink-900)' }">
+          {{ c.value }}
         </div>
-
-        <p v-if="lacksCredit" class="notice">
-          <UIcon name="i-lucide-info" class="size-4 shrink-0 mt-0.5" />
-          <span>
-            <strong>발송을 위해 크레딧 충전이 필요합니다.</strong>
-            크레딧 충전은 <a href="/account/credit" class="link">크레딧 관리</a> 메뉴에서 가능합니다.
-          </span>
-        </p>
       </div>
-    </template>
+    </div>
+    <div class="scd-foot">
+      <span>발송 전 잔액: <span class="num">{{ currentBalance.toLocaleString() }}</span> C</span>
+      <span>발송 후 잔액:
+        <strong class="num" :style="{ color: after < 0 ? 'var(--danger-ink)' : 'var(--ink-700)' }">{{ after.toLocaleString() }} C</strong>
+      </span>
+    </div>
     <template #footer>
-      <div class="footer-actions">
-        <UButton color="neutral" variant="outline" @click="emit('cancel'); open = false">
-          취소
-        </UButton>
-        <UButton class="btn-confirm" :disabled="lacksCredit" @click="emit('confirm')">
-          발송하기
-        </UButton>
-      </div>
+      <button type="button" class="btn btn-outline-dark" @click="emit('close')">
+        취소
+      </button>
+      <button type="button" class="btn btn-sky" @click="emit('confirm')">
+        발송하기
+      </button>
     </template>
-  </UModal>
+  </AppModal>
 </template>
 
 <style scoped>
-.confirm-body {
-  padding: 8px 0 16px;
+.scd-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(0, 220, 130, 0.2);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--ink-700);
 }
-.confirm-title {
-  font-size: 18px;
-  font-weight: 700;
-  text-align: center;
-  color: var(--gray-900);
-  margin-bottom: 24px;
-}
-.info-block {
-  border-top: 1px solid var(--gray-200);
-  border-bottom: 1px solid var(--gray-200);
-  padding: 16px 0;
+.scd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
   margin-bottom: 16px;
 }
-.info-row {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  align-items: center;
-  padding: 6px 0;
-  font-size: 14px;
-}
-.info-label {
-  color: var(--gray-500);
-  font-weight: 500;
-}
-.info-value {
-  color: var(--gray-900);
-  font-weight: 500;
-}
-.cost-block {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.cost-cell {
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-}
-.cost-label {
-  display: block;
-  font-size: 13px;
-  color: var(--gray-500);
-  margin-bottom: 8px;
-}
-.cost-value {
-  display: block;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gray-900);
-}
-.cost-value.warn {
-  color: #ef4444;
-}
-.cost-c {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-  background: var(--color-indigo);
-  border-radius: 50%;
-  font-style: normal;
-  margin-left: 2px;
-  vertical-align: middle;
-}
-.notice {
+.scd-cell { padding: 16px; background: var(--white); }
+.scd-cell-br { border-right: 1px solid var(--line); }
+.scd-label { font-size: 11px; color: var(--ink-500); margin-bottom: 4px; }
+.scd-value { font-size: 16px; font-weight: 600; }
+.scd-foot {
+  font-size: 12px;
+  color: var(--ink-500);
   display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--color-sky-soft);
-  border-radius: 8px;
-  color: var(--gray-700);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.notice .link {
-  color: var(--color-sky-vivid);
-  text-decoration: underline;
-}
-.footer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  width: 100%;
-}
-.btn-confirm {
-  background: var(--color-sky-vivid);
-  color: white;
-}
-.btn-confirm:hover:not(:disabled) {
-  background: #016bda;
-}
-.btn-confirm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  justify-content: space-between;
 }
 </style>

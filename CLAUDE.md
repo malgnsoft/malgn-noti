@@ -4,7 +4,9 @@
 
 > 형제 프로젝트: [`malgn-noti-admin`](../malgn-noti-admin) (운영자 콘솔) · [`malgn-noti-api`](../malgn-noti-api) (백엔드 API)
 >
-> **디자인/IA 참조 시안**: https://malgn-notifications.pages.dev/#/pagelists (총 263 페이지/팝업, 16 카테고리. 이 시안이 IA의 단일 정본(SoT)임.)
+> **IA 참조 시안**: https://malgn-notifications.pages.dev/#/pagelists (총 263 페이지/팝업, 16 카테고리. **IA(페이지 목록·라우트 구조)** 한정 정본.)
+>
+> **디자인 정본(SoT)**: [`doc/DESIGN.md`](./doc/DESIGN.md) — `design_handoff_malgn_noti` Relay-inspired Design System v1.0. (2026-05-18 시안 기반 디자인에서 전면 피벗. 시안의 디자인 언어는 더 이상 적용하지 않음 — IA만 참조.)
 
 ---
 
@@ -43,8 +45,9 @@
 - **프레임워크**: Nuxt 3 (Vue 3, `<script setup>`, TypeScript)
 - **상태 관리**: Pinia
 - **UI / 스타일**: **Nuxt UI v3** (MIT, Reka UI + Tailwind CSS v4 기반). `@nuxtjs/tailwindcss`는 **설치하지 않는다** — Nuxt UI 모듈이 Tailwind를 통합 관리.
-- **아이콘**: Iconify — 기본 `heroicons`/`lucide`, 시안 매핑용으로 `@iconify-json/bi`(Bootstrap Icons) 추가
-- **폰트**: Noto Sans KR — Nuxt UI 테마 토큰(`--ui-font-family`)으로 주입
+- **디자인 시스템**: Relay-inspired v1.0 ([`doc/DESIGN.md`](./doc/DESIGN.md) 정본) — ink 무채색 11단 + 단일 그린 액센트 `#00DC82`, 1px hairline, 저밀도. 토큰은 [`app/assets/css/main.css`](./app/assets/css/main.css), Nuxt UI 색상은 `app.config.ts`(`primary`/`neutral` = `zinc`).
+- **아이콘**: Iconify — 기본 `lucide`(핸드오프 기준)/`heroicons`, `@iconify-json/bi` 보유
+- **폰트**: **Inter**(UI) + **JetBrains Mono**(숫자/ID) + **Pretendard**(한국어 fallback) + Instrument Serif(대형 디스플레이). `nuxt.config.ts` head 주입.
 - **API 통신**: `$fetch` / `useFetch` — 항상 [`malgn-noti-api`](../malgn-noti-api) 경유
 - **인증**: 백엔드 발급 JWT를 HttpOnly 쿠키에 저장, OTP/2FA 보조
 - **차트**: Chart.js (통계 화면 — Nuxt UI에 차트 컴포넌트 없음)

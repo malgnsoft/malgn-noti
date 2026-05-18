@@ -1,280 +1,131 @@
 <script setup lang="ts">
-export interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
+const props = withDefaults(defineProps<{
+  open: boolean
+  value?: string
+  senderName?: string
+}>(), { value: '', senderName: '1588-1234' })
 
-withDefaults(defineProps<{
-  quickPrompts?: string[]
-  loading?: boolean
-}>(), {
-  quickPrompts: () => ['친근한 톤', '간결하게', '정중한 비즈니스', '맞춤법 교정'],
-  loading: false,
+const emit = defineEmits<{ close: [], apply: [string] }>()
+
+const quickActions = ['더 친근하게', '더 정중하게', '더 짧게', '맞춤법 검사', '이모지 추가']
+const history = ref<{ role: 'user' | 'ai', text: string }[]>([])
+const input = ref('')
+const draft = ref('')
+
+watch(() => props.open, (v) => {
+  if (v) { history.value = []; draft.value = props.value || ''; input.value = '' }
 })
 
-const open = defineModel<boolean>('open', { default: false })
-const messages = defineModel<ChatMessage[]>('messages', { default: () => [] })
-const inputText = defineModel<string>('inputText', { default: '' })
-
-const emit = defineEmits<{
-  send: [prompt: string]
-  apply: []
-  cancel: []
-}>()
-
-function onSend() {
-  if (!inputText.value.trim()) return
-  emit('send', inputText.value)
-  inputText.value = ''
+function ask(prompt: string) {
+  history.value.push({ role: 'user', text: prompt })
+  input.value = ''
+  const cur = draft.value
+  setTimeout(() => {
+    const transformed = prompt.includes('짧게')
+      ? cur.split('.')[0] + '.'
+      : prompt.includes('정중')
+        ? cur.replace(/요\./g, '습니다.')
+        : prompt.includes('친근')
+          ? cur.replace(/하셨습니다/g, '되셨네요').replace(/입니다/g, '이에요')
+          : prompt.includes('이모지')
+            ? '🎉 ' + cur + ' 😊'
+            : cur + ' (다듬은 결과)'
+    history.value.push({ role: 'ai', text: transformed })
+    draft.value = transformed
+  }, 450)
 }
-
-function onQuickPrompt(p: string) {
-  emit('send', p)
-}
-
-function onApply() {
-  emit('apply')
-  open.value = false
-}
-
-function onCancel() {
-  emit('cancel')
-  open.value = false
-}
-
-const hasResult = computed(() => messages.value.some(m => m.role === 'assistant'))
 </script>
 
 <template>
-  <UModal v-model:open="open" :ui="{ content: 'sm:max-w-5xl' }">
-    <template #body>
-      <div class="ai-body">
-        <h4 class="modal-title">
-          <UIcon name="i-bi-stars" class="size-4 text-indigo-500" />
-          AI 문장 다듬기
-        </h4>
-
-        <div class="grid">
-          <!-- 좌측: 챗 -->
-          <div class="chat-col">
-            <div class="chat-messages">
-              <div v-if="!messages.length" class="chat-empty">
-                원하는 톤이나 방향을 입력하거나 아래 빠른 옵션을 선택하세요.
-              </div>
-              <div
-                v-for="(m, i) in messages"
-                :key="i"
-                class="chat-msg"
-                :class="m.role"
-              >
-                <div class="chat-bubble">{{ m.content }}</div>
-              </div>
-              <div v-if="loading" class="chat-msg assistant">
-                <div class="chat-bubble loading">생각 중...</div>
-              </div>
-            </div>
-
-            <div class="quick-row">
-              <button
-                v-for="q in quickPrompts"
-                :key="q"
-                type="button"
-                class="quick-btn"
-                :disabled="loading"
-                @click="onQuickPrompt(q)"
-              >
-                {{ q }}
-              </button>
-            </div>
-
-            <div class="chat-input-wrap">
-              <UTextarea
-                v-model="inputText"
-                :rows="2"
-                placeholder="원하는 톤이나 다듬을 방향을 입력하세요. (예: 더 친근한 톤으로, 인사말만 추가)"
-                class="flex-1"
-                @keydown.enter.prevent="onSend"
-              />
-              <button
-                type="button"
-                class="chat-send"
-                :disabled="loading || !inputText.trim()"
-                aria-label="전송"
-                @click="onSend"
-              >
-                <UIcon name="i-lucide-arrow-up" class="size-4" />
-              </button>
-            </div>
+  <AppModal :open="open" title="AI 문장 다듬기" :width="960" @close="emit('close')">
+    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 20px">
+      <div>
+        <div class="ai-log">
+          <div v-if="history.length === 0" class="muted" style="font-size: 13px">
+            아래 빠른 액션을 누르거나, 원하는 톤을 직접 입력해 주세요.
           </div>
-
-          <!-- 우측: 프리뷰 슬롯 -->
-          <div class="preview-col">
-            <div class="preview-label">미리보기</div>
-            <div class="preview-content">
-              <slot name="preview">
-                <div class="preview-empty">AI가 다듬은 결과가 이곳에 표시됩니다.</div>
-              </slot>
+          <div v-for="(h, i) in history" :key="i" style="margin-bottom: 12px">
+            <div
+              class="ai-role"
+              :style="{ color: h.role === 'ai' ? 'var(--accent-ink)' : 'var(--ink-500)' }"
+            >
+              {{ h.role === 'ai' ? '✨ AI' : '나' }}
+            </div>
+            <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap">
+              {{ h.text }}
             </div>
           </div>
         </div>
+        <div class="row" style="flex-wrap: wrap; gap: 6px; margin-top: 10px">
+          <button
+            v-for="a in quickActions"
+            :key="a"
+            type="button"
+            class="btn btn-outline btn-sm"
+            @click="ask(a)"
+          >
+            {{ a }}
+          </button>
+        </div>
+        <div class="row" style="margin-top: 12px; gap: 6px">
+          <input
+            v-model="input"
+            class="input"
+            placeholder="원하는 변경을 입력하세요…"
+            @keydown.enter="input.trim() && ask(input)"
+          >
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            :disabled="!input.trim()"
+            @click="ask(input)"
+          >
+            <UIcon name="i-lucide-sparkles" class="text-[12px]" /> 다듬기
+          </button>
+        </div>
+        <div class="ai-result">
+          <div class="row" style="justify-content: space-between; margin-bottom: 6px">
+            <div style="font-size: 12px; font-weight: 600; color: var(--ink-600)">
+              적용 후 본문
+            </div>
+            <span class="num" style="font-size: 11px; color: var(--ink-500)">{{ byteLen(draft) }} byte</span>
+          </div>
+          <div style="font-size: 13px; white-space: pre-wrap; line-height: 1.6; color: var(--ink-800)">
+            {{ draft || '(빈 본문)' }}
+          </div>
+        </div>
       </div>
-    </template>
+      <div style="display: grid; place-items: center">
+        <AppPhonePreview :sender-name="senderName" :message="draft" />
+      </div>
+    </div>
     <template #footer>
-      <div class="footer-actions">
-        <UButton color="neutral" variant="outline" @click="onCancel">취소</UButton>
-        <UButton class="btn-confirm" :disabled="!hasResult" @click="onApply">적용</UButton>
-      </div>
+      <button type="button" class="btn btn-outline-dark" @click="emit('close')">
+        취소
+      </button>
+      <button type="button" class="btn btn-sky" @click="emit('apply', draft); emit('close')">
+        적용
+      </button>
     </template>
-  </UModal>
+  </AppModal>
 </template>
 
 <style scoped>
-.ai-body { padding: 8px 0 16px; }
-.modal-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--gray-900);
-  margin-bottom: 16px;
+.ai-log {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px;
+  min-height: 200px;
+  max-height: 280px;
+  overflow: auto;
 }
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 16px;
-  min-height: 480px;
-}
-.chat-col {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.chat-messages {
-  flex: 1;
-  background: var(--gray-50);
-  border-radius: 8px;
-  padding: 16px;
-  overflow-y: auto;
-  max-height: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.chat-empty {
-  color: var(--gray-500);
-  font-size: 13px;
-  text-align: center;
-  margin: auto;
-}
-.chat-msg {
-  display: flex;
-}
-.chat-msg.user {
-  justify-content: flex-end;
-}
-.chat-bubble {
-  max-width: 80%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-.chat-msg.user .chat-bubble {
-  background: var(--primary-color);
-  color: white;
-}
-.chat-msg.assistant .chat-bubble {
-  background: white;
-  border: 1px solid var(--gray-200);
-  color: var(--gray-800);
-}
-.chat-bubble.loading {
-  opacity: 0.6;
-}
-.quick-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.quick-btn {
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid var(--gray-300);
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--gray-700);
-  cursor: pointer;
-}
-.quick-btn:hover:not(:disabled) {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-.quick-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.chat-input-wrap {
-  display: flex;
-  gap: 8px;
-}
-.chat-send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--primary-color);
-  color: white;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-  align-self: flex-end;
-}
-.chat-send:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.preview-col {
-  background: var(--gray-50);
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.preview-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--gray-700);
-}
-.preview-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.preview-empty {
-  text-align: center;
-  color: var(--gray-500);
-  font-size: 13px;
-}
-.footer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  width: 100%;
-}
-.btn-confirm {
-  background: var(--color-sky-vivid);
-  color: white;
-}
-.btn-confirm:hover:not(:disabled) {
-  background: #016bda;
-}
-.btn-confirm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.ai-role { font-size: 11px; margin-bottom: 4px; font-weight: 600; }
+.ai-result {
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
 }
 </style>

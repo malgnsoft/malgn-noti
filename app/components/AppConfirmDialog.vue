@@ -1,46 +1,31 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
-  title: string
-  description?: string
+withDefaults(defineProps<{
+  open: boolean
+  title?: string
+  message?: string
   confirmLabel?: string
-  cancelLabel?: string
-  confirmColor?: 'primary' | 'error' | 'warning' | 'success'
-  loading?: boolean
-}>(), {
-  confirmLabel: '확인',
-  cancelLabel: '취소',
-  confirmColor: 'primary',
-  loading: false
-})
+  danger?: boolean
+}>(), { title: '확인', confirmLabel: '확인' })
 
-const open = defineModel<boolean>('open', { default: false })
-
-const emit = defineEmits<{
-  confirm: []
-  cancel: []
-}>()
-
-function onCancel() {
-  open.value = false
-  emit('cancel')
-}
-
-function onConfirm() {
-  emit('confirm')
-}
+const emit = defineEmits<{ close: [], confirm: [] }>()
 </script>
 
 <template>
-  <UModal v-model:open="open" :title="props.title" :description="props.description">
+  <AppModal :open="open" :title="title" :width="400" @close="emit('close')">
+    <div style="font-size: 13px; color: var(--ink-700); line-height: 1.6">
+      {{ message }}
+    </div>
     <template #footer>
-      <div class="flex justify-end gap-2 w-full">
-        <UButton color="neutral" variant="soft" :disabled="loading" @click="onCancel">
-          {{ cancelLabel }}
-        </UButton>
-        <UButton :color="confirmColor" :loading="loading" @click="onConfirm">
-          {{ confirmLabel }}
-        </UButton>
-      </div>
+      <button type="button" class="btn btn-outline-dark" @click="emit('close')">
+        취소
+      </button>
+      <button
+        type="button"
+        :class="danger ? 'btn btn-error-solid' : 'btn btn-sky'"
+        @click="emit('confirm')"
+      >
+        {{ confirmLabel }}
+      </button>
     </template>
-  </UModal>
+  </AppModal>
 </template>

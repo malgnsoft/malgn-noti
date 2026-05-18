@@ -1,65 +1,66 @@
 <script setup lang="ts">
-const mode = defineModel<'now' | 'reserve'>('mode', { default: 'now' })
-const reserveAt = defineModel<string>('reserveAt', { default: '' })
+interface SendOptions { mode: 'now' | 'schedule', date?: string, hour?: string, minute?: string }
+
+const props = withDefaults(defineProps<{
+  modelValue: SendOptions
+  step?: number
+}>(), { step: 4 })
+
+const emit = defineEmits<{ 'update:modelValue': [SendOptions] }>()
+
+const minDate = new Date().toISOString().slice(0, 10)
+const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const minutes = ['00', '10', '20', '30', '40', '50']
+
+function patch(p: Partial<SendOptions>) {
+  emit('update:modelValue', { ...props.modelValue, ...p })
+}
 </script>
 
 <template>
-  <AppSendFormCard title="발송 옵션">
-    <div class="form-row">
-      <label class="form-label">발송 시점 <span class="required">*</span></label>
-      <div class="form-control">
-        <div class="radio-group">
-          <label class="radio">
-            <input v-model="mode" type="radio" value="now">
-            <span>즉시 발송</span>
-          </label>
-          <label class="radio">
-            <input v-model="mode" type="radio" value="reserve">
-            <span>예약 발송</span>
-          </label>
+  <AppSendFormCard :step="step" title="발송 옵션">
+    <AppFormRow label="발송 시점" required>
+      <AppRadioGroup
+        :model-value="modelValue.mode"
+        :options="[
+          { value: 'now', label: '즉시 발송' },
+          { value: 'schedule', label: '예약 발송' },
+        ]"
+        @update:model-value="patch({ mode: $event as SendOptions['mode'] })"
+      />
+      <div v-if="modelValue.mode === 'schedule'" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
+        <input
+          type="date"
+          class="input"
+          style="max-width: 160px"
+          :min="minDate"
+          :value="modelValue.date || ''"
+          @input="patch({ date: ($event.target as HTMLInputElement).value })"
+        >
+        <select
+          class="select"
+          style="max-width: 100px"
+          :value="modelValue.hour ?? '09'"
+          @change="patch({ hour: ($event.target as HTMLSelectElement).value })"
+        >
+          <option v-for="h in hours" :key="h" :value="h">
+            {{ h }}시
+          </option>
+        </select>
+        <select
+          class="select"
+          style="max-width: 100px"
+          :value="modelValue.minute ?? '00'"
+          @change="patch({ minute: ($event.target as HTMLSelectElement).value })"
+        >
+          <option v-for="m in minutes" :key="m" :value="m">
+            {{ m }}분
+          </option>
+        </select>
+        <div class="inline-help" style="align-self: center">
+          KST 기준 · 과거 시각 불가
         </div>
       </div>
-    </div>
-    <div v-if="mode === 'reserve'" class="form-row">
-      <label class="form-label">예약 일시</label>
-      <div class="form-control">
-        <AppDateTimePicker v-model="reserveAt" />
-      </div>
-    </div>
+    </AppFormRow>
   </AppSendFormCard>
 </template>
-
-<style scoped>
-.form-row {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 0;
-}
-.form-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-700);
-}
-.required {
-  color: #ef4444;
-  margin-left: 2px;
-}
-.radio-group {
-  display: flex;
-  gap: 24px;
-}
-.radio {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--gray-700);
-}
-.radio input[type='radio'] {
-  accent-color: var(--primary-color);
-  cursor: pointer;
-}
-</style>

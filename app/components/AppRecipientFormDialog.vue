@@ -1,116 +1,85 @@
 <script setup lang="ts">
-export interface RecipientFormValue {
-  alias?: string
-  phone?: string
-  email?: string
-  token?: string
-  pushType?: string
-  substitution?: string
-}
+import type { Recipient } from '~/types/recipient'
 
 const props = withDefaults(defineProps<{
-  title?: string
-  fields: ('alias' | 'phone' | 'email' | 'token' | 'pushType' | 'substitution')[]
-  substitutionPlaceholder?: string
-  pushTypeOptions?: string[]
-}>(), {
-  title: '수신자 정보',
-  substitutionPlaceholder: '치환자 값',
-  pushTypeOptions: () => ['FCM', 'APNS', 'APNS_SANDBOX', 'APNS_VOIP', 'APNS_SANDBOX_VOIP', 'ADM'],
+  open: boolean
+  edit?: Recipient | null
+  keyColumn?: 'phone' | 'email' | 'token'
+  varKeys?: string[]
+}>(), { edit: null, keyColumn: 'phone', varKeys: () => [] })
+
+const emit = defineEmits<{ close: [], confirm: [Recipient] }>()
+
+const form = reactive<{ name: string, phone: string, email: string, vars: Record<string, string> }>({
+  name: '', phone: '', email: '', vars: {}
 })
 
-const open = defineModel<boolean>('open', { default: false })
-const value = defineModel<RecipientFormValue>('value', { default: () => ({}) })
+watch(() => props.open, (v) => {
+  if (v) {
+    const e = props.edit
+    form.name = e?.name || ''
+    form.phone = e?.phone || ''
+    form.email = e?.email || ''
+    form.vars = { ...(e?.vars || {}) }
+  }
+})
 
-const emit = defineEmits<{
-  confirm: [value: RecipientFormValue]
-  cancel: []
-}>()
-
-function onConfirm() {
-  emit('confirm', value.value)
-  open.value = false
-}
-
-function onCancel() {
-  emit('cancel')
-  open.value = false
+function confirm() {
+  emit('confirm', {
+    id: props.edit?.id ?? `m-${Date.now()}`,
+    name: form.name,
+    phone: form.phone,
+    email: form.email,
+    vars: { ...form.vars }
+  })
+  emit('close')
 }
 </script>
 
 <template>
-  <UModal v-model:open="open" :title="title" :ui="{ content: 'sm:max-w-md' }">
-    <template #body>
-      <div class="form-stack">
-        <div v-if="fields.includes('alias')" class="form-row">
-          <label class="form-label">수신자 별칭</label>
-          <UInput v-model="value.alias" placeholder="수신자 별칭" />
+  <AppModal
+    :open="open"
+    :title="edit ? '수신자 수정' : '수신자 직접 입력'"
+    :width="480"
+    @close="emit('close')"
+  >
+    <div class="col">
+      <AppFormRow label="별칭">
+        <input v-model="form.name" class="input" placeholder="예: 이수민">
+      </AppFormRow>
+      <AppFormRow v-if="keyColumn === 'phone'" label="휴대폰" required>
+        <input v-model="form.phone" class="input" placeholder="010-1234-5678">
+      </AppFormRow>
+      <AppFormRow v-else label="이메일" required>
+        <input v-model="form.email" class="input" placeholder="user@example.com">
+      </AppFormRow>
+      <div v-if="varKeys.length > 0" style="margin-top: 6px">
+        <div style="font-size: 12px; font-weight: 600; color: var(--ink-700); margin-bottom: 8px">
+          치환자
         </div>
-        <div v-if="fields.includes('phone')" class="form-row">
-          <label class="form-label">휴대폰 번호</label>
-          <UInput v-model="value.phone" placeholder="-없이 숫자 입력" maxlength="11" />
-        </div>
-        <div v-if="fields.includes('email')" class="form-row">
-          <label class="form-label">이메일</label>
-          <UInput v-model="value.email" type="email" placeholder="example@domain.com" />
-        </div>
-        <div v-if="fields.includes('pushType')" class="form-row">
-          <label class="form-label">푸시 유형</label>
-          <USelect v-model="value.pushType" :items="pushTypeOptions" placeholder="푸시 유형 선택" />
-        </div>
-        <div v-if="fields.includes('token')" class="form-row">
-          <label class="form-label">토큰</label>
-          <UInput v-model="value.token" placeholder="토큰" />
-        </div>
-        <div v-if="fields.includes('substitution')" class="form-row">
-          <label class="form-label">템플릿 치환자</label>
-          <UInput v-model="value.substitution" :placeholder="substitutionPlaceholder" />
+        <div
+          v-for="k in varKeys"
+          :key="k"
+          style="display: grid; grid-template-columns: 100px 1fr; gap: 8px; align-items: center; margin-bottom: 6px"
+        >
+          <div style="font-size: 12px; color: var(--ink-600); font-family: var(--font-mono)">
+            #{{ '{' + k + '}' }}
+          </div>
+          <input
+            class="input"
+            :value="form.vars[k] || ''"
+            @input="form.vars[k] = ($event.target as HTMLInputElement).value"
+          >
         </div>
       </div>
-    </template>
-
+    </div>
     <template #footer>
-      <div class="footer-actions">
-        <UButton color="neutral" variant="outline" @click="onCancel">
-          취소
-        </UButton>
-        <UButton class="btn-confirm" @click="onConfirm">
-          확인
-        </UButton>
-      </div>
+      <button type="button" class="btn btn-outline-dark" @click="emit('close')">
+        취소
+      </button>
+      <button type="button" class="btn btn-sky" @click="confirm">
+        {{ edit ? '수정 완료' : '추가' }}
+      </button>
     </template>
-  </UModal>
+  </AppModal>
 </template>
-
-<style scoped>
-.form-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 8px 0;
-}
-.form-row {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  align-items: center;
-  gap: 12px;
-}
-.form-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-700);
-}
-.footer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  width: 100%;
-}
-.btn-confirm {
-  background: var(--color-sky-vivid);
-  color: white;
-}
-.btn-confirm:hover {
-  background: #016bda;
-}
-</style>
