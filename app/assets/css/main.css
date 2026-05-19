@@ -76,9 +76,10 @@
   /* 전체 UI 스케일 — 폰트 포함 모든 px를 비례 확대 (1 = 100%) */
   --ui-scale: 1.15;
 
-  /* Layout */
+  /* Layout — 디자인 폭은 화면상 실제 1400px.
+     body zoom(--ui-scale)이 곱해지므로 토큰을 나눠 보정(렌더 결과 = 1400px). */
   --topbar-height: 56px;
-  --container-max: 1400px;
+  --container-max: calc(1400px / var(--ui-scale));
   --container-pad: 32px;
 
   /* Type */

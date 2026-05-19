@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% 적용 후 재배포.
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 실제 1400px 디자인 폭 보정을 적용하며 재배포(총 3회).
 
 ---
 
@@ -43,6 +43,16 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 CSS 자산(`entry.*.css`)에 `ui-scale:1.15` · `zoom:var(--ui-scale)` 포함 확인.
 - 변경 파일: `app/assets/css/main.css` 단일.
 
+## 5. 디자인 폭 1400px 보정 + 재배포
+
+- 요청: 디자인 너비 1400px.
+- 진단: `--container-max` 토큰은 이미 `1400px`였으나 §4의 `body{zoom:1.15}`가 곱해져 화면 실제 폭 ≈ 1610px.
+- **수정**: `--container-max: calc(1400px / var(--ui-scale))` → `1217.4px × 1.15 = 1400px` 화면폭. `--ui-scale` 변경 시 자동 유지(절대 디자인 폭). 본문·GNB·푸터 일괄.
+- 빌드 → `wrangler pages deploy dist --branch=main` 재배포(3회차).
+  - 배포 alias: https://3ae53fbd.malgn-noti.pages.dev
+  - 검증: 프로덕션 CSS에 `container-max:calc(1400px/var(--ui-scale))` 포함 확인.
+- 변경 파일: `app/assets/css/main.css` 단일.
+
 ---
 
 ## 산출물 (당일)
@@ -50,9 +60,9 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `app/pages/guide.vue` (신규, 18섹션 라이브 가이드)
 - `app/pages/home.vue` (바로가기 5번째: 디자인 가이드)
 - `doc/DESIGN.md` (§0 적용 현황에 가이드 페이지 행 추가)
-- `app/assets/css/main.css` (`--ui-scale: 1.15` + `body{zoom}` — 전역 115%)
+- `app/assets/css/main.css` (`--ui-scale: 1.15` + `body{zoom}` 전역 115%, `--container-max` 1400px 보정)
 - `doc/history/history.20260519.md` + README 인덱스
-- Cloudflare Pages 프로덕션 배포 ×2 (https://malgn-noti.pages.dev)
+- Cloudflare Pages 프로덕션 배포 ×3 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 
