@@ -56,6 +56,7 @@ function keyVal(r: Recipient) {
     :step="step"
     title="수신자"
     required
+    collapsible
     :locked="locked"
     :locked-hint="lockedHint"
     :hint="locked ? undefined : `총 ${recipients.length.toLocaleString()}명`"

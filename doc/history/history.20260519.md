@@ -115,6 +115,16 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 `/send/sms` `card-header--accent` 4건(B 적용), `/dev/card-emphasis-mockups` 404(목업 제거).
 - 변경 파일: `AppSendFormCard.vue`, `main.css`, `app/pages/dev/`(삭제).
 
+## 12. 헤더 불투명화 + 수신자 카드 접기/펼치기
+
+- 헤더: `.gnb-wrap` 반투명(`rgba(255,255,255,.8)` + `backdrop-filter blur`) → **불투명 `var(--white)`**, backdrop-filter 제거(성능).
+- 수신자 카드 접기/펼치기: `AppSendFormCard`에 `collapsible`/`defaultCollapsed` prop + chevron 토글(헤더 클릭/버튼, `aria-expanded`·`aria-label`, ▾↔▸ 회전, 바디 `v-show`). `AppRecipientCard`만 `collapsible` 적용 — 발신정보·메시지·발송옵션·홈·가이드 무영향.
+- 아이콘 위치: 사용자 요청으로 헤더 우측 끝 → **타이틀 바로 옆**으로 이동(hint "총 N명"은 기존 `margin-left:auto`로 우측 유지).
+- 빌드 → 재배포(9회차).
+  - 배포 alias: https://7910043f.malgn-noti.pages.dev
+  - 검증: 프로덕션 CSS `.gnb-wrap{background:var(--white)}`(불투명), `/send/sms` `card-toggle` 존재(접기 토글), 200.
+- 변경 파일: `main.css`, `AppSendFormCard.vue`, `AppRecipientCard.vue`.
+
 ---
 
 ## 산출물 (당일)
@@ -127,7 +137,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `AppLogoMark.vue` 신규(브랜드 마크 SVG) · AppGnb/AppFooter/auth/default 로고·정렬·푸터 다크
 - `doc/history/history.20260519.md` + README 인덱스
 - 강조안 **B(accent 좌측 바)** 확정 적용 → `card-header--accent`, 비교 목업 폐기
-- Cloudflare Pages 프로덕션 배포 ×8 (https://malgn-noti.pages.dev)
+- 헤더 불투명화 + 수신자 카드 접기/펼치기(`AppSendFormCard` collapsible)
+- Cloudflare Pages 프로덕션 배포 ×9 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 
