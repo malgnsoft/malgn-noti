@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 실제 1400px 디자인 폭 보정을 적용하며 재배포(총 3회).
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 실제 1400px 디자인 폭 보정 + 헤더/본문 정렬 버그 수정을 적용하며 재배포(총 4회).
 
 ---
 
@@ -53,6 +53,16 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 CSS에 `container-max:calc(1400px/var(--ui-scale))` 포함 확인.
 - 변경 파일: `app/assets/css/main.css` 단일.
 
+## 6. 헤더/본문 좌우 정렬 버그 수정 + 재배포
+
+- 증상: sticky 헤더(GNB)가 본문보다 안쪽으로 들어와 좌우 끝이 어긋남.
+- **원인**: §4의 `body { zoom }`이 스크롤바(html/viewport 기준)·sticky GNB·중앙정렬과 다른 좌표계 → sticky 헤더가 스크롤바 폭만큼 가로 오프셋.
+- **수정**: zoom을 스크롤 컨테이너인 `html`로 이동 + `scrollbar-gutter: stable`. 스크롤바·sticky·`.app-container`/`.gnb-inner`/푸터가 동일 좌표계 → 좌우 끝 일치. `--container-max` calc·115%·1400px 모두 불변(html zoom 균일).
+- 빌드 → `wrangler pages deploy dist --branch=main` 재배포(4회차).
+  - 배포 alias: https://2c1a6180.malgn-noti.pages.dev
+  - 검증: 프로덕션 CSS에 `html{scrollbar-gutter:stable;zoom:var(--ui-scale)}` 포함 확인.
+- 변경 파일: `app/assets/css/main.css` 단일.
+
 ---
 
 ## 산출물 (당일)
@@ -60,9 +70,9 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `app/pages/guide.vue` (신규, 18섹션 라이브 가이드)
 - `app/pages/home.vue` (바로가기 5번째: 디자인 가이드)
 - `doc/DESIGN.md` (§0 적용 현황에 가이드 페이지 행 추가)
-- `app/assets/css/main.css` (`--ui-scale: 1.15` + `body{zoom}` 전역 115%, `--container-max` 1400px 보정)
+- `app/assets/css/main.css` (전역 115% `html{zoom}`+`scrollbar-gutter`, `--container-max` 1400px 보정, 헤더 정렬 수정)
 - `doc/history/history.20260519.md` + README 인덱스
-- Cloudflare Pages 프로덕션 배포 ×3 (https://malgn-noti.pages.dev)
+- Cloudflare Pages 프로덕션 배포 ×4 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 
