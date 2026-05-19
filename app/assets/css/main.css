@@ -73,6 +73,9 @@
   --r-lg: 8px;
   --r-full: 9999px;
 
+  /* 전체 UI 스케일 — 폰트 포함 모든 px를 비례 확대 (1 = 100%) */
+  --ui-scale: 1.15;
+
   /* Layout */
   --topbar-height: 56px;
   --container-max: 1400px;
@@ -140,6 +143,10 @@ html, body {
   font-feature-settings: "cv11", "ss01", "ss03";
   letter-spacing: 0;
 }
+
+/* 전역 폰트/UI 스케일 — px 하드코딩이 많아 zoom으로 전체 비례 확대.
+   값 조정은 :root 의 --ui-scale 한 곳에서. (100% 복원 = 1) */
+body { zoom: var(--ui-scale); }
 
 button { font-family: inherit; cursor: pointer; }
 input, textarea, select { font-family: inherit; color: inherit; }

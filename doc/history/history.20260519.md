@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포했다.
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% 적용 후 재배포.
 
 ---
 
@@ -33,13 +33,26 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 
 ---
 
+## 4. 전역 UI 스케일 115% + 재배포
+
+- 요청: 전체 폰트 스케일 ~115% 확대.
+- **결정**: 카드 제목·헤딩·테이블 등 폰트가 px 하드코딩이라 `--font-base`만 키우면 부분만 커짐. `:root` 에 `--ui-scale: 1.15` 토큰 + `body { zoom: var(--ui-scale); }` 한 줄로 텍스트·간격·컴포넌트를 균일 비례 확대(브라우저 줌 효과). sticky GNB·모달·토스트 정상. 복원 = `--ui-scale: 1`.
+- 트레이드오프: 폰트만이 아니라 레이아웃·여백도 ~15% 확대(전체 비례). 텍스트-only는 타이포 스케일 재설계 필요(범위 큼) — 보류.
+- 빌드 → `wrangler pages deploy dist --branch=main` 재배포.
+  - 배포 alias: https://ec3368a2.malgn-noti.pages.dev
+  - 검증: 프로덕션 CSS 자산(`entry.*.css`)에 `ui-scale:1.15` · `zoom:var(--ui-scale)` 포함 확인.
+- 변경 파일: `app/assets/css/main.css` 단일.
+
+---
+
 ## 산출물 (당일)
 
 - `app/pages/guide.vue` (신규, 18섹션 라이브 가이드)
 - `app/pages/home.vue` (바로가기 5번째: 디자인 가이드)
 - `doc/DESIGN.md` (§0 적용 현황에 가이드 페이지 행 추가)
+- `app/assets/css/main.css` (`--ui-scale: 1.15` + `body{zoom}` — 전역 115%)
 - `doc/history/history.20260519.md` + README 인덱스
-- Cloudflare Pages 프로덕션 배포 (https://malgn-noti.pages.dev)
+- Cloudflare Pages 프로덕션 배포 ×2 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 
