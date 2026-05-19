@@ -105,6 +105,16 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 `/dev/card-emphasis-mockups` 200, `/send/sms` `class="step"` 0건(번호 제거), `/home` 200.
 - 변경 파일: `AppSendFormCard.vue`, `main.css`, `app/pages/dev/card-emphasis-mockups.vue`(신규), `CLAUDE.md` §7.1.
 
+## 11. 강조안 B 확정 적용 + 목업 폐기
+
+- 사용자 결정: 강조안 **B (accent 좌측 바)** 채택.
+- 적용: `AppSendFormCard`의 `.card-header`에 `card-header--accent` 클래스 부여 + `main.css`에 `.card-header--accent { border-left: 3px solid var(--accent); padding-left: 17px }`. AppSendFormCard 한정 스코프 → 발송 6종의 4카드(발신/수신자/메시지/발송옵션)에만 적용, 홈·가이드 카드 무영향.
+- 결정 완료로 `app/pages/dev/card-emphasis-mockups.vue` + `app/pages/dev/` 폐기.
+- 빌드 → 재배포(8회차).
+  - 배포 alias: https://e86488b5.malgn-noti.pages.dev
+  - 검증: 프로덕션 `/send/sms` `card-header--accent` 4건(B 적용), `/dev/card-emphasis-mockups` 404(목업 제거).
+- 변경 파일: `AppSendFormCard.vue`, `main.css`, `app/pages/dev/`(삭제).
+
 ---
 
 ## 산출물 (당일)
@@ -116,8 +126,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `CLAUDE.md` §7.1 운영 컨벤션(Git·배포·이력) 신규
 - `AppLogoMark.vue` 신규(브랜드 마크 SVG) · AppGnb/AppFooter/auth/default 로고·정렬·푸터 다크
 - `doc/history/history.20260519.md` + README 인덱스
-- `app/pages/dev/card-emphasis-mockups.vue` 신규(강조안 8종 비교, 배포 포함)
-- Cloudflare Pages 프로덕션 배포 ×7 (https://malgn-noti.pages.dev)
+- 강조안 **B(accent 좌측 바)** 확정 적용 → `card-header--accent`, 비교 목업 폐기
+- Cloudflare Pages 프로덕션 배포 ×8 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

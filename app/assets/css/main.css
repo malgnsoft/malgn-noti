@@ -470,6 +470,11 @@ a { text-decoration: none; color: inherit; }
   gap: 8px;
   border-bottom: 1px solid var(--line);
 }
+/* 강조안 B — 발송 카드(AppSendFormCard) 한정 accent 좌측 바 */
+.card-header--accent {
+  border-left: 3px solid var(--accent);
+  padding-left: 17px;
+}
 .card-header .step {
   font-family: var(--font-mono);
   font-size: 10px;

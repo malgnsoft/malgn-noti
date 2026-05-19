@@ -11,7 +11,7 @@ defineProps<{
 
 <template>
   <div class="card">
-    <div class="card-header">
+    <div class="card-header card-header--accent">
       <div class="title">
         {{ title }}<span v-if="required" class="required"> *</span>
       </div>
