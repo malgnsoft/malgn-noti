@@ -13,8 +13,10 @@ const props = withDefaults(defineProps<{
   commonVars?: Record<string, string>
   locked?: boolean
   lockedHint?: string
+  title?: string
 }>(), {
   step: 2,
+  title: '수신자',
   keyColumn: 'phone',
   showVars: false,
   varKeys: () => [],
@@ -54,7 +56,7 @@ function keyVal(r: Recipient) {
 <template>
   <AppSendFormCard
     :step="step"
-    title="수신자"
+    :title="title"
     required
     collapsible
     :locked="locked"
@@ -96,32 +98,30 @@ function keyVal(r: Recipient) {
       </div>
     </AppFormRow>
 
-    <AppFormRow label="수신자 추가" required>
-      <div style="display: flex; gap: 6px; flex-wrap: wrap">
-        <button type="button" class="btn btn-soft btn-sm" @click="emit('addManual', undefined)">
-          <UIcon name="i-lucide-plus" class="text-[12px]" /> 직접 입력
-        </button>
-        <button type="button" class="btn btn-soft btn-sm" @click="emit('addressBook')">
-          <UIcon name="i-lucide-contact-round" class="text-[12px]" /> 주소록
-        </button>
-        <button
-          type="button"
-          class="btn btn-outline btn-sm"
-          :disabled="selected.length !== 1"
-          @click="emit('addManual', recipients.find(r => r.id === selected[0]))"
-        >
-          <UIcon name="i-lucide-pencil" class="text-[12px]" /> 수정
-        </button>
-        <button
-          type="button"
-          class="btn btn-error btn-sm"
-          :disabled="selected.length === 0"
-          @click="onDelete"
-        >
-          <UIcon name="i-lucide-trash-2" class="text-[12px]" /> 삭제 ({{ selected.length || 0 }})
-        </button>
-      </div>
-    </AppFormRow>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px">
+      <button type="button" class="btn btn-primary btn-sm" @click="emit('addManual', undefined)">
+        <UIcon name="i-lucide-plus" class="text-[12px]" /> 직접입력
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" @click="emit('addressBook')">
+        <UIcon name="i-lucide-plus" class="text-[12px]" /> 주소록에서 선택
+      </button>
+      <button
+        type="button"
+        class="btn btn-error btn-sm"
+        :disabled="selected.length !== 1"
+        @click="emit('addManual', recipients.find(r => r.id === selected[0]))"
+      >
+        수신자 정보 수정
+      </button>
+      <button
+        type="button"
+        class="btn btn-error btn-sm"
+        :disabled="selected.length === 0"
+        @click="onDelete"
+      >
+        수신자 정보 삭제
+      </button>
+    </div>
 
     <div style="margin-top: 12px">
       <AppEmptyState

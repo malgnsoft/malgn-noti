@@ -8,7 +8,7 @@ const router = useRouter()
 
 interface Tpl { id: number, name: string, subject?: string, body: string, vars: string[], type?: string }
 
-const senderNumber = ref('1588-1234')
+const senderNumber = ref('')
 const useTemplate = ref<'off' | 'on'>('off')
 const template = ref<Tpl | null>(null)
 const purpose = ref<'info' | 'ad' | 'auth'>('info')
@@ -20,13 +20,7 @@ const adNumber = ref<string | null>(null)
 const substitutionMode = ref<'common' | 'individual'>('common')
 const commonVars = ref<Record<string, string>>({})
 
-const recipients = ref<Recipient[]>([
-  { id: 1, name: '이수민', phone: '010-2345-6789', email: 'soomin.lee@example.com', vars: { 이름: '이수민', 주문번호: 'ORD-20260518-0042' } },
-  { id: 2, name: '박지훈', phone: '010-9876-5432', email: 'park.jihoon@example.com', vars: { 이름: '박지훈', 주문번호: 'ORD-20260518-0043' } },
-  { id: 3, name: '최예진', phone: '010-3344-5566', email: 'yejin.choi@example.com', vars: { 이름: '최예진', 주문번호: 'ORD-20260518-0044' } },
-  { id: 4, name: '정민호', phone: '010-7788-9900', email: 'minho.jeong@example.com', vars: { 이름: '정민호', 주문번호: 'ORD-20260518-0045' } },
-  { id: 5, name: '한지영', phone: '010-2233-4455', email: 'jiyoung.han@example.com', vars: { 이름: '한지영', 주문번호: 'ORD-20260518-0046' } }
-])
+const recipients = ref<Recipient[]>([])
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '2026-05-19', hour: '10', minute: '00' })
 
@@ -59,7 +53,7 @@ function applyTemplate(t: Tpl) {
 }
 
 function handleReset() {
-  senderNumber.value = '1588-1234'
+  senderNumber.value = ''
   useTemplate.value = 'off'
   template.value = null
   purpose.value = 'info'
@@ -114,8 +108,37 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
-      <!-- 수신자 -->
+      <!-- 템플릿 선택 -->
+      <AppSendFormCard title="템플릿 선택">
+        <AppFormRow label="템플릿 사용유무">
+          <AppRadioGroup
+            v-model="useTemplate"
+            :options="[
+              { value: 'off', label: '사용 안함' },
+              { value: 'on', label: '사용' },
+            ]"
+          />
+        </AppFormRow>
+        <AppFormRow label="템플릿 선택">
+          <div class="row" style="gap: 12px; flex-wrap: wrap">
+            <span style="font-size: 13px; color: var(--ink-900)">
+              {{ template ? template.name : '선택된 템플릿 없음' }}
+            </span>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              :disabled="useTemplate === 'off'"
+              @click="openTpl = true"
+            >
+              선택
+            </button>
+          </div>
+        </AppFormRow>
+      </AppSendFormCard>
+
+      <!-- 수신자 설정 -->
       <AppRecipientCard
+        title="수신자 설정"
         :step="2"
         v-model:recipients="recipients"
         v-model:selected="selectedRcpt"
@@ -129,120 +152,98 @@ function send() {
         @address-book="openAddrBook = true"
       />
 
-      <!-- 발신 정보 -->
-      <AppSendFormCard step="1" title="발신 정보" required>
+      <!-- 메시지 설정 -->
+      <AppSendFormCard title="메시지 설정" required>
         <template v-if="tplLock" #headerRight>
           <AppBadge tone="neutral">
             <UIcon name="i-lucide-lock" class="text-[10px]" /> 템플릿 잠금
           </AppBadge>
         </template>
-        <AppFormRow label="발신번호" required>
-          <select v-model="senderNumber" class="select" style="max-width: 280px" :disabled="tplLock">
-            <option value="1588-1234">
-              1588-1234 (몰리몰리 대표)
-            </option>
-            <option value="02-555-1234">
-              02-555-1234 (서울 본사)
-            </option>
-            <option value="031-444-5678">
-              031-444-5678 (분당 지점)
-            </option>
-          </select>
-        </AppFormRow>
-        <AppFormRow label="템플릿 사용" help="등록된 템플릿을 불러와서 사용합니다.">
-          <div class="row" style="gap: 12px">
-            <AppRadioGroup
-              v-model="useTemplate"
-              :options="[
-                { value: 'off', label: '사용 안 함' },
-                { value: 'on', label: '사용' },
-              ]"
-            />
-            <button
-              v-if="useTemplate === 'on'"
-              type="button"
-              class="btn btn-outline btn-sm"
-              @click="openTpl = true"
-            >
-              <UIcon name="i-lucide-book-open" class="text-[12px]" />
-              {{ template ? template.name : '템플릿 선택' }}
-            </button>
-          </div>
-        </AppFormRow>
-        <AppFormRow label="발송 목적" required>
-          <AppRadioGroup
-            :model-value="purpose"
-            :disabled="tplLock"
-            :options="[
-              { value: 'info', label: '정보성' },
-              { value: 'ad', label: '광고성' },
-              { value: 'auth', label: '인증' },
-            ]"
-            @update:model-value="onPurpose"
-          />
-          <div v-if="purpose === 'ad'" class="recipient-summary" style="margin-top: 8px">
-            <UIcon name="i-lucide-megaphone" class="text-sm" />
-            <span>광고 메시지 — 080 수신거부 번호 자동 부착됨</span>
-            <button type="button" class="btn btn-ghost btn-sm" style="margin-left: auto" @click="openAd = true">
-              변경
-            </button>
-          </div>
-        </AppFormRow>
-        <AppFormRow label="발송 유형" required>
-          <AppRadioGroup
-            :model-value="smsType"
-            :disabled="tplLock"
-            :options="[
-              { value: 'sms', label: 'SMS (단문 · 90byte)' },
-              { value: 'lms', label: 'LMS (장문)' },
-              { value: 'mms', label: 'MMS (포토)' },
-            ]"
-            @update:model-value="(v) => { smsType = v as 'sms' | 'lms' | 'mms'; if (v !== 'mms') files = [] }"
-          />
-        </AppFormRow>
-      </AppSendFormCard>
-
-      <!-- ③ 메시지 -->
-      <AppSendFormCard step="3" title="메시지" required>
         <div class="msg-grid">
           <div class="col">
+            <AppFormRow
+              label="발신 번호"
+              required
+              help="전기통신사업법 관련 고시 준수를 위해 발신 번호 등록 시 발신 번호에 대한 명의자 인증이 필요합니다. [발신 정보 > 발신 번호 관리] 메뉴에서 발신 번호를 사전 등록하세요."
+            >
+              <select v-model="senderNumber" class="select" style="max-width: 340px" :disabled="tplLock">
+                <option value="">
+                  선택하세요
+                </option>
+                <option value="1588-1234">
+                  1588-1234 (몰리몰리 대표)
+                </option>
+                <option value="02-555-1234">
+                  02-555-1234 (서울 본사)
+                </option>
+                <option value="031-444-5678">
+                  031-444-5678 (분당 지점)
+                </option>
+              </select>
+            </AppFormRow>
+            <AppFormRow
+              label="발송 목적"
+              required
+              help="광고성 정보 발송 시 수신자가 수신 거부나 수신 동의 철회를 무료로 할 수 있도록 무료 수신 거부 방법을 반드시 포함해야 합니다."
+            >
+              <AppRadioGroup
+                :model-value="purpose"
+                :disabled="tplLock"
+                :options="[
+                  { value: 'info', label: '일반용' },
+                  { value: 'auth', label: '인증용' },
+                  { value: 'ad', label: '광고용' },
+                ]"
+                @update:model-value="onPurpose"
+              />
+              <div v-if="purpose === 'ad'" class="recipient-summary" style="margin-top: 8px">
+                <UIcon name="i-lucide-megaphone" class="text-sm" />
+                <span>광고 메시지 — 080 수신거부 번호 자동 부착됨</span>
+                <button type="button" class="btn btn-ghost btn-sm" style="margin-left: auto" @click="openAd = true">
+                  변경
+                </button>
+              </div>
+            </AppFormRow>
+            <AppFormRow
+              label="발송 유형"
+              required
+              help="광고성 정보 발송 시 수신자가 수신 거부나 수신 동의 철회를 무료로 할 수 있도록 무료 수신 거부 방법을 반드시 포함해야 합니다."
+            >
+              <AppRadioGroup
+                :model-value="smsType"
+                :disabled="tplLock"
+                :options="[
+                  { value: 'sms', label: 'SMS' },
+                  { value: 'lms', label: 'LMS' },
+                  { value: 'mms', label: 'MMS' },
+                ]"
+                @update:model-value="(v) => { smsType = v as 'sms' | 'lms' | 'mms'; if (v !== 'mms') files = [] }"
+              />
+            </AppFormRow>
             <AppFormRow v-if="showSubject" label="제목" required>
               <div style="position: relative">
-                <input
-                  v-model="subject"
-                  class="input"
-                  placeholder="LMS/MMS 제목 (40 byte 이내)"
-                  style="padding-right: 110px"
-                >
+                <input v-model="subject" class="input" placeholder="LMS/MMS 제목 (40 byte 이내)" style="padding-right: 110px">
                 <AppByteCounter :value="subject" :max="40" />
               </div>
             </AppFormRow>
-            <AppFormRow label="본문" required>
+            <AppFormRow label="내용" required>
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
+                <button type="button" class="btn btn-outline btn-sm" :disabled="tplLock" @click="openAi = true">
+                  <UIcon name="i-lucide-sparkles" class="text-[12px]" style="color: var(--accent-ink)" /> AI 문장 다듬기
+                </button>
+              </div>
               <div style="position: relative">
                 <textarea
                   v-model="body"
                   class="textarea"
-                  rows="8"
-                  placeholder="본문을 입력하세요. 치환자는 #{이름}, #{주문번호} 형식으로 작성합니다."
-                  style="padding-right: 110px; padding-bottom: 28px"
+                  rows="10"
+                  placeholder="내용을 입력하세요. 치환자는 #{이름}, #{주문번호} 형식으로 작성합니다."
+                  style="padding-bottom: 42px"
                 />
-                <AppByteCounter :value="body" :max="counterMax" />
-              </div>
-              <div class="row" style="margin-top: 8px; gap: 6px; flex-wrap: wrap">
-                <button
-                  type="button"
-                  class="btn btn-outline btn-sm"
-                  :disabled="tplLock"
-                  @click="openAi = true"
-                >
-                  <UIcon name="i-lucide-sparkles" class="text-[12px]" style="color: var(--accent-ink)" /> AI 문장 다듬기
-                </button>
-                <button type="button" class="btn btn-outline btn-sm" @click="body += ' #{이름}'">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 치환자 추가
-                </button>
-                <span class="muted" style="font-size: 12px; margin-left: auto">
-                  SMS 90 byte / LMS · MMS 2,000 byte
-                </span>
+                <div class="sms-counter">
+                  <div>국내 SMS {{ byteLen(body) }}/{{ counterMax }}Bytes(EUC-KR)</div>
+                  <div>국제 SMS {{ body.length }}/765자(GSM-7)</div>
+                </div>
               </div>
             </AppFormRow>
             <AppFormRow
@@ -275,7 +276,7 @@ function send() {
               미리보기
             </div>
             <div style="display: grid; place-items: center">
-              <AppPhonePreview :sender-name="senderNumber" :message="body" />
+              <AppPhonePreview :sender-name="senderNumber || '발신번호'" :message="body" />
             </div>
             <div class="row" style="justify-content: center; margin-top: 10px; gap: 8px">
               <AppBadge :tone="smsType === 'sms' ? 'primary' : 'neutral'">
@@ -292,7 +293,7 @@ function send() {
         </div>
       </AppSendFormCard>
 
-      <!-- ④ 발송 옵션 -->
+      <!-- 발송 옵션 -->
       <AppSendOptionsCard v-model="sendOptions" :step="4" />
     </div>
 
@@ -363,5 +364,16 @@ function send() {
 }
 @media (max-width: 1023px) {
   .msg-grid { grid-template-columns: 1fr; }
+}
+.sms-counter {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-400);
+  pointer-events: none;
 }
 </style>

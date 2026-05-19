@@ -167,6 +167,22 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 소스 `<AppSendFormCard`@85 < `<AppRecipientCard`@120, 프로덕션 200.
 - 변경: `pages/send/kakao.vue` 단일.
 
+## 17. 발송 6채널 3-카드 재배치 + 템플릿 다이얼로그 (캡처 기준)
+
+사용자 제공 캡처 6종 기준으로 발송 페이지를 **템플릿 선택 / 수신자 설정 / 메시지 설정 3-카드** 패턴으로 통일:
+
+- **공용 컴포넌트**: `AppSendFormCard` 접기 토글 → "닫기/열기" 텍스트형. `AppRecipientCard` `title` prop 추가(기본 "수신자"), 액션 버튼 라벨/스타일 캡처 기준(+ 직접입력/+ 주소록에서 선택=다크, 수신자 정보 수정/삭제=핑크), "수신자 추가" 라벨 제거.
+- **SMS**: 3-카드, 발송목적 일반용/인증용/광고용, 발신번호 안내문, 국내/국제 2줄 byte 카운터, 템플릿 행 통일(선택된 템플릿 없음 + 선택), 수신자 초기 공란.
+- **알림톡**: 발신 프로필 셀렉트화, 메시지 설정=읽기전용 메타(템플릿코드/카카오톡코드/발송목적/메시지유형/강조유형/내용/보안여부), 프로필 모달 제거.
+- **RCS**: 발신 브랜드+번호 2-셀렉트, 발송유형 3-단, 수신 대기 만료 기한, `AppRcsTemplateDialog` 신규(미리보기 미지원 안내).
+- **이메일**: 발송목적/발신메일/제목(0/1000)/내용/첨부파일(안내 4줄)+인라인 이메일 미리보기(텍스트/HTML 토글), `AppEmailTemplateDialog` 신규(미리보기 포함).
+- **PUSH**: 발송목적·입력유형 라디오, HTML 스타일 박스, 배지, 확장 6행(버튼/미디어/Android·iOS 미디어/큰 아이콘/그룹), Android·iOS 미리보기 2-up, `AppPushTemplateDialog` 신규.
+- **Flow**: 안내 2줄, 플로우 이름 셀렉트+생성관리, 발송 순서 chips+메시지 채널 셀렉트, 읽기전용 발신/목적/유형, `AppFlowManageDialog` 신규(생성 관리 목록).
+- 빌드 → 재배포(14회차).
+  - 배포 alias: https://093effc9.malgn-noti.pages.dev
+  - 검증: 발송 6채널 + 홈 200, 컴파일/하이드레이션 0.
+- 신규 컴포넌트: `AppRcsTemplateDialog`/`AppEmailTemplateDialog`/`AppPushTemplateDialog`/`AppFlowManageDialog`. 변경: `AppSendFormCard`·`AppRecipientCard` + `pages/send/{sms,kakao,rcs,email,push,flow}.vue`.
+
 ---
 
 ## 산출물 (당일)
@@ -184,7 +200,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - GNB "발송 관리" → "발송 조회/통계" + "주소록" 분리
 - SMS→문자메시지 발송 타이틀 변경 + 발송 6채널 수신자 카드 최상단 이동
 - 알림톡 발신 정보 카드 최상단 복귀(disclosure 정합)
-- Cloudflare Pages 프로덕션 배포 ×13 (https://malgn-noti.pages.dev)
+- 발송 6채널 3-카드 재배치(템플릿 선택/수신자 설정/메시지 설정) + 채널 템플릿 다이얼로그 4종 신규
+- Cloudflare Pages 프로덕션 배포 ×14 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

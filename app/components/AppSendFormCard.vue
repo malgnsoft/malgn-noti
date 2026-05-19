@@ -32,13 +32,13 @@ const showToggle = computed(() => props.collapsible && !props.locked)
         type="button"
         class="card-toggle"
         :aria-expanded="open"
-        :aria-label="open ? '접기' : '펼치기'"
         @click.stop="toggle()"
       >
+        {{ open ? '닫기' : '열기' }}
         <UIcon
           name="i-lucide-chevron-down"
           class="card-toggle-ico"
-          :class="{ collapsed: !open }"
+          :class="{ 'is-open': open }"
         />
       </button>
       <span v-if="hint" class="hint">{{ hint }}</span>
@@ -66,23 +66,23 @@ const showToggle = computed(() => props.collapsible && !props.locked)
   user-select: none;
 }
 .card-toggle {
-  display: grid;
-  place-items: center;
-  width: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   height: 22px;
+  padding: 0 6px;
   border-radius: var(--r-sm);
-  color: var(--ink-400);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 500;
   flex-shrink: 0;
 }
-.card-toggle:hover {
-  background: var(--ink-50);
-  color: var(--ink-700);
-}
+.card-toggle:hover { background: var(--ink-50); }
 .card-toggle-ico {
-  font-size: 16px;
+  font-size: 14px;
   transition: transform 0.15s ease;
 }
-.card-toggle-ico.collapsed {
-  transform: rotate(-90deg);
+.card-toggle-ico.is-open {
+  transform: rotate(180deg);
 }
 </style>

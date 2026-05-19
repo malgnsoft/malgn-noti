@@ -5,20 +5,14 @@ useHead({ title: '이메일 발송' })
 const toast = useToast()
 const router = useRouter()
 
-const sample: Recipient[] = [
-  { id: 1, name: '이수민', email: 'soomin.lee@example.com', vars: { 이름: '이수민' } },
-  { id: 2, name: '박지훈', email: 'park.jihoon@example.com', vars: { 이름: '박지훈' } },
-  { id: 3, name: '최예진', email: 'yejin.choi@example.com', vars: { 이름: '최예진' } },
-  { id: 4, name: '정민호', email: 'minho.jeong@example.com', vars: { 이름: '정민호' } },
-  { id: 5, name: '한지영', email: 'jiyoung.han@example.com', vars: { 이름: '한지영' } }
-]
-
-const from = ref('noreply@malgnsoft.com')
+const useTemplate = ref<'off' | 'on'>('off')
+const from = ref('')
 const purpose = ref('info')
-const subject = ref('[몰리몰리] 5월 가정의 달 특별 혜택 안내')
-const body = ref('안녕하세요, #{이름}님.\n\n5월 가정의 달을 맞아 준비한 특별 혜택을 안내해 드립니다.\n\n• 전 상품 최대 40% 할인\n• 무료 배송 쿠폰 제공\n• 신규 회원 추가 10% 할인\n\n적용 기간: 2026년 5월 31일까지\n\n감사합니다.')
+const subject = ref('')
+const body = ref('')
+const viewMode = ref<'text' | 'html'>('html')
 const files = ref<{ name: string }[]>([])
-const recipients = ref<Recipient[]>([...sample])
+const recipients = ref<Recipient[]>([])
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '', hour: '09', minute: '00' })
 
@@ -28,7 +22,16 @@ const editTarget = ref<Recipient | null>(null)
 const openConfirm = ref(false)
 const openReset = ref(false)
 const openAi = ref(false)
+const openTpl = ref(false)
+const emailTemplateName = ref('')
 
+function onPickEmailTpl(t: { name: string, subject: string, from: string, body: string }) {
+  emailTemplateName.value = t.name
+  from.value = t.from
+  subject.value = t.subject
+  body.value = t.body
+  toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
+}
 function onManualConfirm(r: Recipient) {
   recipients.value = editTarget.value
     ? recipients.value.map(x => x.id === r.id ? r : x)
@@ -52,7 +55,34 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
+      <!-- 템플릿 선택 -->
+      <AppSendFormCard title="템플릿 선택">
+        <AppFormRow label="템플릿 사용유무">
+          <AppRadioGroup
+            v-model="useTemplate"
+            :options="[{ value: 'off', label: '사용 안함' }, { value: 'on', label: '사용' }]"
+          />
+        </AppFormRow>
+        <AppFormRow label="템플릿 선택">
+          <div class="row" style="gap: 12px; flex-wrap: wrap">
+            <span style="font-size: 13px; color: var(--ink-900)">
+              {{ emailTemplateName || '선택된 템플릿 없음' }}
+            </span>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              :disabled="useTemplate === 'off'"
+              @click="openTpl = true"
+            >
+              선택
+            </button>
+          </div>
+        </AppFormRow>
+      </AppSendFormCard>
+
+      <!-- 수신자 설정 -->
       <AppRecipientCard
+        title="수신자 설정"
         :step="2"
         v-model:recipients="recipients"
         v-model:selected="selectedRcpt"
@@ -61,52 +91,61 @@ function send() {
         @address-book="openAddrBook = true"
       />
 
-      <AppSendFormCard step="1" title="발신 정보" required>
-        <AppFormRow label="보낸 사람" required>
-          <input v-model="from" class="input" style="max-width: 360px">
-        </AppFormRow>
-        <AppFormRow label="발송 목적">
-          <AppRadioGroup
-            v-model="purpose"
-            :options="[{ value: 'info', label: '정보성' }, { value: 'ad', label: '광고성' }]"
-          />
-        </AppFormRow>
-      </AppSendFormCard>
-
-      <AppSendFormCard step="3" title="메시지" required>
+      <!-- 메시지 설정 -->
+      <AppSendFormCard title="메시지 설정" required>
         <div class="msg-grid">
-          <div>
+          <div class="col">
+            <AppFormRow label="발송 목적" required>
+              <AppRadioGroup
+                v-model="purpose"
+                :options="[
+                  { value: 'info', label: '일반용' },
+                  { value: 'auth', label: '인증용' },
+                  { value: 'ad', label: '광고용' },
+                ]"
+              />
+            </AppFormRow>
+            <AppFormRow label="발신 메일" required>
+              <input v-model="from" class="input" placeholder="example@domain.com">
+            </AppFormRow>
             <AppFormRow label="제목" required>
               <div style="position: relative">
-                <input v-model="subject" class="input" style="padding-right: 110px">
+                <input v-model="subject" class="input" style="padding-right: 90px">
                 <AppByteCounter :value="subject" :max="1000" unit="char" />
               </div>
             </AppFormRow>
-            <AppFormRow label="본문 (HTML)" required>
-              <textarea v-model="body" class="textarea" rows="10" />
-              <div class="row" style="margin-top: 8px; gap: 6px">
+            <AppFormRow label="내용" required>
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
                 <button type="button" class="btn btn-outline btn-sm" @click="openAi = true">
                   <UIcon name="i-lucide-sparkles" class="text-[12px]" style="color: var(--accent-ink)" /> AI 문장 다듬기
                 </button>
-                <span class="muted" style="font-size: 12px; margin-left: auto">치환자 사용 가능 #{{ '{이름}' }}</span>
               </div>
+              <textarea v-model="body" class="textarea" rows="12" placeholder="내용을 입력하세요. 치환자는 #{이름} 형식으로 작성합니다." />
             </AppFormRow>
-            <AppFormRow label="첨부파일" help="any · 최대 10개 · 총 30MB · .js .exe 금지">
-              <div class="row" style="flex-wrap: wrap; gap: 6px">
+            <AppFormRow label="첨부파일" required>
+              <div class="row" style="gap: 8px; flex-wrap: wrap">
+                <input class="input readonly" style="flex: 1; min-width: 200px" value="" placeholder="파일을 업로드하세요." readonly>
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  @click="files = [...files, { name: `첨부파일-${files.length + 1}.pdf` }]"
+                >
+                  <UIcon name="i-lucide-paperclip" class="text-[12px]" /> 파일 선택
+                </button>
+              </div>
+              <div v-if="files.length" class="row" style="flex-wrap: wrap; gap: 6px; margin-top: 8px">
                 <div v-for="(f, i) in files" :key="i" class="file-chip">
                   <UIcon name="i-lucide-paperclip" class="text-[12px]" />{{ f.name }}
                   <span class="remove" @click="files = files.filter((_, j) => j !== i)">
                     <UIcon name="i-lucide-x" class="text-[12px]" />
                   </span>
                 </div>
-                <button
-                  v-if="files.length < 10"
-                  type="button"
-                  class="btn btn-outline btn-sm"
-                  @click="files = [...files, { name: `첨부파일-${files.length + 1}.pdf` }]"
-                >
-                  <UIcon name="i-lucide-upload" class="text-[12px]" /> 파일 선택
-                </button>
+              </div>
+              <div class="mail-help">
+                <div>첨부 가능 파일 수: 최대 10개</div>
+                <div>미지원 파일 형식: .js, .exe, .bat, .cmd, .com, .cpl, .scr, .vbs, .wsr</div>
+                <div>파일 용량: 합산 30MB 이하</div>
+                <div>파일 이름 길이: 최대 45자</div>
               </div>
             </AppFormRow>
           </div>
@@ -114,7 +153,21 @@ function send() {
             <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
-            <AppEmailPreview :from="from" :subject="subject" :body="body" />
+            <div class="mail-preview">
+              <div class="mail-head">
+                <div>보낸사람 <span>{{ from }}</span></div>
+                <div>첨부파일 <span>{{ files.map(f => f.name).join(', ') }}</span></div>
+              </div>
+              <div class="mail-body">
+                {{ body }}
+              </div>
+              <div class="mail-foot">
+                <AppSegmented
+                  v-model="viewMode"
+                  :options="[{ value: 'text', label: '텍스트' }, { value: 'html', label: 'HTML' }]"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </AppSendFormCard>
@@ -128,6 +181,7 @@ function send() {
       @send="openConfirm = true"
     />
 
+    <AppEmailTemplateDialog :open="openTpl" @close="openTpl = false" @pick="onPickEmailTpl" />
     <AppAddressBookDialog
       :open="openAddrBook"
       key-column="email"
@@ -171,4 +225,42 @@ function send() {
 <style scoped>
 .msg-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
 @media (max-width: 1023px) { .msg-grid { grid-template-columns: 1fr; } }
+.mail-help {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-400);
+  line-height: 1.7;
+}
+.mail-preview {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+}
+.mail-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-500);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mail-head span { color: var(--ink-800); margin-left: 4px; }
+.mail-body {
+  flex: 1;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-700);
+  white-space: pre-wrap;
+}
+.mail-foot {
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
 </style>

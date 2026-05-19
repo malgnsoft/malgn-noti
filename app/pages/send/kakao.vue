@@ -24,7 +24,6 @@ const openAddrBook = ref(false)
 const openManual = ref(false)
 const editTarget = ref<Recipient | null>(null)
 const openTpl = ref(false)
-const openProfile = ref(false)
 const openConfirm = ref(false)
 const openReset = ref(false)
 
@@ -82,42 +81,41 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
-      <AppSendFormCard step="1" title="발신 정보" required>
+      <!-- 템플릿 선택 -->
+      <AppSendFormCard title="템플릿 선택">
         <AppFormRow label="발신 프로필" required>
-          <button
-            type="button"
-            class="btn btn-outline sel-btn"
-            @click="openProfile = true"
+          <select
+            class="select"
+            style="max-width: 360px"
+            :value="profile?.id ?? ''"
+            @change="profile = profiles.find(p => p.id === Number(($event.target as HTMLSelectElement).value)) || null"
           >
-            <span>
-              <template v-if="profile"><strong>{{ profile.name }}</strong> · {{ profile.desc }}</template>
-              <template v-else>발신 프로필 검색 / 선택</template>
-            </span>
-            <UIcon name="i-lucide-chevron-down" class="text-sm" />
-          </button>
+            <option value="">
+              발신 프로필 선택
+            </option>
+            <option v-for="p in profiles" :key="p.id" :value="p.id">
+              {{ p.name }} · {{ p.desc }}
+            </option>
+          </select>
         </AppFormRow>
-        <AppFormRow label="템플릿" required help="알림톡은 사전 승인된 템플릿만 사용할 수 있습니다.">
-          <button
-            type="button"
-            class="btn btn-outline sel-btn"
-            :disabled="!profile"
-            @click="openTpl = true"
-          >
-            <span>
-              <template v-if="template">
-                <strong>{{ template.name }}</strong> · <AppBadge :tone="template.type === 'basic' ? 'neutral' : 'primary'">{{ typeLabel(template.type) }}</AppBadge>
-              </template>
-              <template v-else>템플릿 선택</template>
+        <AppFormRow label="템플릿 선택" required help="알림톡은 사전 승인된 템플릿만 사용할 수 있습니다.">
+          <div class="row" style="gap: 12px; flex-wrap: wrap">
+            <span style="font-size: 13px; color: var(--ink-900)">
+              {{ template ? template.name : '선택된 템플릿 없음' }}
             </span>
-            <UIcon name="i-lucide-chevron-down" class="text-sm" />
-          </button>
+            <button type="button" class="btn btn-primary btn-sm" :disabled="!profile" @click="openTpl = true">
+              선택
+            </button>
+          </div>
           <div v-if="!profile" class="help" style="color: var(--warning-ink)">
             발신 프로필을 먼저 선택해 주세요.
           </div>
         </AppFormRow>
       </AppSendFormCard>
 
+      <!-- 수신자 설정 -->
       <AppRecipientCard
+        title="수신자 설정"
         :step="2"
         v-model:recipients="recipients"
         v-model:selected="selectedRcpt"
@@ -133,46 +131,48 @@ function send() {
         @address-book="openAddrBook = true"
       />
 
+      <!-- 메시지 설정 -->
       <AppSendFormCard
-        step="3"
-        title="메시지"
+        title="메시지 설정"
         required
         :locked="locked"
         locked-hint="발신 프로필과 템플릿을 먼저 선택해 주세요."
       >
         <div v-if="template" class="msg-grid">
-          <div>
-            <div class="row" style="justify-content: space-between; margin-bottom: 10px">
-              <div style="font-size: 13px; font-weight: 600; color: var(--ink-900)">
-                본문 (변수 영역만 편집 가능)
+          <div class="col">
+            <AppFormRow label="템플릿 코드">
+              <div class="ro-text">
+                {{ template.id }}
               </div>
-              <AppBadge tone="neutral">
-                <UIcon name="i-lucide-lock" class="text-[10px]" /> 본문 잠금
-              </AppBadge>
-            </div>
-            <AppTemplateVariableTextarea v-model="commonVars" :body="template.body" />
-            <template v-if="template.extra">
-              <div style="font-size: 12px; font-weight: 600; margin-top: 16px; margin-bottom: 6px">
-                부가 정보
+            </AppFormRow>
+            <AppFormRow label="카카오톡 템플릿 코드">
+              <div class="ro-text">
+                {{ template.id }}
               </div>
-              <div class="kakao-extra">
-                {{ template.extra }}
+            </AppFormRow>
+            <AppFormRow label="발송 목적">
+              <div class="ro-text">
+                일반용
               </div>
-            </template>
-            <template v-if="template.buttons.length > 0">
-              <div style="font-size: 12px; font-weight: 600; margin-top: 16px; margin-bottom: 6px">
-                버튼 (읽기 전용)
+            </AppFormRow>
+            <AppFormRow label="메시지 유형">
+              <div class="ro-text">
+                {{ typeLabel(template.type) }}
               </div>
-              <div class="col" style="gap: 4px">
-                <div v-for="(b, i) in template.buttons" :key="i" class="kakao-btn-row">
-                  <UIcon :name="b.type === 'web' ? 'i-lucide-external-link' : 'i-lucide-phone'" class="text-[12px]" />
-                  {{ b.label }}
-                  <AppBadge tone="neutral" style="margin-left: auto">
-                    {{ b.type }}
-                  </AppBadge>
-                </div>
+            </AppFormRow>
+            <AppFormRow label="메시지 강조 유형">
+              <div class="ro-text">
+                선택 안함
               </div>
-            </template>
+            </AppFormRow>
+            <AppFormRow label="내용" required>
+              <textarea class="textarea" rows="8" readonly :value="template.body" />
+            </AppFormRow>
+            <AppFormRow label="보안 템플릿 여부">
+              <div class="ro-text">
+                {{ template.type === 'auth' ? '설정' : '미설정' }}
+              </div>
+            </AppFormRow>
           </div>
           <div>
             <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
@@ -198,31 +198,6 @@ function send() {
       @reset="openReset = true"
       @send="openConfirm = true"
     />
-
-    <AppModal :open="openProfile" title="발신 프로필 선택" :width="520" @close="openProfile = false">
-      <input class="input" placeholder="프로필명 검색" style="margin-bottom: 12px">
-      <div class="col" style="gap: 6px">
-        <div
-          v-for="p in profiles"
-          :key="p.id"
-          class="prof-item"
-          :class="{ 'prof-on': profile?.id === p.id }"
-          @click="profile = p; openProfile = false"
-        >
-          <div style="font-size: 13px; font-weight: 600; color: var(--ink-900)">
-            {{ p.name }}
-          </div>
-          <div style="font-size: 12px; color: var(--ink-500); margin-top: 2px">
-            {{ p.desc }}
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <button type="button" class="btn btn-outline-dark" @click="openProfile = false">
-          닫기
-        </button>
-      </template>
-    </AppModal>
 
     <AppKakaoTemplateDialog :open="openTpl" @close="openTpl = false" @pick="onPickTemplate" />
     <AppAddressBookDialog
@@ -263,34 +238,13 @@ function send() {
 <style scoped>
 .msg-grid { display: grid; grid-template-columns: 1fr 280px; gap: 24px; }
 @media (max-width: 1023px) { .msg-grid { grid-template-columns: 1fr; } }
-.sel-btn { justify-content: space-between; width: 100%; max-width: 420px; }
-.kakao-extra {
-  padding: 12px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  font-size: 12px;
-  color: var(--ink-700);
-  white-space: pre-wrap;
-  line-height: 1.6;
+.ro-text {
+  font-size: 13px;
+  color: var(--ink-800);
+  padding-top: 2px;
 }
-.kakao-btn-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  font-size: 12px;
+.textarea[readonly] {
+  background: var(--ink-50);
+  color: var(--ink-600);
 }
-.prof-item {
-  padding: 12px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line);
-  cursor: pointer;
-  background: var(--white);
-}
-.prof-item:hover { border-color: var(--ink-200); }
-.prof-on { background: var(--accent-soft); border-color: var(--accent); }
 </style>
