@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 1400px 폭 보정 + 헤더 정렬 수정 + 타이틀 설명 줄 제거 + 운영 컨벤션 문서화 + 로고 이미지화 + 헤더/푸터 정렬 근본수정 + 푸터 다크 + 채널 칩 통일을 적용하며 재배포(총 6회).
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 UI 스케일 115%·1400px 폭·정렬 근본수정·로고 이미지화·푸터 다크·채널칩 통일·카드강조 B·헤더 불투명·수신자 접기 등 페이지 설정과 **Phase 2b-3(발송조회/통계/주소록/충전/인증)**까지 적용하며 재배포(총 10회).
 
 ---
 
@@ -125,6 +125,21 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 CSS `.gnb-wrap{background:var(--white)}`(불투명), `/send/sms` `card-toggle` 존재(접기 토글), 200.
 - 변경 파일: `main.css`, `AppSendFormCard.vue`, `AppRecipientCard.vue`.
 
+## 13. Phase 2b-3 — 발송조회/통계/주소록/충전/인증
+
+- 핸드오프 `other-pages.jsx` 6개 페이지군 이식:
+  - `AppHistoryView.vue` 신규 — 발송 조회(4 stat-card+segmented 기간+채널/상태 필터+검색+테이블+페이지네이션). `/history/{sms,rcs,kakao,email,push}` 5채널이 `defaultChannel`만 달리해 공유.
+  - `history/stats.vue` — 4 KPI + 일별 stacked bar + 채널 donut(SVG) + TOP 템플릿 progress. 차트색 = DESIGN §2.4 채널 도트 체계(info/amber/warning/accent/violet).
+  - `contacts/list.vue` — 240px 그룹 사이드바 + 필터바 + 연락처 테이블 + 선택 액션.
+  - `charge/index.vue` — `.content-2col`, 프리셋 5 + 결제수단 3 + 최근내역 / aside `.credit-hero` + 결제요약.
+  - `login/index.vue`·`signup.vue` — 기존 `auth` 레이아웃 셸 안에 카드 내용만 렌더(로그인: 비번토글/유지/찾기, 회원가입: 3-step 스테퍼).
+- 핸드오프 적응: 구 토큰 → ink/accent/semantic+채널색, `Icon`→`UIcon i-lucide-*`, `useToast`→Nuxt UI, 기존 공용 클래스 재사용.
+- 빌드 → 재배포(10회차).
+  - 배포 alias: https://08f9446c.malgn-noti.pages.dev
+  - 검증: 10개 URL 200, stats `donut-wrap`·charge `credit-hero` 확인.
+- 변경: `AppHistoryView.vue`(신규), `pages/history/{sms,rcs,kakao,email,push,stats}.vue`, `pages/contacts/list.vue`, `pages/charge/index.vue`, `pages/login/index.vue`, `pages/signup.vue`, `doc/DESIGN.md` §0.
+- **잔여**: 발신정보·메시지관리·캠페인·계정설정·문의·시스템페이지 — 핸드오프 시안 없음, 디자인 방향 별도 협의 필요.
+
 ---
 
 ## 산출물 (당일)
@@ -138,7 +153,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `doc/history/history.20260519.md` + README 인덱스
 - 강조안 **B(accent 좌측 바)** 확정 적용 → `card-header--accent`, 비교 목업 폐기
 - 헤더 불투명화 + 수신자 카드 접기/펼치기(`AppSendFormCard` collapsible)
-- Cloudflare Pages 프로덕션 배포 ×9 (https://malgn-noti.pages.dev)
+- **Phase 2b-3** — 발송조회(`AppHistoryView`)/통계/주소록/충전/로그인/회원가입 6페이지군
+- Cloudflare Pages 프로덕션 배포 ×10 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

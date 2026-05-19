@@ -22,7 +22,8 @@
 | 디자인 가이드 페이지 (라이브 카탈로그) | ✅ 적용 | [pages/guide.vue](../app/pages/guide.vue) — `/guide`, 18섹션 sticky nav |
 | 발송 공용 컴포넌트군 + SMS 발송 (레퍼런스) | ✅ Phase 2b-1 적용 | [pages/send/sms.vue](../app/pages/send/sms.vue), `AppModal`/`AppSendFormCard`/`AppRecipientCard`/`AppSmsTemplateDialog` 등 |
 | 알림톡·RCS·이메일·PUSH·Flow 발송 + 채널 프리뷰 | ✅ Phase 2b-2 적용 | [app/pages/send/](../app/pages/send/), `AppKakaoPreview`/`AppRcsPreview`/`AppEmailPreview`/`AppPushPreview`/`AppSegmented`/`AppKakaoTemplateDialog`/`AppTemplateVariableTextarea` |
-| 이력·통계·주소록·충전·인증 페이지 | ⏳ Phase 2b-3 | [app/pages/](../app/pages/) |
+| 발송조회(5채널)·통계·주소록·충전·로그인·회원가입 | ✅ Phase 2b-3 적용 | [pages/history/](../app/pages/history/)·[contacts/list](../app/pages/contacts/list.vue)·[charge/](../app/pages/charge/)·[login/](../app/pages/login/)·[signup](../app/pages/signup.vue), `AppHistoryView` |
+| 발신정보·메시지관리·캠페인·계정/문의 등 잔여 | ⏳ 핸드오프 시안 없음 — 별도 협의 | [app/pages/](../app/pages/) |
 
 > 기존 `App*` 컴포넌트는 `--gray-*`/`--primary-*`/`--color-sky-*`를 사용한다. main.css의 **backward-compat 별칭**이 이를 ink/accent로 자동 이행하므로 Phase 1 단계에서도 색은 새 팔레트로 보인다. 단 간격·폰트·컴포넌트 형태는 Phase 2에서 재작업한다.
 
