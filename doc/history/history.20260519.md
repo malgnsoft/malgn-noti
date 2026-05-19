@@ -140,6 +140,15 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - 변경: `AppHistoryView.vue`(신규), `pages/history/{sms,rcs,kakao,email,push,stats}.vue`, `pages/contacts/list.vue`, `pages/charge/index.vue`, `pages/login/index.vue`, `pages/signup.vue`, `doc/DESIGN.md` §0.
 - **잔여**: 발신정보·메시지관리·캠페인·계정설정·문의·시스템페이지 — 핸드오프 시안 없음, 디자인 방향 별도 협의 필요.
 
+## 14. GNB "발송 관리" 메뉴 분리
+
+- 요청: 단일 "발송 관리" 드롭다운을 둘로 분리.
+- `AppGnb.vue` MENU_TREE: `발송 조회/통계`(채널별 발송조회 5 + 구분선 + 통계) / `주소록`(연락처/그룹/수신거부) 2개 그룹으로 분리. 메뉴는 데이터+CSS 호버 기반이라 인덱스 의존 없음.
+- 빌드 → 재배포(11회차).
+  - 배포 alias: https://3af5079b.malgn-noti.pages.dev
+  - 검증: 프로덕션 `/home` 200, "발송 조회/통계"·"주소록" 렌더, "발송 관리" 0건.
+- 변경 파일: `AppGnb.vue` 단일.
+
 ---
 
 ## 산출물 (당일)
@@ -154,7 +163,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - 강조안 **B(accent 좌측 바)** 확정 적용 → `card-header--accent`, 비교 목업 폐기
 - 헤더 불투명화 + 수신자 카드 접기/펼치기(`AppSendFormCard` collapsible)
 - **Phase 2b-3** — 발송조회(`AppHistoryView`)/통계/주소록/충전/로그인/회원가입 6페이지군
-- Cloudflare Pages 프로덕션 배포 ×10 (https://malgn-noti.pages.dev)
+- GNB "발송 관리" → "발송 조회/통계" + "주소록" 분리
+- Cloudflare Pages 프로덕션 배포 ×11 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

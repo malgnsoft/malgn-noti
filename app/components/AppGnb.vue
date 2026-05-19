@@ -48,12 +48,22 @@ const menu: MenuItem[] = [
     ]
   },
   {
-    label: '발송 관리',
-    title: '발송 관리',
+    label: '발송 조회/통계',
+    title: '발송 조회/통계',
     children: [
-      { label: '발송 조회', to: '/history/sms' },
-      { label: '통계', to: '/history/stats' },
+      { label: '문자메시지 발송 조회', to: '/history/sms' },
+      { label: '알림톡 발송 조회', to: '/history/kakao' },
+      { label: 'RCS 발송 조회', to: '/history/rcs' },
+      { label: '이메일 발송 조회', to: '/history/email' },
+      { label: 'PUSH 발송 조회', to: '/history/push' },
       { divider: true },
+      { label: '통계', to: '/history/stats' }
+    ]
+  },
+  {
+    label: '주소록',
+    title: '주소록',
+    children: [
       { label: '연락처 관리', to: '/contacts/list' },
       { label: '그룹 관리', to: '/contacts/groups' },
       { label: '수신 거부 관리', to: '/contacts/optout' }
