@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 실제 1400px 디자인 폭 보정 + 헤더/본문 정렬 버그 수정을 적용하며 재배포(총 4회).
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 1400px 폭 보정 + 헤더 정렬 수정 + 페이지 타이틀 설명 줄 제거를 적용하며 재배포(총 5회).
 
 ---
 
@@ -71,6 +71,15 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 이력: `history.yyyyMMdd.md` 하루 한 파일, 같은 날 추가는 `§N`+README 인덱스 갱신.
 - 변경 파일: `CLAUDE.md` 단일 (문서, 무배포).
 
+## 8. 페이지 타이틀 설명 줄 제거 + 재배포
+
+- 요청: 페이지 타이틀 영역 3번째 줄(설명 `<p>`) 제거 — 범위는 **페이지 헤더 패턴 전체**(사용자 확인).
+- 수정: `main.css` `.page-header p { display: none }`. `.page-header` 쓰는 모든 페이지(발송 6종 + 향후) 일괄, 홈/가이드는 다른 헤더라 무영향. 복원 = `display` 제거. 마크업 `<p>`는 템플릿 유지(숨김).
+- 빌드 → `wrangler pages deploy dist --branch=main` 재배포(5회차).
+  - 배포 alias: https://08d1a759.malgn-noti.pages.dev
+  - 검증: 프로덕션 CSS `page-header p{…display:none…}` 확인.
+- 변경 파일: `app/assets/css/main.css` 단일.
+
 ---
 
 ## 산출물 (당일)
@@ -81,7 +90,7 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `app/assets/css/main.css` (전역 115% `html{zoom}`+`scrollbar-gutter`, `--container-max` 1400px 보정, 헤더 정렬 수정)
 - `CLAUDE.md` §7.1 운영 컨벤션(Git·배포·이력) 신규
 - `doc/history/history.20260519.md` + README 인덱스
-- Cloudflare Pages 프로덕션 배포 ×4 (https://malgn-noti.pages.dev)
+- Cloudflare Pages 프로덕션 배포 ×5 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

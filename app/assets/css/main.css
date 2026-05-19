@@ -437,6 +437,8 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.27;
 }
 .page-header p {
+  /* 페이지 타이틀 설명 줄 — 패턴 전체에서 비표시 (복원: display 제거) */
+  display: none;
   font-size: 13px;
   color: var(--ink-500);
   margin: 6px 0 0;
