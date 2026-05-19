@@ -29,7 +29,8 @@ const quickLinks = [
   { label: '발송 조회', icon: 'i-lucide-history', to: '/history/sms' },
   { label: '통계', icon: 'i-lucide-bar-chart-3', to: '/history/stats' },
   { label: '주소록', icon: 'i-lucide-users', to: '/contacts/list' },
-  { label: '발신 정보', icon: 'i-lucide-shield', to: '/sender/numbers' }
+  { label: '발신 정보', icon: 'i-lucide-shield', to: '/sender/numbers' },
+  { label: '디자인 가이드', icon: 'i-lucide-book-open', to: '/guide' }
 ]
 
 const recent = [

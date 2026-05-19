@@ -1,0 +1,50 @@
+# 2026-05-19 — 디자인 가이드 페이지 + Cloudflare 프로덕션 배포
+
+## 한 줄 요약
+
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포했다.
+
+---
+
+## 1. 디자인 가이드 페이지 (`/guide`)
+
+- `app/pages/guide.vue` 신설 — sticky 사이드 nav + 스크롤 스파이 + 18섹션 라이브 카탈로그.
+  - 소개(hero) · 01 원칙(7) · 02 컬러(ink 11단/accent/semantic/채널 도트) · 03 타이포 · 04 간격 · 05 라운드·그림자 · 06 버튼 · 07 Pill · 08 폼 · 09 배지 · 10 카드 · 11 테이블 · 12 빈상태 · 13 토스트 · 14 미리보기 폰 5종 · 15 레이아웃 · 16 5-카드 골격+매트릭스 · 17 톤
+  - 실제 `App*` 컴포넌트로 라이브 예시 렌더 (AppBadge/AppEmptyState/Phone·Kakao·Rcs·Email·Push Preview/AppFormRow/AppRadioGroup/AppSegmented/AppSendFormCard).
+- **결정**: 핸드오프 `design-guide.jsx`는 구 토큰이 섞인 stale 아티팩트(`--color-sky-vivid`, Noto Sans KR, 1200px, indigo 그라데이션)라 그대로 복사하지 않고, **현재 정본(ink/accent, Inter/JetBrains Mono, 1400px, r-sm/md/lg, shadow-soft/popover/modal)에 맞춰 값·라벨 재작성**. 가이드 표기값 = main.css 일치.
+- `app/pages/home.vue` 바로가기에 "디자인 가이드"(`/guide`) 링크 추가.
+- 검증: `/guide` HTTP 200 (87.6KB), 컴파일·하이드레이션 오류 0.
+
+## 2. Cloudflare Pages 프로덕션 배포
+
+- 빌드: `pnpm build` (Nitro `cloudflare-pages` 프리셋) → `dist/` 1.35MB / gzip 423KB.
+- 인증: `wrangler whoami` → info@malgnsoft.com (account `d2b8c552…`, 기존 배포 계정 동일).
+- 배포: `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main` (프로덕션).
+- 결과:
+  - 프로덕션: https://malgn-noti.pages.dev — `/home`·`/guide` HTTP 200
+  - 배포 alias: https://4b3da057.malgn-noti.pages.dev
+  - 라이브 마커 확인: `gnb-wrap` · `ai-card` · `credit-hero` · Inter 폰트 · `ink-900` · "운영 콘솔"
+- 배포 시점 working tree 기준이라 `guide.vue`/`home.vue`/문서가 git 미반영 상태였음 → 본 커밋으로 라이브 ↔ git 일치화.
+
+## 3. Git
+
+- `main` 직접 커밋·푸시 (브랜치는 main 단일 운영 — 2026-05-18 사용자 결정 유지).
+- 범위: `app/pages/guide.vue`(신규), `app/pages/home.vue`(가이드 링크), `doc/DESIGN.md`(§0 현황), 이 history + README 인덱스.
+
+---
+
+## 산출물 (당일)
+
+- `app/pages/guide.vue` (신규, 18섹션 라이브 가이드)
+- `app/pages/home.vue` (바로가기 5번째: 디자인 가이드)
+- `doc/DESIGN.md` (§0 적용 현황에 가이드 페이지 행 추가)
+- `doc/history/history.20260519.md` + README 인덱스
+- Cloudflare Pages 프로덕션 배포 (https://malgn-noti.pages.dev)
+
+## 다음 단계 / 알려진 한계
+
+- **Phase 2b-3 남음**: 이력·통계·주소록·발신정보·메시지관리·캠페인·충전·인증 페이지.
+  - 핸드오프 `other-pages.jsx`에 발송조회/통계/주소록/충전/로그인/회원가입 시안 존재.
+  - 발신정보·메시지관리·캠페인은 핸드오프 시안 없음 → 별도 협의.
+- 미적용 화면은 backward-compat 별칭으로 색만 이행(간격·폰트·형태는 구 시안).
+- GitHub Actions 자동 배포 미구성 — 현재는 wrangler CLI 수동 배포.

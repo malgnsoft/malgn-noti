@@ -19,6 +19,7 @@
 | 폰트 (Inter/JetBrains Mono/Pretendard) | ✅ 적용 | [nuxt.config.ts](../nuxt.config.ts) |
 | 셸 (AppGnb/AppFooter/layouts) | ✅ Phase 2a 적용 | [components/AppGnb.vue](../app/components/AppGnb.vue) · [AppFooter.vue](../app/components/AppFooter.vue) · [layouts/](../app/layouts/) |
 | 홈 대시보드 (레퍼런스) | ✅ Phase 2a 적용 | [pages/home.vue](../app/pages/home.vue) |
+| 디자인 가이드 페이지 (라이브 카탈로그) | ✅ 적용 | [pages/guide.vue](../app/pages/guide.vue) — `/guide`, 18섹션 sticky nav |
 | 발송 공용 컴포넌트군 + SMS 발송 (레퍼런스) | ✅ Phase 2b-1 적용 | [pages/send/sms.vue](../app/pages/send/sms.vue), `AppModal`/`AppSendFormCard`/`AppRecipientCard`/`AppSmsTemplateDialog` 등 |
 | 알림톡·RCS·이메일·PUSH·Flow 발송 + 채널 프리뷰 | ✅ Phase 2b-2 적용 | [app/pages/send/](../app/pages/send/), `AppKakaoPreview`/`AppRcsPreview`/`AppEmailPreview`/`AppPushPreview`/`AppSegmented`/`AppKakaoTemplateDialog`/`AppTemplateVariableTextarea` |
 | 이력·통계·주소록·충전·인증 페이지 | ⏳ Phase 2b-3 | [app/pages/](../app/pages/) |
