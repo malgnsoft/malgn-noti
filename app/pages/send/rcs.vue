@@ -63,6 +63,15 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
+      <AppRecipientCard
+        :step="2"
+        v-model:recipients="recipients"
+        v-model:selected="selectedRcpt"
+        key-column="phone"
+        @add-manual="(t) => { editTarget = t || null; openManual = true }"
+        @address-book="openAddrBook = true"
+      />
+
       <AppSendFormCard step="1" title="발신 정보" required>
         <AppFormRow label="RCS 브랜드" required>
           <select v-model="brand" class="select" style="max-width: 320px">
@@ -128,15 +137,6 @@ function send() {
           </div>
         </AppFormRow>
       </AppSendFormCard>
-
-      <AppRecipientCard
-        :step="2"
-        v-model:recipients="recipients"
-        v-model:selected="selectedRcpt"
-        key-column="phone"
-        @add-manual="(t) => { editTarget = t || null; openManual = true }"
-        @address-book="openAddrBook = true"
-      />
 
       <AppSendFormCard step="3" title="메시지" required>
         <div class="msg-grid">

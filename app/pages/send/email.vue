@@ -52,6 +52,15 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
+      <AppRecipientCard
+        :step="2"
+        v-model:recipients="recipients"
+        v-model:selected="selectedRcpt"
+        key-column="email"
+        @add-manual="(t) => { editTarget = t || null; openManual = true }"
+        @address-book="openAddrBook = true"
+      />
+
       <AppSendFormCard step="1" title="발신 정보" required>
         <AppFormRow label="보낸 사람" required>
           <input v-model="from" class="input" style="max-width: 360px">
@@ -63,15 +72,6 @@ function send() {
           />
         </AppFormRow>
       </AppSendFormCard>
-
-      <AppRecipientCard
-        :step="2"
-        v-model:recipients="recipients"
-        v-model:selected="selectedRcpt"
-        key-column="email"
-        @add-manual="(t) => { editTarget = t || null; openManual = true }"
-        @address-book="openAddrBook = true"
-      />
 
       <AppSendFormCard step="3" title="메시지" required>
         <div class="msg-grid">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
 
-useHead({ title: 'SMS 발송' })
+useHead({ title: '문자메시지 발송' })
 
 const toast = useToast()
 const router = useRouter()
@@ -109,12 +109,27 @@ function send() {
       <div class="crumb">
         메시지 발송 · 문자메시지
       </div>
-      <h1>SMS 발송</h1>
+      <h1>문자메시지 발송</h1>
       <p>SMS · LMS · MMS 단발 발송. 한 건당 9.9 C부터.</p>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
-      <!-- ① 발신 정보 -->
+      <!-- 수신자 -->
+      <AppRecipientCard
+        :step="2"
+        v-model:recipients="recipients"
+        v-model:selected="selectedRcpt"
+        v-model:substitution-mode="substitutionMode"
+        v-model:common-vars="commonVars"
+        key-column="phone"
+        :show-vars="varKeys.length > 0"
+        :var-keys="varKeys"
+        :show-substitution="showSubst"
+        @add-manual="onAddManual"
+        @address-book="openAddrBook = true"
+      />
+
+      <!-- 발신 정보 -->
       <AppSendFormCard step="1" title="발신 정보" required>
         <template v-if="tplLock" #headerRight>
           <AppBadge tone="neutral">
@@ -186,21 +201,6 @@ function send() {
           />
         </AppFormRow>
       </AppSendFormCard>
-
-      <!-- ② 수신자 -->
-      <AppRecipientCard
-        :step="2"
-        v-model:recipients="recipients"
-        v-model:selected="selectedRcpt"
-        v-model:substitution-mode="substitutionMode"
-        v-model:common-vars="commonVars"
-        key-column="phone"
-        :show-vars="varKeys.length > 0"
-        :var-keys="varKeys"
-        :show-substitution="showSubst"
-        @add-manual="onAddManual"
-        @address-book="openAddrBook = true"
-      />
 
       <!-- ③ 메시지 -->
       <AppSendFormCard step="3" title="메시지" required>

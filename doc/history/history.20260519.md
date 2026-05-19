@@ -149,6 +149,15 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 `/home` 200, "발송 조회/통계"·"주소록" 렌더, "발송 관리" 0건.
 - 변경 파일: `AppGnb.vue` 단일.
 
+## 15. SMS 타이틀 변경 + 수신자 카드 최상단 이동
+
+- `pages/send/sms.vue`: H1·문서타이틀 `SMS 발송` → `문자메시지 발송` (브레드크럼은 이미 일치).
+- 발송 6채널(sms/kakao/rcs/email/push/flow) 전체: `AppRecipientCard`를 카드 스택 첫 번째(타이틀 다음)로 이동. 새 순서 = 수신자 → 발신/플로우 → 메시지 → 발송옵션. 사용자 결정: 6채널 전체 적용(알림톡은 잠긴 수신자 카드가 먼저 노출되는 UX 감수).
+- 빌드 → 재배포(12회차).
+  - 배포 alias: https://5ad321a1.malgn-noti.pages.dev
+  - 검증: 소스상 6파일 모두 `<AppRecipientCard`가 첫 `<AppSendFormCard`보다 앞, 프로덕션 200.
+- 변경: `pages/send/{sms,kakao,rcs,email,push,flow}.vue`.
+
 ---
 
 ## 산출물 (당일)
@@ -164,7 +173,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - 헤더 불투명화 + 수신자 카드 접기/펼치기(`AppSendFormCard` collapsible)
 - **Phase 2b-3** — 발송조회(`AppHistoryView`)/통계/주소록/충전/로그인/회원가입 6페이지군
 - GNB "발송 관리" → "발송 조회/통계" + "주소록" 분리
-- Cloudflare Pages 프로덕션 배포 ×11 (https://malgn-noti.pages.dev)
+- SMS→문자메시지 발송 타이틀 변경 + 발송 6채널 수신자 카드 최상단 이동
+- Cloudflare Pages 프로덕션 배포 ×12 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

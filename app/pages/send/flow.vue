@@ -71,6 +71,15 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
+      <AppRecipientCard
+        :step="2"
+        v-model:recipients="recipients"
+        v-model:selected="selectedRcpt"
+        key-column="phone"
+        @add-manual="(t) => { editTarget = t || null; openManual = true }"
+        @address-book="openAddrBook = true"
+      />
+
       <AppSendFormCard step="1" title="플로우 선택" required>
         <AppFormRow label="플로우" required>
           <div class="row" style="gap: 8px; flex-wrap: wrap">
@@ -84,15 +93,6 @@ function send() {
           </div>
         </AppFormRow>
       </AppSendFormCard>
-
-      <AppRecipientCard
-        :step="2"
-        v-model:recipients="recipients"
-        v-model:selected="selectedRcpt"
-        key-column="phone"
-        @add-manual="(t) => { editTarget = t || null; openManual = true }"
-        @address-book="openAddrBook = true"
-      />
 
       <AppSendFormCard step="3" title="메시지 시퀀스 (읽기 전용)">
         <div class="flow-chips">
