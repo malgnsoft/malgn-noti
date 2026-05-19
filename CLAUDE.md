@@ -197,8 +197,9 @@ pnpm test
 **배포 (Cloudflare Pages — 프로덕션)**
 
 - 빌드: `pnpm build` (Nitro `cloudflare-pages` 프리셋 → `dist/`).
-- 배포: `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main`
+- 배포: `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main --commit-dirty=true --commit-message "<ascii>"`
   (프로젝트 production-branch=main → `--branch=main`이 프로덕션 배포).
+  - **`--commit-message`는 ASCII로 명시 필수.** 생략 시 wrangler가 git HEAD의 한글 커밋 메시지를 배포 메타로 읽다 `Invalid commit message, must be valid UTF-8` 에러로 실패함. `--commit-dirty=true`로 미커밋 상태 경고도 억제.
 - 인증: wrangler OAuth(info@malgnsoft.com). 네트워크 필요 — 샌드박스 비활성 환경에서 실행.
 - URL: 프로덕션 <https://malgn-noti.pages.dev>, 배포마다 `https://<id>.malgn-noti.pages.dev` alias.
 - 사용자가 "배포"라고 하면 **빌드 → 배포 → 검증(프로덕션 HTTP 200 + 빌드 CSS/마커 확인) → 커밋·푸시·history**까지 한 흐름으로 처리.

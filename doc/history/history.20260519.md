@@ -94,6 +94,17 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 CSS `.footer{background:var(--ink-900)}` · `.phone .kakao{` · `page-body{…padding-block}` 확인.
 - 변경 파일: `main.css`, `AppLogoMark.vue`(신규), `AppGnb.vue`, `AppFooter.vue`, `layouts/{auth,default}.vue`.
 
+## 10. 카드 헤더 단계번호 제거·타이틀 강조 + 강조안 목업 배포
+
+- 요청: 발신/수신자 등 카드의 `01·02` 단계 번호 삭제 + 영역 강조(우선 폰트 키우기).
+- 적용: `AppSendFormCard.vue`에서 `.step` 번호 요소 제거(발송 6종 전체, `step` prop은 호환 위해 유지·미렌더). `.card-header .title` 13→15px·600→700·tracking -0.01em, `.card-header` padding 14→16px.
+- 강조 추가안 8종(현행/A eyebrow/B accent바/A+B/D dot/F 헤더↔바디 accent 경계선/C 섹션헤더 분리/E 헤더톤) 비교용 `app/pages/dev/card-emphasis-mockups.vue` 생성 — **사용자 요청으로 배포 포함**(이전 title 목업과 달리 폐기 보류, 결정 시 정리).
+- **배포 사고·수정**: `wrangler pages deploy`가 git HEAD 한글 커밋 메시지를 배포 메타로 읽다 `Invalid commit message, must be valid UTF-8`로 실패. `--commit-message "<ascii>" --commit-dirty=true` 명시로 해결. CLAUDE.md §7.1 배포 절차에 규약 반영.
+- 빌드 → 재배포(7회차).
+  - 배포 alias: https://20c0b350.malgn-noti.pages.dev
+  - 검증: 프로덕션 `/dev/card-emphasis-mockups` 200, `/send/sms` `class="step"` 0건(번호 제거), `/home` 200.
+- 변경 파일: `AppSendFormCard.vue`, `main.css`, `app/pages/dev/card-emphasis-mockups.vue`(신규), `CLAUDE.md` §7.1.
+
 ---
 
 ## 산출물 (당일)
@@ -105,7 +116,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `CLAUDE.md` §7.1 운영 컨벤션(Git·배포·이력) 신규
 - `AppLogoMark.vue` 신규(브랜드 마크 SVG) · AppGnb/AppFooter/auth/default 로고·정렬·푸터 다크
 - `doc/history/history.20260519.md` + README 인덱스
-- Cloudflare Pages 프로덕션 배포 ×6 (https://malgn-noti.pages.dev)
+- `app/pages/dev/card-emphasis-mockups.vue` 신규(강조안 8종 비교, 배포 포함)
+- Cloudflare Pages 프로덕션 배포 ×7 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 

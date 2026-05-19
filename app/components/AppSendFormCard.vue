@@ -12,9 +12,6 @@ defineProps<{
 <template>
   <div class="card">
     <div class="card-header">
-      <div v-if="step != null" :class="['step', locked ? '' : 'active']">
-        {{ String(step).padStart(2, '0') }}
-      </div>
       <div class="title">
         {{ title }}<span v-if="required" class="required"> *</span>
       </div>

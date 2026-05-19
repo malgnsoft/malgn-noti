@@ -464,7 +464,7 @@ a { text-decoration: none; color: inherit; }
   overflow: hidden;
 }
 .card-header {
-  padding: 14px 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -485,14 +485,14 @@ a { text-decoration: none; color: inherit; }
 }
 .card-header .step.active { color: var(--accent-ink); }
 .card-header .title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--ink-900);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
 }
 .card-header .required {
   color: var(--danger);
