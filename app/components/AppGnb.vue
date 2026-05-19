@@ -118,9 +118,9 @@ function avatarChar(name: string) {
 
         <!-- 로고 -->
         <NuxtLink to="/home" class="gnb-logo">
-          <span class="logo-icon"><UIcon name="i-lucide-zap" class="text-base" /></span>
+          <span class="logo-icon"><AppLogoMark /></span>
           <span class="gnb-logo-text">맑은</span>
-          <span class="gnb-logo-sub">메시징</span>
+          <span class="gnb-logo-sub">message</span>
         </NuxtLink>
 
         <!-- 데스크톱 메뉴 -->
@@ -219,9 +219,9 @@ function avatarChar(name: string) {
       <template #content>
         <div class="drawer-header">
           <NuxtLink to="/home" class="gnb-logo" @click="mobileOpen = false">
-            <span class="logo-icon"><UIcon name="i-lucide-zap" class="text-base" /></span>
+            <span class="logo-icon"><AppLogoMark /></span>
             <span class="gnb-logo-text">맑은</span>
-            <span class="gnb-logo-sub">메시징</span>
+            <span class="gnb-logo-sub">message</span>
           </NuxtLink>
           <button type="button" class="btn btn-ghost btn-icon" aria-label="닫기" @click="mobileOpen = false">
             <UIcon name="i-lucide-x" class="text-xl" />

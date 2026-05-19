@@ -25,7 +25,7 @@ const info = [
         <div class="footer-logo">
           <NuxtLink to="/home" class="name-row">
             <span class="name">맑은</span>
-            <span class="msg">메시징</span>
+            <span class="msg">message</span>
           </NuxtLink>
           <div class="footer-slogan">
             기업의 모든 메시지를 한 곳에서
@@ -61,6 +61,6 @@ const info = [
 .footer-copy {
   width: 100%;
   margin-top: 8px;
-  color: var(--ink-300);
+  color: rgba(255, 255, 255, 0.55);
 }
 </style>

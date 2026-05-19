@@ -152,6 +152,7 @@ html, body {
 html {
   zoom: var(--ui-scale);
   scrollbar-gutter: stable;
+  overflow-y: scroll; /* 모든 브라우저에서 세로 스크롤바 폭 항상 고정 → 본문 폭 불변 */
 }
 
 button { font-family: inherit; cursor: pointer; }
@@ -227,34 +228,35 @@ a { text-decoration: none; color: inherit; }
 .gnb-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   cursor: pointer;
   flex-shrink: 0;
 }
 .gnb-logo .logo-icon {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   background: var(--ink-900);
-  color: var(--accent);
-  border-radius: var(--r-sm);
+  color: var(--white);
+  border-radius: var(--r-md);
   display: grid;
   place-items: center;
 }
 .gnb-logo-text {
   font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--ink-900);
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 .gnb-logo-sub {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
   color: var(--ink-400);
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   line-height: 1;
+  margin-left: -5px; /* 단어 사이 간격 축소 (7px gap - 5 = 2px) */
 }
 
 /* Nav menu */
@@ -446,7 +448,9 @@ a { text-decoration: none; color: inherit; }
   max-width: 640px;
 }
 .page-body {
-  padding: 32px 0 64px;
+  /* 세로만 지정 — padding 단축속성을 쓰면 .app-container 의 좌우 패딩(32px)을
+     0으로 덮어써 본문이 헤더/푸터보다 넓어짐(좌우 정렬 깨짐). */
+  padding-block: 32px 64px;
   min-height: calc(100vh - var(--topbar-height));
 }
 
@@ -940,10 +944,10 @@ a { text-decoration: none; color: inherit; }
    Footer
    ============================================================ */
 .footer {
-  background: var(--white);
-  color: var(--ink-500);
+  background: var(--ink-900);
+  color: rgba(255, 255, 255, 0.72);
   margin-top: 0;
-  border-top: 1px solid var(--line);
+  border-top: 0;
 }
 .footer-upper { padding: 32px 0 20px; }
 .footer-upper-inner {
@@ -965,17 +969,17 @@ a { text-decoration: none; color: inherit; }
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 600;
-  color: var(--ink-900);
+  color: var(--white);
   letter-spacing: -0.005em;
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 2px;
 }
-.footer-logo .name { color: var(--ink-900); font-weight: 600; }
-.footer-logo .msg { color: var(--ink-400); font-weight: 400; font-family: var(--font-mono); font-size: 11px; }
+.footer-logo .name { color: var(--white); font-weight: 700; }
+.footer-logo .msg { color: rgba(255, 255, 255, 0.7); font-weight: 400; font-family: var(--font-sans); font-size: 14px; }
 .footer-slogan {
   font-size: 12px;
-  color: var(--ink-500);
+  color: rgba(255, 255, 255, 0.7);
   letter-spacing: 0;
   max-width: 240px;
 }
@@ -987,14 +991,14 @@ a { text-decoration: none; color: inherit; }
 }
 .footer-links a {
   font-size: 12px;
-  color: var(--ink-500);
+  color: rgba(255, 255, 255, 0.82);
   cursor: pointer;
   font-weight: 400;
 }
-.footer-links a:hover { color: var(--ink-900); }
-.footer-links a.strong { color: var(--ink-700); font-weight: 500; }
+.footer-links a:hover { color: var(--white); }
+.footer-links a.strong { color: var(--white); font-weight: 500; }
 .footer-lower {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 16px 0 24px;
 }
 .footer-lower-inner {
@@ -1007,13 +1011,13 @@ a { text-decoration: none; color: inherit; }
   flex-wrap: wrap;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--ink-400);
+  color: rgba(255, 255, 255, 0.75);
 }
 .footer-company-name {
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
-  color: var(--ink-700);
+  color: var(--white);
   min-width: 140px;
 }
 .footer-meta {
@@ -1052,7 +1056,8 @@ a { text-decoration: none; color: inherit; }
 .phone-status .right { display: flex; gap: 4px; align-items: center; font-size: 9px; }
 
 /* iMessage */
-.imsg { display: flex; flex-direction: column; height: 100%; background: var(--white); }
+/* 미리보기 셸 — .phone 하위로 스코프 (ch-pill 등 동명 클래스 누수 방지) */
+.phone .imsg { display: flex; flex-direction: column; height: 100%; background: var(--white); }
 .imsg-header {
   display: flex;
   flex-direction: column;
@@ -1107,7 +1112,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* Kakao */
-.kakao { display: flex; flex-direction: column; height: 100%; background: #abc1d1; }
+.phone .kakao { display: flex; flex-direction: column; height: 100%; background: #abc1d1; }
 .kakao-header {
   display: flex;
   align-items: center;
@@ -1192,7 +1197,7 @@ a { text-decoration: none; color: inherit; }
 .kakao-bubble .btn-row:last-child { border-bottom: 0; }
 
 /* RCS */
-.rcs { display: flex; flex-direction: column; height: 100%; background: var(--white); }
+.phone .rcs { display: flex; flex-direction: column; height: 100%; background: var(--white); }
 .rcs-header {
   display: flex;
   align-items: center;
@@ -1554,7 +1559,7 @@ a { text-decoration: none; color: inherit; }
 .auth-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-family: var(--font-sans);
   font-size: 16px;
   font-weight: 600;
@@ -1563,11 +1568,11 @@ a { text-decoration: none; color: inherit; }
   letter-spacing: -0.005em;
 }
 .auth-logo .logo-icon {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   background: var(--ink-900);
-  color: var(--accent);
-  border-radius: var(--r-sm);
+  color: var(--white);
+  border-radius: var(--r-md);
   display: grid;
   place-items: center;
 }

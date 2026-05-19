@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 1400px 폭 보정 + 헤더 정렬 수정 + 페이지 타이틀 설명 줄 제거를 적용하며 재배포(총 5회).
+Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(18섹션)를 추가하고, 디자인 피벗 전체(Phase 1~2b-2 + 가이드)를 Cloudflare Pages 프로덕션에 배포. 이후 전역 UI 스케일 115% + 1400px 폭 보정 + 헤더 정렬 수정 + 타이틀 설명 줄 제거 + 운영 컨벤션 문서화 + 로고 이미지화 + 헤더/푸터 정렬 근본수정 + 푸터 다크 + 채널 칩 통일을 적용하며 재배포(총 6회).
 
 ---
 
@@ -80,6 +80,20 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 CSS `page-header p{…display:none…}` 확인.
 - 변경 파일: `app/assets/css/main.css` 단일.
 
+## 9. 페이지 설정 묶음 (로고·정렬·푸터·채널 칩) + 재배포
+
+사용자 요청을 모아 처리한 일괄 변경:
+
+- **로고 이미지화**: 워드마크를 이미지대로 변경 — 다크 r-md 타일 + 화이트 글리프, "맑은"(700) + "message"(연회색). 아이콘은 lucide 단일로 없어 `AppLogoMark.vue`(말풍선+스파클 커스텀 SVG, currentColor) 신설, GNB(헤더·드로어)·푸터·인증 일관. 단어 간격 축소(`.gnb-logo` gap 10→7 + `.gnb-logo-sub` margin-left -5 → ~2px, `.auth-logo` 8, 푸터 name-row 2).
+- **헤더/푸터 ↔ 본문 정렬 근본 수정**: 원인은 zoom/스크롤바가 아니라 **CSS 단축속성 충돌** — 페이지 루트 `class="app-container page-body"`에서 `.page-body { padding: 32px 0 64px }`가 `.app-container`의 좌우 패딩(32px)을 0으로 덮어써 본문만 풀블리드였음. `.page-body`를 `padding-block: 32px 64px`(세로 전용)로 변경. 부수 가드: `html { overflow-y: scroll }`(스크롤바 폭 고정), `.layout-default { overflow-x: clip }` + `.layout-main { min-width: 0 }`.
+- **푸터 다크**: 배경 `--ink-900`, 텍스트는 흰색 투명도 단계로 재배치. 1차 가독성 미흡 피드백 → 작은 텍스트(11~12px) 대비를 WCAG AA 기준으로 상향(회사명·강조 링크 = 순백, 사업자정보 0.75, 기본 0.72 등).
+- **채널 칩 통일**: KAKAO만 박스로 보인 원인은 **클래스 충돌** — 미리보기 셸 전역 `.kakao`/`.rcs`가 `.ch-pill kakao/rcs`에 누수. 셸 컨테이너를 `.phone .imsg`/`.phone .kakao`/`.phone .rcs`로 스코프 → 6채널 모두 SMS·EMAIL과 동일(점+모노 코드).
+- **타이틀 실사 이미지 검토**: 디자인 시스템(정보 우선·calm)과 충돌해 비권장. 비교 목업 페이지로 6안 제시 → 사용자 **현행 유지** 결정, 목업 페이지 폐기(미커밋).
+- 빌드 → `wrangler pages deploy dist --branch=main` 재배포(6회차).
+  - 배포 alias: https://cecb5166.malgn-noti.pages.dev
+  - 검증: 프로덕션 CSS `.footer{background:var(--ink-900)}` · `.phone .kakao{` · `page-body{…padding-block}` 확인.
+- 변경 파일: `main.css`, `AppLogoMark.vue`(신규), `AppGnb.vue`, `AppFooter.vue`, `layouts/{auth,default}.vue`.
+
 ---
 
 ## 산출물 (당일)
@@ -89,8 +103,9 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `doc/DESIGN.md` (§0 적용 현황에 가이드 페이지 행 추가)
 - `app/assets/css/main.css` (전역 115% `html{zoom}`+`scrollbar-gutter`, `--container-max` 1400px 보정, 헤더 정렬 수정)
 - `CLAUDE.md` §7.1 운영 컨벤션(Git·배포·이력) 신규
+- `AppLogoMark.vue` 신규(브랜드 마크 SVG) · AppGnb/AppFooter/auth/default 로고·정렬·푸터 다크
 - `doc/history/history.20260519.md` + README 인덱스
-- Cloudflare Pages 프로덕션 배포 ×5 (https://malgn-noti.pages.dev)
+- Cloudflare Pages 프로덕션 배포 ×6 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 
