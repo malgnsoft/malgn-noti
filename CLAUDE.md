@@ -184,6 +184,33 @@ pnpm lint
 pnpm test
 ```
 
+### 7.1 Git · 배포 · 작업 이력 (운영 컨벤션)
+
+**Git**
+
+- **단일 브랜치 운영**: `main` 하나만 사용. 피처 브랜치를 만들었다면 작업 후 `main`에 FF 머지하고 로컬·원격 브랜치 삭제.
+- 커밋·푸시는 **사용자가 명시적으로 요청할 때만**.
+- 커밋 메시지: 한국어 제목 + 본문 불릿. 끝에 반드시 trailer:
+  `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
+- 무관·기존 untracked 파일은 끌어들이지 말고 작업 범위 경로만 stage.
+
+**배포 (Cloudflare Pages — 프로덕션)**
+
+- 빌드: `pnpm build` (Nitro `cloudflare-pages` 프리셋 → `dist/`).
+- 배포: `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main`
+  (프로젝트 production-branch=main → `--branch=main`이 프로덕션 배포).
+- 인증: wrangler OAuth(info@malgnsoft.com). 네트워크 필요 — 샌드박스 비활성 환경에서 실행.
+- URL: 프로덕션 <https://malgn-noti.pages.dev>, 배포마다 `https://<id>.malgn-noti.pages.dev` alias.
+- 사용자가 "배포"라고 하면 **빌드 → 배포 → 검증(프로덕션 HTTP 200 + 빌드 CSS/마커 확인) → 커밋·푸시·history**까지 한 흐름으로 처리.
+- 배포는 **working tree 기준**이므로 배포 후 반드시 git 커밋으로 라이브 ↔ `main` 일치시킬 것.
+
+**작업 이력 (`doc/history/`)**
+
+- `doc/history/history.yyyyMMdd.md` — **하루 한 파일**, 작업이 있는 날만 생성.
+- 구조: ① 한 줄 요약 → ② 번호별 섹션(결정/코드/배포) → ③ 산출물 → ④ 다음 단계·한계.
+- **같은 날 추가 작업은 그날 파일에 `§N` 추가**(새 파일 만들지 않음), 한 줄 요약·산출물 갱신, `doc/history/README.md` 인덱스 표 갱신.
+- 큰 마일스톤·배포 직후 기록. 형식 상세는 [`doc/history/README.md`](./doc/history/README.md).
+
 ---
 
 ## 8. 코드 규칙

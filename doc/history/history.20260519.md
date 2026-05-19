@@ -63,6 +63,14 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 프로덕션 CSS에 `html{scrollbar-gutter:stable;zoom:var(--ui-scale)}` 포함 확인.
 - 변경 파일: `app/assets/css/main.css` 단일.
 
+## 7. 운영 컨벤션 문서화
+
+- `CLAUDE.md` §7.1 "Git · 배포 · 작업 이력 (운영 컨벤션)" 신규 — 그간 따라온 워크플로 규약화.
+  - Git: 단일 `main` 운영, 커밋/푸시는 명시 요청 시, Co-Authored-By trailer.
+  - 배포: `pnpm build` → `wrangler pages deploy dist --branch=main`, "배포"=빌드→배포→검증→커밋·푸시·history 한 흐름, working tree 기준→배포 후 git 일치.
+  - 이력: `history.yyyyMMdd.md` 하루 한 파일, 같은 날 추가는 `§N`+README 인덱스 갱신.
+- 변경 파일: `CLAUDE.md` 단일 (문서, 무배포).
+
 ---
 
 ## 산출물 (당일)
@@ -71,6 +79,7 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - `app/pages/home.vue` (바로가기 5번째: 디자인 가이드)
 - `doc/DESIGN.md` (§0 적용 현황에 가이드 페이지 행 추가)
 - `app/assets/css/main.css` (전역 115% `html{zoom}`+`scrollbar-gutter`, `--container-max` 1400px 보정, 헤더 정렬 수정)
+- `CLAUDE.md` §7.1 운영 컨벤션(Git·배포·이력) 신규
 - `doc/history/history.20260519.md` + README 인덱스
 - Cloudflare Pages 프로덕션 배포 ×4 (https://malgn-noti.pages.dev)
 
