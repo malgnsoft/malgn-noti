@@ -82,22 +82,6 @@ function send() {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px">
-      <AppRecipientCard
-        :step="2"
-        v-model:recipients="recipients"
-        v-model:selected="selectedRcpt"
-        v-model:substitution-mode="substitutionMode"
-        v-model:common-vars="commonVars"
-        key-column="phone"
-        :locked="locked"
-        locked-hint="발신 프로필과 템플릿을 먼저 선택해 주세요."
-        :show-vars="varKeys.length > 0"
-        :var-keys="varKeys"
-        :show-substitution="varKeys.length > 0"
-        @add-manual="(t) => { editTarget = t || null; openManual = true }"
-        @address-book="openAddrBook = true"
-      />
-
       <AppSendFormCard step="1" title="발신 정보" required>
         <AppFormRow label="발신 프로필" required>
           <button
@@ -132,6 +116,22 @@ function send() {
           </div>
         </AppFormRow>
       </AppSendFormCard>
+
+      <AppRecipientCard
+        :step="2"
+        v-model:recipients="recipients"
+        v-model:selected="selectedRcpt"
+        v-model:substitution-mode="substitutionMode"
+        v-model:common-vars="commonVars"
+        key-column="phone"
+        :locked="locked"
+        locked-hint="발신 프로필과 템플릿을 먼저 선택해 주세요."
+        :show-vars="varKeys.length > 0"
+        :var-keys="varKeys"
+        :show-substitution="varKeys.length > 0"
+        @add-manual="(t) => { editTarget = t || null; openManual = true }"
+        @address-book="openAddrBook = true"
+      />
 
       <AppSendFormCard
         step="3"

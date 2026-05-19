@@ -158,6 +158,15 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
   - 검증: 소스상 6파일 모두 `<AppRecipientCard`가 첫 `<AppSendFormCard`보다 앞, 프로덕션 200.
 - 변경: `pages/send/{sms,kakao,rcs,email,push,flow}.vue`.
 
+## 16. 알림톡 발신 정보 카드 최상단 복귀
+
+- 요청: 알림톡 페이지만 발신 정보 카드를 타이틀 다음(첫 카드)으로.
+- `pages/send/kakao.vue`: 발신 정보 ↔ 수신자 순서 교체 → 발신 정보 → 수신자 → 메시지 → 옵션. 알림톡은 발신 프로필+템플릿 선택 전 수신자/메시지 잠금(progressive disclosure)이라 발신 정보 선행이 자연스러움. 나머지 5채널은 수신자-우선 유지.
+- 빌드 → 재배포(13회차).
+  - 배포 alias: https://372eab23.malgn-noti.pages.dev
+  - 검증: 소스 `<AppSendFormCard`@85 < `<AppRecipientCard`@120, 프로덕션 200.
+- 변경: `pages/send/kakao.vue` 단일.
+
 ---
 
 ## 산출물 (당일)
@@ -174,7 +183,8 @@ Relay-inspired 정본을 시각화한 `/guide` 라이브 카탈로그 페이지(
 - **Phase 2b-3** — 발송조회(`AppHistoryView`)/통계/주소록/충전/로그인/회원가입 6페이지군
 - GNB "발송 관리" → "발송 조회/통계" + "주소록" 분리
 - SMS→문자메시지 발송 타이틀 변경 + 발송 6채널 수신자 카드 최상단 이동
-- Cloudflare Pages 프로덕션 배포 ×12 (https://malgn-noti.pages.dev)
+- 알림톡 발신 정보 카드 최상단 복귀(disclosure 정합)
+- Cloudflare Pages 프로덕션 배포 ×13 (https://malgn-noti.pages.dev)
 
 ## 다음 단계 / 알려진 한계
 
