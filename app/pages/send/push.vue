@@ -209,7 +209,7 @@ function send() {
         <AppFormRow label="템플릿 사용유무">
           <AppRadioGroup
             v-model="useTemplate"
-            :options="[{ value: 'off', label: '사용 안함' }, { value: 'on', label: '사용' }]"
+            :options="[{ value: 'off', label: '사용 안 함' }, { value: 'on', label: '사용' }]"
           />
         </AppFormRow>
         <AppFormRow label="템플릿 선택">
@@ -262,7 +262,7 @@ function send() {
                 <AppFormRow label="HTML 스타일">
                   <AppRadioGroup
                     v-model="htmlStyle"
-                    :options="[{ value: 'on', label: '사용' }, { value: 'off', label: '사용 안함' }]"
+                    :options="[{ value: 'on', label: '사용' }, { value: 'off', label: '사용 안 함' }]"
                   />
                 </AppFormRow>
                 <AppFormRow label="제목">

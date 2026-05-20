@@ -18,7 +18,7 @@ function patch(p: Partial<SendOptions>) {
 </script>
 
 <template>
-  <AppSendFormCard :step="step" title="발송 옵션">
+  <AppSendFormCard :step="step" title="발송 설정">
     <AppFormRow label="발송 시점" required>
       <AppRadioGroup
         :model-value="modelValue.mode"

@@ -15,7 +15,7 @@ defineEmits<{
 <template>
   <div class="app-recipient-actions">
     <button type="button" class="btn-dark" @click="$emit('directInput')">
-      + 직접입력
+      + 직접 입력
     </button>
     <button type="button" class="btn-dark" @click="$emit('fromAddressBook')">
       + 주소록에서 선택

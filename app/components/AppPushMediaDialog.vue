@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ close: [], confirm: [PushMedia] }>()
 const toast = useToast()
 
-const EXPAND_OPTIONS = ['사용', '사용 안함']
+const EXPAND_OPTIONS = ['사용', '사용 안 함']
 
 const url = ref('')
 const mediaType = ref('')

@@ -108,7 +108,7 @@ function onDelete() {
 
     <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px">
       <button type="button" class="btn btn-primary btn-sm" @click="emit('addManual', undefined)">
-        <UIcon name="i-lucide-plus" class="text-[12px]" /> 직접입력
+        <UIcon name="i-lucide-plus" class="text-[12px]" /> 직접 입력
       </button>
       <button type="button" class="btn btn-primary btn-sm" @click="emit('addressBook')">
         <UIcon name="i-lucide-plus" class="text-[12px]" /> 주소록에서 선택

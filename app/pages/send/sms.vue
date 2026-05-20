@@ -177,7 +177,7 @@ function send() {
           <AppRadioGroup
             v-model="useTemplate"
             :options="[
-              { value: 'off', label: '사용 안함' },
+              { value: 'off', label: '사용 안 함' },
               { value: 'on', label: '사용' },
             ]"
           />
@@ -368,7 +368,7 @@ function send() {
         </div>
       </AppSendFormCard>
 
-      <!-- 발송 옵션 -->
+      <!-- 발송 설정 -->
       <AppSendOptionsCard v-model="sendOptions" :step="4" />
     </div>
 
