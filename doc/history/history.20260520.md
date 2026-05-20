@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 마지막으로 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 이어서 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21). 끝으로 주소록 관리 페이지를 강화 — 등록·일괄등록·그룹이동 모달, 선택 발송 채널 드롭다운, 이름 클릭 수정, 페이지네이션·토큰 컬럼을 추가하여 재배포 (#22).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -153,6 +153,18 @@
 - 빌드 → `wrangler pages deploy` (`--commit-message "send pages: keep recipients on template toggle, stash and restore message settings"`) — 배포 #21. 프로덕션 `/send/{sms,kakao,rcs,email,push,flow}` 전부 200, alias `https://e1b4d7da.malgn-noti.pages.dev` 200.
 - 커밋: `93411ae 발송 페이지 템플릿 토글 동작 개선 — 수신자 유지 + 메시지 stash/복원` (6 files, +345 −46) → `origin/main` 푸시.
 
+## 16. 주소록 관리 페이지 강화 (§16, 배포 #22)
+
+- **GNB**: '연락처 관리' → '주소록 관리'.
+- **주소록 페이지(`contacts/list.vue`)**: 타이틀 '주소록 그룹/연락처' → '주소록 관리', 발송 페이지와 동일한 `.page-header`로 통일. 테이블 하단 페이지네이션 추가, 'CSV 가져오기' 제거, **토큰 컬럼**(있음 / `-`) 추가.
+- **그룹 이동 모달**: 선택한 연락처를 다른 그룹으로 일괄 이동. `DATA`를 `reactive`로, 그룹 카운트를 `computed`로 전환해 이동 즉시 좌측 인원수 갱신.
+- **선택 발송 → 5채널 드롭다운**: 선택 발송 클릭 시 문자메시지/알림톡·친구톡/RCS/이메일/PUSH 드롭다운, 채널 선택 시 선택 연락처를 `useState('sendRecipients')`로 인계해 해당 채널 발송 페이지로 이동. 발송 6채널이 `onMounted`에서 인계 수신자를 반영(sms는 §15 이전 적용, kakao/rcs/email/push 추가).
+- **AppContactFormDialog**(신규): 주소록 등록/수정 겸용 모달 — 별칭(64자)·휴대폰·이메일, 토큰 입력 패널(푸시 유형·국가/언어 코드·시간대·수신 거부 3종·디바이스 ID, 칩으로 다중), 그룹 다중 선택(최대 16). 이름 클릭 시 수정 모드로 오픈.
+- **AppContactBulkDialog**(신규): 주소록 일괄 등록 모달 — 템플릿 다운로드 + `.xlsx` 파일 업로드(최대 1MB).
+- **배포 범위 분리**: 배포 시점 working tree에 별개의 '발신번호 등록' 진행 중 작업이 섞여 있어, 사용자 확인 후 해당 변경을 `git stash`로 임시 분리하고 **주소록 작업만** 빌드·배포·커밋한 뒤 stash 복원.
+- 빌드 → `wrangler pages deploy` (`--commit-message "address book: register/bulk dialogs, group move, channel send dropdown"`) — 배포 #22. 프로덕션 `https://malgn-noti.pages.dev/contacts/list`·`/home` 200, alias `https://57bab931.malgn-noti.pages.dev` 200.
+- 커밋: `547dd61 주소록 관리 페이지 강화 — 등록·일괄등록·그룹이동·채널 발송` (5 files, +839 −41) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (8)
@@ -178,6 +190,7 @@
 - #19 — 발송 조회 페이지 전면 재작업 + btn-sky 제거 / Alias: https://77a6d8df.malgn-noti.pages.dev
 - #20 — 통계 페이지 재구성 + 폰트 토큰화 + zoom 제거 / Alias: https://95f36a35.malgn-noti.pages.dev
 - #21 — 발송 페이지 템플릿 토글 동작 개선 / Alias: https://e1b4d7da.malgn-noti.pages.dev
+- #22 — 주소록 관리 페이지 강화 / Alias: https://57bab931.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
@@ -188,6 +201,7 @@
 - `d0efe8c` 발송 조회 페이지 목록·검색 필터·다이얼로그 전면 작업 + btn-sky 정리 (§13, 배포 #19)
 - `6bc05c6` 통계 페이지 재구성 + 폰트 토큰화 + zoom 스케일 제거 (§14, 배포 #20)
 - `93411ae` 발송 페이지 템플릿 토글 동작 개선 — 수신자 유지 + 메시지 stash/복원 (§15, 배포 #21)
+- `547dd61` 주소록 관리 페이지 강화 — 등록·일괄등록·그룹이동·채널 발송 (§16, 배포 #22)
 
 ## 다음 단계 / 한계
 
