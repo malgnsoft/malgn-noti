@@ -6,7 +6,7 @@ useHead({ title: '문자메시지 발송' })
 const toast = useToast()
 const router = useRouter()
 
-interface Tpl { id: number, name: string, subject?: string, body: string, vars: string[], type?: string }
+interface Tpl { id: number, name: string, subject?: string, body: string, vars: string[], type?: string, images?: { name: string, size: number }[] }
 
 const senderNumber = ref('')
 const useTemplate = ref<'off' | 'on'>('off')
@@ -14,7 +14,7 @@ const template = ref<Tpl | null>(null)
 const purpose = ref<'info' | 'ad' | 'auth'>('info')
 const smsType = ref<'sms' | 'lms' | 'mms'>('sms')
 const subject = ref('')
-const body = ref('[몰리몰리] 안녕하세요! 주문하신 상품이 출고되었습니다.\n\n주문번호: #{주문번호}\n운송장: CJ대한통운\n\n빠른 배송으로 곧 만나뵙겠습니다.')
+const body = ref('')
 const files = ref<{ name: string, size: number }[]>([])
 const adNumber = ref<string | null>(null)
 const substitutionMode = ref<'common' | 'individual'>('common')
@@ -42,28 +42,64 @@ const showSubject = computed(() => smsType.value === 'lms' || smsType.value === 
 const showAttach = computed(() => smsType.value === 'mms')
 const counterMax = computed(() => smsType.value === 'sms' ? 90 : 2000)
 const tplLock = computed(() => useTemplate.value === 'on')
+// MMS 템플릿이 적용되면 첨부 이미지는 템플릿 값으로 자동 설정 · 수정 불가
+const attachLocked = computed(() => tplLock.value && template.value?.type === 'mms')
 const pricePerUnit = computed(() => smsType.value === 'mms' ? 22 : smsType.value === 'lms' ? 14 : 9.9)
+
+// 발송 목적이 광고용이면 제목 앞에 (광고)를 자동·강제로 부착
+const AD_PREFIX = '(광고)'
+watch(purpose, (val, old) => {
+  if (val === 'ad') {
+    if (!subject.value.startsWith(AD_PREFIX)) subject.value = `${AD_PREFIX} ${subject.value}`.trimEnd()
+  }
+  else if (old === 'ad' && subject.value.startsWith(AD_PREFIX)) {
+    subject.value = subject.value.slice(AD_PREFIX.length).replace(/^\s+/, '')
+  }
+})
+watch(subject, (v) => {
+  if (purpose.value === 'ad' && !v.startsWith(AD_PREFIX)) subject.value = `${AD_PREFIX} ${v}`.trimEnd()
+})
 
 function applyTemplate(t: Tpl) {
   template.value = t
   smsType.value = (t.type as 'sms' | 'lms' | 'mms') || 'sms'
   if (t.subject) subject.value = t.subject
   body.value = t.body
+  // MMS 템플릿은 첨부 이미지를 템플릿 값으로 자동 설정, 그 외 유형은 첨부 비움
+  files.value = t.type === 'mms' && t.images ? t.images.map(f => ({ ...f })) : []
   toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
 
-function handleReset() {
-  senderNumber.value = ''
-  useTemplate.value = 'off'
+// 발신 번호를 제외한 페이지 내용값 초기화(템플릿 사용유무 전환 / 전체 초기화 공용)
+function resetContent() {
   template.value = null
   purpose.value = 'info'
   smsType.value = 'sms'
   subject.value = ''
   body.value = ''
   files.value = []
+  adNumber.value = null
   recipients.value = []
   selectedRcpt.value = []
+  substitutionMode.value = 'common'
+  commonVars.value = {}
   sendOptions.value = { mode: 'now', date: '', hour: '09', minute: '00' }
+}
+
+// 템플릿 사용유무를 바꾸면 페이지 내용값 초기화(전체 초기화 중에는 억제)
+const suppressTplReset = ref(false)
+watch(useTemplate, () => {
+  if (suppressTplReset.value) return
+  resetContent()
+  toast.add({ title: '템플릿 사용 설정이 변경되어 입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
+}, { flush: 'sync' })
+
+function handleReset() {
+  suppressTplReset.value = true
+  useTemplate.value = 'off'
+  suppressTplReset.value = false
+  resetContent()
+  senderNumber.value = ''
   openReset.value = false
   toast.add({ title: '입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
 }
@@ -88,6 +124,33 @@ function onManualConfirm(r: Recipient) {
 function onAddrBookConfirm(items: Recipient[]) {
   recipients.value = [...recipients.value, ...items]
   toast.add({ title: `${items.length}명을 추가했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
+}
+
+const imgInput = ref<HTMLInputElement | null>(null)
+function onPickImages(e: Event) {
+  const input = e.target as HTMLInputElement
+  const picked = Array.from(input.files || [])
+  input.value = ''
+  for (const f of picked) {
+    const ext = f.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'jpg' && ext !== 'jpeg') {
+      toast.add({ title: `${f.name}: JPG/JPEG 파일만 첨부할 수 있습니다.`, color: 'error', icon: 'i-lucide-octagon-alert' })
+      continue
+    }
+    if (files.value.length >= 3) {
+      toast.add({ title: '이미지는 최대 3장까지 첨부할 수 있습니다.', color: 'warning', icon: 'i-lucide-triangle-alert' })
+      break
+    }
+    if (f.size > 300_000) {
+      toast.add({ title: `${f.name}: 1장당 300KB 이내여야 합니다.`, color: 'error', icon: 'i-lucide-octagon-alert' })
+      continue
+    }
+    if (files.value.reduce((s, x) => s + x.size, 0) + f.size > 800_000) {
+      toast.add({ title: '첨부 합산 용량 800KB를 초과했습니다.', color: 'error', icon: 'i-lucide-octagon-alert' })
+      break
+    }
+    files.value = [...files.value, { name: f.name, size: f.size }]
+  }
 }
 
 function send() {
@@ -166,7 +229,7 @@ function send() {
               required
               help="전기통신사업법 관련 고시 준수를 위해 발신 번호 등록 시 발신 번호에 대한 명의자 인증이 필요합니다. [발신 정보 > 발신 번호 관리] 메뉴에서 발신 번호를 사전 등록하세요."
             >
-              <select v-model="senderNumber" class="select" style="max-width: 340px" :disabled="tplLock">
+              <select v-model="senderNumber" class="select" style="max-width: 340px">
                 <option value="">
                   선택하세요
                 </option>
@@ -252,21 +315,33 @@ function send() {
               help="JPG/JPEG · 최대 3장 · 1장 300KB / 총 800KB 이내 · 1000×1000 이하"
             >
               <div class="row" style="flex-wrap: wrap; gap: 8px">
-                <div v-for="(f, i) in files" :key="i" class="file-chip">
-                  <UIcon name="i-lucide-image" class="text-[12px]" />
+                <div v-for="(f, i) in files" :key="i" class="file-chip" :class="{ locked: attachLocked }">
+                  <UIcon :name="attachLocked ? 'i-lucide-lock' : 'i-lucide-image'" class="text-[12px]" />
                   {{ f.name }}
-                  <span class="remove" @click="files = files.filter((_, j) => j !== i)">
+                  <span v-if="!attachLocked" class="remove" @click="files = files.filter((_, j) => j !== i)">
                     <UIcon name="i-lucide-x" class="text-[12px]" />
                   </span>
                 </div>
+                <input
+                  ref="imgInput"
+                  type="file"
+                  accept=".jpg,.jpeg,image/jpeg"
+                  multiple
+                  style="display: none"
+                  @change="onPickImages"
+                >
                 <button
-                  v-if="files.length < 3"
+                  v-if="!attachLocked && files.length < 3"
                   type="button"
                   class="btn btn-outline btn-sm"
-                  @click="files = [...files, { name: `image-${files.length + 1}.jpg`, size: 200000 }]"
+                  @click="imgInput?.click()"
                 >
                   <UIcon name="i-lucide-upload" class="text-[12px]" /> 이미지 선택
                 </button>
+              </div>
+              <div v-if="attachLocked" class="attach-locked-hint">
+                <UIcon name="i-lucide-lock" class="text-[11px]" />
+                템플릿에 포함된 이미지로 자동 설정되었습니다. (수정 불가)
               </div>
             </AppFormRow>
           </div>
@@ -276,7 +351,7 @@ function send() {
               미리보기
             </div>
             <div style="display: grid; place-items: center">
-              <AppPhonePreview :sender-name="senderNumber || '발신번호'" :message="body" />
+              <AppPhonePreview :sender-name="senderNumber || '발신번호'" :message="body" :images="showAttach ? files : []" />
             </div>
             <div class="row" style="justify-content: center; margin-top: 10px; gap: 8px">
               <AppBadge :tone="smsType === 'sms' ? 'primary' : 'neutral'">
@@ -375,5 +450,18 @@ function send() {
   line-height: 1.5;
   color: var(--ink-400);
   pointer-events: none;
+}
+.file-chip.locked {
+  background: var(--ink-50);
+  color: var(--ink-600);
+  cursor: default;
+}
+.attach-locked-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-500);
 }
 </style>

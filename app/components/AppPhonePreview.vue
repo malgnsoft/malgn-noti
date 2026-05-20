@@ -3,7 +3,8 @@ withDefaults(defineProps<{
   senderName?: string
   message?: string
   time?: string
-}>(), { senderName: '1588-1234', message: '', time: '9:41' })
+  images?: { name: string, size: number }[]
+}>(), { senderName: '1588-1234', message: '', time: '9:41', images: () => [] })
 </script>
 
 <template>
@@ -30,11 +31,26 @@ withDefaults(defineProps<{
         <div class="imsg-time">
           오늘 오후 2:30
         </div>
+        <div
+          v-for="(img, i) in images"
+          :key="i"
+          class="imsg-photo"
+        >
+          <UIcon name="i-lucide-image" class="imsg-photo-ico" />
+          <div class="imsg-photo-meta">
+            <div class="imsg-photo-name">
+              {{ img.name }}
+            </div>
+            <div class="imsg-photo-size">
+              {{ Math.round(img.size / 1024) }} KB
+            </div>
+          </div>
+        </div>
         <div v-if="message" class="imsg-bubble">
           {{ message }}
         </div>
         <div
-          v-else
+          v-else-if="!images.length"
           class="imsg-bubble"
           style="background: transparent; color: var(--ink-400); border: 1px dashed var(--ink-200)"
         >
@@ -44,3 +60,39 @@ withDefaults(defineProps<{
     </div>
   </div>
 </template>
+
+<style scoped>
+.imsg-photo {
+  align-self: flex-start;
+  max-width: 86%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ink-50);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.imsg-photo-ico {
+  font-size: 22px;
+  color: var(--ink-400);
+  flex-shrink: 0;
+}
+.imsg-photo-meta {
+  min-width: 0;
+}
+.imsg-photo-name {
+  font-size: 12px;
+  color: var(--ink-800);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imsg-photo-size {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-400);
+  margin-top: 2px;
+}
+</style>

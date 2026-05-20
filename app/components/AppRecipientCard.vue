@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
 
+type KeyCol = 'phone' | 'email' | 'token'
+
 const props = withDefaults(defineProps<{
   step?: number
   recipients: Recipient[]
   selected: (number | string)[]
-  keyColumn?: 'phone' | 'email' | 'token'
+  keyColumn?: KeyCol
+  keyColumns?: KeyCol[]
   showVars?: boolean
   varKeys?: string[]
   substitutionMode?: 'common' | 'individual'
@@ -18,6 +21,7 @@ const props = withDefaults(defineProps<{
   step: 2,
   title: '수신자',
   keyColumn: 'phone',
+  keyColumns: undefined,
   showVars: false,
   varKeys: () => [],
   substitutionMode: 'common',
@@ -34,7 +38,14 @@ const emit = defineEmits<{
 }>()
 
 const allChecked = computed(() => props.recipients.length > 0 && props.selected.length === props.recipients.length)
-const keyHead = computed(() => props.keyColumn === 'phone' ? '휴대폰' : props.keyColumn === 'email' ? '이메일' : '토큰')
+// 표시할 키 컬럼 배열 (다중 컬럼 지원)
+const cols = computed<KeyCol[]>(() => (props.keyColumns && props.keyColumns.length ? props.keyColumns : [props.keyColumn!]))
+function headOf(c: KeyCol) {
+  return c === 'phone' ? '휴대폰' : c === 'email' ? '이메일' : '토큰'
+}
+function valOf(r: Recipient, c: KeyCol) {
+  return c === 'phone' ? (r.phone || '—') : c === 'email' ? (r.email || '—') : (r.token || '—')
+}
 
 function toggleAll() {
   emit('update:selected', allChecked.value ? [] : props.recipients.map(r => r.id))
@@ -47,9 +58,6 @@ function toggleOne(id: number | string) {
 function onDelete() {
   emit('update:recipients', props.recipients.filter(r => !props.selected.includes(r.id)))
   emit('update:selected', [])
-}
-function keyVal(r: Recipient) {
-  return props.keyColumn === 'phone' ? r.phone : props.keyColumn === 'email' ? r.email : (r.token || '—')
 }
 </script>
 
@@ -108,14 +116,6 @@ function keyVal(r: Recipient) {
       <button
         type="button"
         class="btn btn-error btn-sm"
-        :disabled="selected.length !== 1"
-        @click="emit('addManual', recipients.find(r => r.id === selected[0]))"
-      >
-        수신자 정보 수정
-      </button>
-      <button
-        type="button"
-        class="btn btn-error btn-sm"
         :disabled="selected.length === 0"
         @click="onDelete"
       >
@@ -146,7 +146,9 @@ function keyVal(r: Recipient) {
                 </label>
               </th>
               <th>별칭</th>
-              <th>{{ keyHead }}</th>
+              <th v-for="c in cols" :key="c">
+                {{ headOf(c) }}
+              </th>
               <th
                 v-for="k in (showVars && substitutionMode === 'individual' ? varKeys : [])"
                 :key="k"
@@ -163,9 +165,13 @@ function keyVal(r: Recipient) {
                   <input type="checkbox" :checked="selected.includes(r.id)" @change="toggleOne(r.id)">
                 </label>
               </td>
-              <td>{{ r.name }}</td>
-              <td class="cell-mono">
-                {{ keyVal(r) }}
+              <td>
+                <button type="button" class="rcp-name-btn" @click="emit('addManual', r)">
+                  {{ r.name || '(이름 없음)' }}
+                </button>
+              </td>
+              <td v-for="c in cols" :key="c" class="cell-mono">
+                {{ valOf(r, c) }}
               </td>
               <td
                 v-for="k in (showVars && substitutionMode === 'individual' ? varKeys : [])"
@@ -181,3 +187,19 @@ function keyVal(r: Recipient) {
     </div>
   </AppSendFormCard>
 </template>
+
+<style scoped>
+.rcp-name-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.rcp-name-btn:hover {
+  text-decoration: underline;
+}
+</style>

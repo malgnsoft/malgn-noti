@@ -12,19 +12,35 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close')
 }
 
+// 본 페이지 스크롤은 공용 잠금 유틸(scrollLock)에서 카운터로 관리 → 중첩 모달도 안전
+let locked = false
+function lock() {
+  if (locked) return
+  lockScroll()
+  locked = true
+}
+function unlock() {
+  if (!locked) return
+  unlockScroll()
+  locked = false
+}
+
 watch(() => props.open, (v) => {
-  if (import.meta.client) {
-    document.body.style.overflow = v ? 'hidden' : ''
-    if (v) window.addEventListener('keydown', onKey)
-    else window.removeEventListener('keydown', onKey)
+  if (!import.meta.client) return
+  if (v) {
+    lock()
+    window.addEventListener('keydown', onKey)
+  }
+  else {
+    unlock()
+    window.removeEventListener('keydown', onKey)
   }
 })
 
 onBeforeUnmount(() => {
-  if (import.meta.client) {
-    document.body.style.overflow = ''
-    window.removeEventListener('keydown', onKey)
-  }
+  if (!import.meta.client) return
+  unlock()
+  window.removeEventListener('keydown', onKey)
 })
 </script>
 

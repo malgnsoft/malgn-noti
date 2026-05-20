@@ -1,21 +1,85 @@
 <script setup lang="ts">
+interface FlowChannel { id: string, ch: string, template: string }
 interface Flow {
   id: string
   name: string
-  purpose: string
-  channels: string
+  purpose: 'info' | 'auth' | 'ad'
+  mode: 'sequential' | 'parallel'
+  channels: FlowChannel[]
   createdAt: string
 }
+interface FlowDraft { id?: string, name: string, purpose: 'info' | 'auth' | 'ad', mode: 'sequential' | 'parallel', channels: FlowChannel[] }
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
 
 const flows = ref<Flow[]>([
-  { id: 'uX32yFWZ', name: 'djkim', purpose: '일반용', channels: 'SMS, 알림톡', createdAt: '2026-04-23 10:01' }
+  {
+    id: 'uX32yFWZ',
+    name: 'djkim',
+    purpose: 'info',
+    mode: 'sequential',
+    channels: [
+      { id: 'c1', ch: '알림톡', template: '01_가입환영_알림톡' },
+      { id: 'c2', ch: 'SMS', template: '01_비디오팩생성' }
+    ],
+    createdAt: '2026-04-23 10:01'
+  }
 ])
 const search = ref('')
 const selected = ref<string[]>([])
+// 등록/수정 다이얼로그 공용 상태
+const openFlowDialog = ref(false)
+const editingFlow = ref<FlowDraft | null>(null)
+
+function purposeLabel(p: string) {
+  return p === 'auth' ? '인증용' : p === 'ad' ? '광고용' : '일반용'
+}
+function channelsLabel(cs: FlowChannel[]) {
+  return cs.map(c => c.ch).join(', ')
+}
+function nowStamp() {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+function newFlowId() {
+  return Math.random().toString(36).slice(2, 10)
+}
+function startCreate() {
+  editingFlow.value = null
+  openFlowDialog.value = true
+}
+function editFlow(f: Flow) {
+  editingFlow.value = {
+    id: f.id,
+    name: f.name,
+    purpose: f.purpose,
+    mode: f.mode,
+    channels: f.channels.map(c => ({ ...c }))
+  }
+  openFlowDialog.value = true
+}
+function onFlowSaved(d: FlowDraft) {
+  if (d.id) {
+    flows.value = flows.value.map(x => x.id === d.id
+      ? { ...x, name: d.name, purpose: d.purpose, mode: d.mode, channels: d.channels }
+      : x)
+    toast.add({ title: `"${d.name}" 플로우를 수정했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  else {
+    flows.value = [...flows.value, {
+      id: newFlowId(),
+      name: d.name,
+      purpose: d.purpose,
+      mode: d.mode,
+      channels: d.channels,
+      createdAt: nowStamp()
+    }]
+    toast.add({ title: `"${d.name}" 플로우를 등록했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
+  }
+}
 
 const filtered = computed(() => flows.value.filter(f =>
   !search.value || (f.id + f.name).toLowerCase().includes(search.value.toLowerCase())))
@@ -32,23 +96,15 @@ function placeholder(msg: string) {
 </script>
 
 <template>
-  <AppModal :open="open" title="복합(플로우) 생성 관리" :width="920" @close="emit('close')">
+  <AppModal :open="open" title="플로우 관리" :width="920" @close="emit('close')">
     <div class="fm-info">
       <div>· 플로우 발송을 하려면 플로우를 먼저 생성해야 합니다.</div>
       <div>· 발송할 메시지 채널과 템플릿을 선택하고 발송 순서를 지정한 플로우를 생성하세요.</div>
     </div>
 
     <div class="fm-bar">
-      <button type="button" class="btn btn-sky btn-sm" @click="placeholder('플로우 생성 화면은 준비 중입니다.')">
-        <UIcon name="i-lucide-plus" class="text-[12px]" /> 플로우 생성
-      </button>
-      <button
-        type="button"
-        class="btn btn-soft btn-sm"
-        :disabled="selected.length !== 1"
-        @click="placeholder('플로우 수정 화면은 준비 중입니다.')"
-      >
-        플로우 수정
+      <button type="button" class="btn btn-sky btn-sm" @click="startCreate">
+        <UIcon name="i-lucide-plus" class="text-[12px]" /> 플로우 등록
       </button>
       <button
         type="button"
@@ -104,11 +160,13 @@ function placeholder(msg: string) {
             <td class="cell-mono">
               {{ f.id }}
             </td>
-            <td style="color: var(--accent-ink); font-weight: 600">
-              {{ f.name }}
+            <td>
+              <button type="button" class="fm-name-btn" @click="editFlow(f)">
+                {{ f.name }}
+              </button>
             </td>
-            <td>{{ f.purpose }}</td>
-            <td>{{ f.channels }}</td>
+            <td>{{ purposeLabel(f.purpose) }}</td>
+            <td>{{ channelsLabel(f.channels) }}</td>
             <td class="muted">
               {{ f.createdAt }}
             </td>
@@ -122,6 +180,13 @@ function placeholder(msg: string) {
       </table>
     </div>
   </AppModal>
+
+  <AppFlowCreateDialog
+    :open="openFlowDialog"
+    :edit="editingFlow"
+    @close="openFlowDialog = false"
+    @confirm="onFlowSaved"
+  />
 </template>
 
 <style scoped>
@@ -140,5 +205,18 @@ function placeholder(msg: string) {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+}
+.fm-name-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent-ink);
+  font-weight: 600;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.fm-name-btn:hover {
+  text-decoration: underline;
 }
 </style>

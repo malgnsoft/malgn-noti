@@ -1,22 +1,34 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
 
+type KeyCol = 'phone' | 'email' | 'token'
+
 const props = withDefaults(defineProps<{
   open: boolean
-  keyColumn?: 'phone' | 'email' | 'token'
-}>(), { keyColumn: 'phone' })
+  keyColumn?: KeyCol
+  keyColumns?: KeyCol[]
+}>(), { keyColumn: 'phone', keyColumns: undefined })
+
+// 표시할 키 컬럼 배열(다중 컬럼 지원). 미지정 시 단일 keyColumn 사용
+const cols = computed<KeyCol[]>(() => (props.keyColumns && props.keyColumns.length ? props.keyColumns : [props.keyColumn!]))
+function headOf(c: KeyCol) {
+  return c === 'phone' ? '휴대폰' : c === 'email' ? '이메일' : '토큰'
+}
+function valOf(item: { phone: string, email: string, token?: string }, c: KeyCol) {
+  return c === 'phone' ? item.phone : c === 'email' ? item.email : (item.token || '—')
+}
 
 const emit = defineEmits<{ close: [], confirm: [Recipient[]] }>()
 
 const individual = [
-  { id: 101, name: '이수민', phone: '010-2345-6789', email: 'soomin.lee@example.com', group: 'VIP 고객' },
-  { id: 102, name: '박지훈', phone: '010-9876-5432', email: 'park.jihoon@example.com', group: '신규 가입' },
-  { id: 103, name: '최예진', phone: '010-3344-5566', email: 'yejin.choi@example.com', group: 'VIP 고객' },
-  { id: 104, name: '정민호', phone: '010-7788-9900', email: 'minho.jeong@example.com', group: '휴면 회원' },
-  { id: 105, name: '한지영', phone: '010-2233-4455', email: 'jiyoung.han@example.com', group: '신규 가입' },
-  { id: 106, name: '김도현', phone: '010-5566-7788', email: 'dohyun.kim@example.com', group: 'VIP 고객' },
-  { id: 107, name: '윤서연', phone: '010-1122-3344', email: 'seoyeon.yoon@example.com', group: '활성 고객' },
-  { id: 108, name: '강민재', phone: '010-9988-7766', email: 'minjae.kang@example.com', group: '활성 고객' }
+  { id: 101, name: '이수민', phone: '010-2345-6789', email: 'soomin.lee@example.com', token: 'fcm:d4Hg9kV2soomin-lee-7e3a8c', group: 'VIP 고객' },
+  { id: 102, name: '박지훈', phone: '010-9876-5432', email: 'park.jihoon@example.com', token: 'fcm:a1Bf2Cmpark-jihoon-9b4c1d', group: '신규 가입' },
+  { id: 103, name: '최예진', phone: '010-3344-5566', email: 'yejin.choi@example.com', token: 'apns:Yc83Hbxc7yejin-choi-2f5e9a', group: 'VIP 고객' },
+  { id: 104, name: '정민호', phone: '010-7788-9900', email: 'minho.jeong@example.com', token: 'fcm:Q9pLm2Vminho-jeong-6c2d8b', group: '휴면 회원' },
+  { id: 105, name: '한지영', phone: '010-2233-4455', email: 'jiyoung.han@example.com', token: 'apns:Kt94Nbm3jiyoung-han-1e9d6f', group: '신규 가입' },
+  { id: 106, name: '김도현', phone: '010-5566-7788', email: 'dohyun.kim@example.com', token: 'fcm:Pz58Ldb4dohyun-kim-8a3e2c', group: 'VIP 고객' },
+  { id: 107, name: '윤서연', phone: '010-1122-3344', email: 'seoyeon.yoon@example.com', token: 'fcm:Vn19Rxm6seoyeon-yoon-4b7d3a', group: '활성 고객' },
+  { id: 108, name: '강민재', phone: '010-9988-7766', email: 'minjae.kang@example.com', token: 'apns:Hg42Wcm5minjae-kang-9f6c8e', group: '활성 고객' }
 ]
 const groups = [
   { id: 1, name: 'VIP 고객', count: 142, desc: '최근 30일 내 3회 이상 구매' },
@@ -65,7 +77,8 @@ function confirm() {
         id: `g-${gid}-${i}-${Date.now()}`,
         name: `${g.name} #${i + 1}`,
         phone: `010-${1000 + Math.floor(Math.random() * 9000)}-${1000 + Math.floor(Math.random() * 9000)}`,
-        email: `${g.name.replace(/ /g, '').toLowerCase()}${i + 1}@example.com`
+        email: `${g.name.replace(/ /g, '').toLowerCase()}${i + 1}@example.com`,
+        token: `fcm:${Math.random().toString(36).slice(2, 14)}${g.name.replace(/ /g, '').toLowerCase()}-${i + 1}`
       }))
     })
   }
@@ -106,7 +119,9 @@ function confirm() {
             <th style="width: 36px" />
             <template v-if="tab === 'individual'">
               <th>이름</th>
-              <th>{{ keyColumn === 'phone' ? '휴대폰' : '이메일' }}</th>
+              <th v-for="c in cols" :key="c">
+                {{ headOf(c) }}
+              </th>
               <th>소속 그룹</th>
             </template>
             <template v-else>
@@ -126,13 +141,13 @@ function confirm() {
               @click="togglePick(item.id)"
             >
               <td>
-                <label class="checkbox">
-                  <input type="checkbox" :checked="picked.includes(item.id)" @click.prevent>
-                </label>
+                <span class="checkbox">
+                  <input type="checkbox" :checked="picked.includes(item.id)" tabindex="-1" style="pointer-events: none">
+                </span>
               </td>
               <td>{{ item.name }}</td>
-              <td class="cell-mono">
-                {{ keyColumn === 'phone' ? item.phone : item.email }}
+              <td v-for="c in cols" :key="c" class="cell-mono">
+                {{ valOf(item, c) }}
               </td>
               <td><AppBadge tone="sky">{{ item.group }}</AppBadge></td>
             </tr>
@@ -146,9 +161,9 @@ function confirm() {
               @click="togglePick(g.id)"
             >
               <td>
-                <label class="checkbox">
-                  <input type="checkbox" :checked="pickedGroups.includes(g.id)" @click.prevent>
-                </label>
+                <span class="checkbox">
+                  <input type="checkbox" :checked="pickedGroups.includes(g.id)" tabindex="-1" style="pointer-events: none">
+                </span>
               </td>
               <td>{{ g.name }}</td>
               <td class="cell-mono">

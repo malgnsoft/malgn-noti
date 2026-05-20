@@ -25,7 +25,153 @@ const openReset = ref(false)
 const openTpl = ref(false)
 const pushTemplateName = ref('')
 
-const extensionRows = ['버튼', '미디어', 'Android 미디어', 'iOS 미디어', 'Android 큰 아이콘', '그룹']
+
+// 미디어(URL · 유형 · 펼치기) 목록
+interface PushMedia { id: number | string, url: string, mediaType: string, expand: string }
+const pushMedia = ref<PushMedia[]>([])
+const openPushMedia = ref(false)
+const editPushMedia = ref<PushMedia | null>(null)
+
+function shortUrl(u: string) {
+  return u.replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+function openPushMediaAdd() {
+  editPushMedia.value = null
+  openPushMedia.value = true
+}
+function openPushMediaEdit(m: PushMedia) {
+  editPushMedia.value = m
+  openPushMedia.value = true
+}
+function onPushMediaConfirm(m: PushMedia) {
+  pushMedia.value = editPushMedia.value
+    ? pushMedia.value.map(x => x.id === m.id ? m : x)
+    : [...pushMedia.value, m]
+}
+function removePushMedia(id: number | string) {
+  pushMedia.value = pushMedia.value.filter(x => x.id !== id)
+}
+
+// Android 미디어(이미지 전용)
+const pushAndroidMedia = ref<PushMedia[]>([])
+const openPushAndroidMedia = ref(false)
+const editPushAndroidMedia = ref<PushMedia | null>(null)
+function openPushAndroidMediaAdd() {
+  editPushAndroidMedia.value = null
+  openPushAndroidMedia.value = true
+}
+function openPushAndroidMediaEdit(m: PushMedia) {
+  editPushAndroidMedia.value = m
+  openPushAndroidMedia.value = true
+}
+function onPushAndroidMediaConfirm(m: PushMedia) {
+  pushAndroidMedia.value = editPushAndroidMedia.value
+    ? pushAndroidMedia.value.map(x => x.id === m.id ? m : x)
+    : [...pushAndroidMedia.value, m]
+}
+function removePushAndroidMedia(id: number | string) {
+  pushAndroidMedia.value = pushAndroidMedia.value.filter(x => x.id !== id)
+}
+
+// iOS 미디어(이미지/GIF/동영상/소리 · 펼치기 없음)
+const pushIosMedia = ref<PushMedia[]>([])
+const openPushIosMedia = ref(false)
+const editPushIosMedia = ref<PushMedia | null>(null)
+function openPushIosMediaAdd() {
+  editPushIosMedia.value = null
+  openPushIosMedia.value = true
+}
+function openPushIosMediaEdit(m: PushMedia) {
+  editPushIosMedia.value = m
+  openPushIosMedia.value = true
+}
+function onPushIosMediaConfirm(m: PushMedia) {
+  pushIosMedia.value = editPushIosMedia.value
+    ? pushIosMedia.value.map(x => x.id === m.id ? m : x)
+    : [...pushIosMedia.value, m]
+}
+function removePushIosMedia(id: number | string) {
+  pushIosMedia.value = pushIosMedia.value.filter(x => x.id !== id)
+}
+
+// Android 큰 아이콘(URL만)
+const pushAndroidBigIcon = ref<PushMedia[]>([])
+const openPushBigIcon = ref(false)
+const editPushBigIcon = ref<PushMedia | null>(null)
+function openPushBigIconAdd() {
+  editPushBigIcon.value = null
+  openPushBigIcon.value = true
+}
+function openPushBigIconEdit(m: PushMedia) {
+  editPushBigIcon.value = m
+  openPushBigIcon.value = true
+}
+function onPushBigIconConfirm(m: PushMedia) {
+  pushAndroidBigIcon.value = editPushBigIcon.value
+    ? pushAndroidBigIcon.value.map(x => x.id === m.id ? m : x)
+    : [...pushAndroidBigIcon.value, m]
+}
+function removePushBigIcon(id: number | string) {
+  pushAndroidBigIcon.value = pushAndroidBigIcon.value.filter(x => x.id !== id)
+}
+
+// 그룹(키 · 설명)
+interface PushGroup { id: number | string, key: string, desc: string }
+const pushGroups = ref<PushGroup[]>([])
+const openPushGroup = ref(false)
+const editPushGroup = ref<PushGroup | null>(null)
+function openPushGroupAdd() {
+  editPushGroup.value = null
+  openPushGroup.value = true
+}
+function openPushGroupEdit(g: PushGroup) {
+  editPushGroup.value = g
+  openPushGroup.value = true
+}
+function onPushGroupConfirm(g: PushGroup) {
+  pushGroups.value = editPushGroup.value
+    ? pushGroups.value.map(x => x.id === g.id ? g : x)
+    : [...pushGroups.value, g]
+}
+function removePushGroup(id: number | string) {
+  pushGroups.value = pushGroups.value.filter(x => x.id !== id)
+}
+
+// 버튼(응답·앱 열기·URL 열기·닫기) 목록
+const pushButtons = ref<{ id: number | string, type: string }[]>([])
+const openPushBtn = ref(false)
+const editPushBtn = ref<{ id: number | string, type: string } | null>(null)
+
+function openPushBtnAdd() {
+  editPushBtn.value = null
+  openPushBtn.value = true
+}
+function openPushBtnEdit(b: { id: number | string, type: string }) {
+  editPushBtn.value = b
+  openPushBtn.value = true
+}
+function onPushBtnConfirm(b: { id: number | string, type: string }) {
+  pushButtons.value = editPushBtn.value
+    ? pushButtons.value.map(x => x.id === b.id ? b : x)
+    : [...pushButtons.value, b]
+}
+function removePushBtn(id: number | string) {
+  pushButtons.value = pushButtons.value.filter(x => x.id !== id)
+}
+
+// 발송 목적이 광고용이면 제목 앞에 (광고)를 자동·강제로 부착
+const AD_PREFIX = '(광고)'
+watch(pushType, (val, old) => {
+  if (val === 'ad') {
+    if (!title.value.startsWith(AD_PREFIX)) title.value = `${AD_PREFIX} ${title.value}`.trimEnd()
+  }
+  else if (old === 'ad' && title.value.startsWith(AD_PREFIX)) {
+    title.value = title.value.slice(AD_PREFIX.length).replace(/^\s+/, '')
+  }
+})
+watch(title, (v) => {
+  if (pushType.value === 'ad' && !v.startsWith(AD_PREFIX)) title.value = `${AD_PREFIX} ${v}`.trimEnd()
+})
 
 function onPickPushTpl(t: { name: string, title: string, body: string }) {
   pushTemplateName.value = t.name
@@ -33,10 +179,12 @@ function onPickPushTpl(t: { name: string, title: string, body: string }) {
   body.value = t.body
   toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
-function onManualConfirm(r: Recipient) {
-  recipients.value = editTarget.value
-    ? recipients.value.map(x => x.id === r.id ? r : x)
-    : [...recipients.value, r]
+function onPushRecipientsConfirm(list: Recipient[]) {
+  // 수정 모드면 기존 항목 제거 후 입력 목록 추가, 아니면 그대로 추가
+  if (editTarget.value) {
+    recipients.value = recipients.value.filter(x => x.id !== editTarget.value!.id)
+  }
+  recipients.value = [...recipients.value, ...list]
 }
 function send() {
   openConfirm.value = false
@@ -137,10 +285,113 @@ function send() {
             <AppFormRow label="배지">
               <input v-model="badge" class="input" inputmode="numeric" placeholder="숫자만 입력" style="max-width: 240px">
             </AppFormRow>
-            <AppFormRow v-for="row in extensionRows" :key="row" :label="row">
-              <button type="button" class="btn btn-sky btn-sm" style="align-self: flex-start">
-                <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
-              </button>
+            <AppFormRow label="버튼">
+              <div class="row" style="gap: 6px; flex-wrap: wrap">
+                <button type="button" class="btn btn-sky btn-sm" @click="openPushBtnAdd">
+                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                </button>
+                <div v-for="b in pushButtons" :key="b.id" class="push-btn-chip">
+                  <span>{{ b.type }}</span>
+                  <button type="button" class="pbc-act" aria-label="수정" @click="openPushBtnEdit(b)">
+                    <UIcon name="i-lucide-pencil" class="text-[11px]" />
+                  </button>
+                  <button type="button" class="pbc-act" aria-label="삭제" @click="removePushBtn(b.id)">
+                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                  </button>
+                </div>
+              </div>
+            </AppFormRow>
+            <AppFormRow label="미디어">
+              <div class="row" style="gap: 6px; flex-wrap: wrap">
+                <button type="button" class="btn btn-sky btn-sm" @click="openPushMediaAdd">
+                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                </button>
+                <div
+                  v-for="m in pushMedia"
+                  :key="m.id"
+                  class="push-btn-chip"
+                  style="cursor: pointer"
+                  @click="openPushMediaEdit(m)"
+                >
+                  <span>{{ m.mediaType }} · {{ shortUrl(m.url) }}</span>
+                  <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushMedia(m.id)">
+                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                  </button>
+                </div>
+              </div>
+            </AppFormRow>
+            <AppFormRow label="iOS 미디어">
+              <div class="row" style="gap: 6px; flex-wrap: wrap">
+                <button type="button" class="btn btn-sky btn-sm" @click="openPushIosMediaAdd">
+                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                </button>
+                <div
+                  v-for="m in pushIosMedia"
+                  :key="m.id"
+                  class="push-btn-chip"
+                  style="cursor: pointer"
+                  @click="openPushIosMediaEdit(m)"
+                >
+                  <span>{{ m.mediaType }} · {{ shortUrl(m.url) }}</span>
+                  <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushIosMedia(m.id)">
+                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                  </button>
+                </div>
+              </div>
+            </AppFormRow>
+            <AppFormRow label="Android 미디어">
+              <div class="row" style="gap: 6px; flex-wrap: wrap">
+                <button type="button" class="btn btn-sky btn-sm" @click="openPushAndroidMediaAdd">
+                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                </button>
+                <div
+                  v-for="m in pushAndroidMedia"
+                  :key="m.id"
+                  class="push-btn-chip"
+                  style="cursor: pointer"
+                  @click="openPushAndroidMediaEdit(m)"
+                >
+                  <span>{{ m.mediaType }} · {{ shortUrl(m.url) }}</span>
+                  <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushAndroidMedia(m.id)">
+                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                  </button>
+                </div>
+              </div>
+            </AppFormRow>
+            <AppFormRow label="Android 큰 아이콘">
+              <div class="row" style="gap: 6px; flex-wrap: wrap">
+                <button type="button" class="btn btn-sky btn-sm" @click="openPushBigIconAdd">
+                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                </button>
+                <div
+                  v-for="m in pushAndroidBigIcon"
+                  :key="m.id"
+                  class="push-btn-chip"
+                  style="cursor: pointer"
+                  @click="openPushBigIconEdit(m)"
+                >
+                  <span>{{ shortUrl(m.url) }}</span>
+                  <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushBigIcon(m.id)">
+                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                  </button>
+                </div>
+              </div>
+            </AppFormRow>
+            <AppFormRow label="그룹">
+              <div class="row" style="gap: 6px; flex-wrap: wrap">
+                <button type="button" class="btn btn-sky btn-sm" @click="openPushGroupAdd">
+                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                </button>
+                <div v-for="g in pushGroups" :key="g.id" class="push-btn-chip">
+                  <span>{{ g.key }}</span>
+                  <button type="button" class="pbc-act" aria-label="수정" @click="openPushGroupEdit(g)">
+                    <UIcon name="i-lucide-pencil" class="text-[11px]" />
+                  </button>
+                  <button type="button" class="pbc-act" aria-label="삭제" @click="removePushGroup(g.id)">
+                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                  </button>
+                </div>
+              </div>
             </AppFormRow>
           </div>
           <div>
@@ -149,8 +400,8 @@ function send() {
               <span>iOS</span>
             </div>
             <div class="push-previews">
-              <AppPushPreview app-name="앱 알림" :title="title" :body="body" />
-              <AppPushPreview app-name="앱 알림" :title="title" :body="body" />
+              <AppPushPreview platform="android" app-name="앱 알림" :title="title" :body="body" />
+              <AppPushPreview platform="ios" app-name="앱 알림" :title="title" :body="body" />
             </div>
             <div class="push-help">
               <UIcon name="i-lucide-info" class="text-[12px]" />
@@ -170,18 +421,60 @@ function send() {
     />
 
     <AppPushTemplateDialog :open="openTpl" @close="openTpl = false" @pick="onPickPushTpl" />
+    <AppPushButtonDialog
+      :open="openPushBtn"
+      :edit="editPushBtn"
+      @close="openPushBtn = false"
+      @confirm="onPushBtnConfirm"
+    />
+    <AppPushMediaDialog
+      :open="openPushMedia"
+      :edit="editPushMedia"
+      @close="openPushMedia = false"
+      @confirm="onPushMediaConfirm"
+    />
+    <AppPushMediaDialog
+      :open="openPushAndroidMedia"
+      :edit="editPushAndroidMedia"
+      title="Android 미디어"
+      :types="['이미지']"
+      @close="openPushAndroidMedia = false"
+      @confirm="onPushAndroidMediaConfirm"
+    />
+    <AppPushMediaDialog
+      :open="openPushIosMedia"
+      :edit="editPushIosMedia"
+      title="iOS 미디어"
+      :show-expand="false"
+      @close="openPushIosMedia = false"
+      @confirm="onPushIosMediaConfirm"
+    />
+    <AppPushMediaDialog
+      :open="openPushBigIcon"
+      :edit="editPushBigIcon"
+      title="Android 큰 아이콘"
+      :show-type="false"
+      :show-expand="false"
+      @close="openPushBigIcon = false"
+      @confirm="onPushBigIconConfirm"
+    />
+    <AppPushGroupDialog
+      :open="openPushGroup"
+      :edit="editPushGroup"
+      @close="openPushGroup = false"
+      @confirm="onPushGroupConfirm"
+    />
     <AppAddressBookDialog
       :open="openAddrBook"
-      key-column="phone"
+      key-column="token"
       @close="openAddrBook = false"
       @confirm="(items) => recipients = [...recipients, ...items]"
     />
-    <AppRecipientFormDialog
+    <AppPushRecipientDialog
       :open="openManual"
       :edit="editTarget"
-      key-column="phone"
       @close="openManual = false"
-      @confirm="onManualConfirm"
+      @confirm="onPushRecipientsConfirm"
     />
     <AppConfirmDialog
       :open="openReset"
@@ -229,6 +522,31 @@ function send() {
 .push-previews {
   display: flex;
   gap: 16px;
+}
+.push-btn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 10px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(0, 220, 130, 0.25);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--ink-800);
+}
+.push-btn-chip .pbc-act {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--ink-600);
+  background: transparent;
+  cursor: pointer;
+}
+.push-btn-chip .pbc-act:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ink-900);
 }
 .push-help {
   display: flex;

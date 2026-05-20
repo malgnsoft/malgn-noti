@@ -122,8 +122,6 @@ function send() {
         v-model:substitution-mode="substitutionMode"
         v-model:common-vars="commonVars"
         key-column="phone"
-        :locked="locked"
-        locked-hint="발신 프로필과 템플릿을 먼저 선택해 주세요."
         :show-vars="varKeys.length > 0"
         :var-keys="varKeys"
         :show-substitution="varKeys.length > 0"
@@ -135,42 +133,46 @@ function send() {
       <AppSendFormCard
         title="메시지 설정"
         required
-        :locked="locked"
-        locked-hint="발신 프로필과 템플릿을 먼저 선택해 주세요."
       >
-        <div v-if="template" class="msg-grid">
+        <div class="msg-grid">
           <div class="col">
             <AppFormRow label="템플릿 코드">
               <div class="ro-text">
-                {{ template.id }}
+                {{ template?.id ?? '' }}
               </div>
             </AppFormRow>
             <AppFormRow label="카카오톡 템플릿 코드">
               <div class="ro-text">
-                {{ template.id }}
+                {{ template?.id ?? '' }}
               </div>
             </AppFormRow>
             <AppFormRow label="발송 목적">
               <div class="ro-text">
-                일반용
+                {{ template ? '일반용' : '' }}
               </div>
             </AppFormRow>
             <AppFormRow label="메시지 유형">
               <div class="ro-text">
-                {{ typeLabel(template.type) }}
+                {{ template ? typeLabel(template.type) : '' }}
               </div>
             </AppFormRow>
             <AppFormRow label="메시지 강조 유형">
               <div class="ro-text">
-                선택 안함
+                {{ template ? '선택 안함' : '' }}
               </div>
             </AppFormRow>
             <AppFormRow label="내용" required>
-              <textarea class="textarea" rows="8" readonly :value="template.body" />
+              <textarea
+                class="textarea"
+                rows="8"
+                readonly
+                :value="template?.body ?? ''"
+                placeholder="템플릿을 선택하면 내용이 표시됩니다."
+              />
             </AppFormRow>
             <AppFormRow label="보안 템플릿 여부">
               <div class="ro-text">
-                {{ template.type === 'auth' ? '설정' : '미설정' }}
+                {{ template ? (template.type === 'auth' ? '설정' : '미설정') : '' }}
               </div>
             </AppFormRow>
           </div>
@@ -182,8 +184,8 @@ function send() {
               <AppKakaoPreview
                 :profile-name="profile?.name"
                 :body="previewBody"
-                :extra="template.extra"
-                :buttons="template.buttons"
+                :extra="template?.extra"
+                :buttons="template?.buttons"
               />
             </div>
           </div>

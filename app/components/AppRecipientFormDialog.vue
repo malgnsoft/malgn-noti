@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
 
+type Col = 'phone' | 'email' | 'token'
+
 const props = withDefaults(defineProps<{
   open: boolean
   edit?: Recipient | null
-  keyColumn?: 'phone' | 'email' | 'token'
+  keyColumn?: Col
+  keyColumns?: Col[]
   varKeys?: string[]
-}>(), { edit: null, keyColumn: 'phone', varKeys: () => [] })
+}>(), { edit: null, keyColumn: 'phone', keyColumns: undefined, varKeys: () => [] })
 
 const emit = defineEmits<{ close: [], confirm: [Recipient] }>()
+const toast = useToast()
+
+// 표시할 키 컬럼 목록: keyColumns가 있으면 그 배열, 없으면 단일 keyColumn
+const cols = computed<Col[]>(() => (props.keyColumns && props.keyColumns.length ? props.keyColumns : [props.keyColumn!]))
 
 const form = reactive<{ name: string, phone: string, email: string, vars: Record<string, string> }>({
   name: '', phone: '', email: '', vars: {}
@@ -18,13 +25,45 @@ watch(() => props.open, (v) => {
   if (v) {
     const e = props.edit
     form.name = e?.name || ''
-    form.phone = e?.phone || ''
+    form.phone = (e?.phone || '').replace(/\D/g, '').slice(0, 11)
     form.email = e?.email || ''
     form.vars = { ...(e?.vars || {}) }
   }
 })
 
+function onPhoneInput(ev: Event) {
+  // 하이픈 등 비숫자 제거 후 11자리로 제한, 숫자만 저장·표시
+  form.phone = (ev.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 11)
+}
+
 function confirm() {
+  const want = cols.value
+  const singleCol = want.length === 1 ? want[0] : null
+  // 단일 컬럼 모드: 기존 동작(해당 컬럼 필수 + 형식 검사)
+  if (singleCol === 'phone' && form.phone.length !== 11) {
+    toast.add({ title: '국내 휴대폰 번호 11자리를 입력하세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
+    return
+  }
+  // 다중 컬럼 모드: 최소 한 항목 입력 + 입력된 항목은 형식 검사
+  if (!singleCol) {
+    const filled = want.filter((c) => {
+      if (c === 'phone') return form.phone.length > 0
+      if (c === 'email') return form.email.trim().length > 0
+      return false
+    })
+    if (filled.length === 0) {
+      toast.add({ title: '휴대폰 또는 이메일 중 하나는 입력해야 합니다.', color: 'error', icon: 'i-lucide-octagon-alert' })
+      return
+    }
+    if (want.includes('phone') && form.phone.length > 0 && form.phone.length !== 11) {
+      toast.add({ title: '휴대폰은 11자리 숫자여야 합니다.', color: 'error', icon: 'i-lucide-octagon-alert' })
+      return
+    }
+    if (want.includes('email') && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toast.add({ title: '올바른 이메일 형식을 입력하세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
+      return
+    }
+  }
   emit('confirm', {
     id: props.edit?.id ?? `m-${Date.now()}`,
     name: form.name,
@@ -47,12 +86,24 @@ function confirm() {
       <AppFormRow label="별칭">
         <input v-model="form.name" class="input" placeholder="예: 이수민">
       </AppFormRow>
-      <AppFormRow v-if="keyColumn === 'phone'" label="휴대폰" required>
-        <input v-model="form.phone" class="input" placeholder="010-1234-5678">
+      <AppFormRow v-if="cols.includes('phone')" label="휴대폰" :required="cols.length === 1">
+        <input
+          :value="form.phone"
+          class="input"
+          inputmode="numeric"
+          placeholder="01012345678"
+          @input="onPhoneInput"
+        >
+        <div class="phone-hint">
+          국내 휴대폰 <b>11자리</b>를 하이픈 없이 숫자만 입력하세요. (예: 01012345678)
+        </div>
       </AppFormRow>
-      <AppFormRow v-else label="이메일" required>
+      <AppFormRow v-if="cols.includes('email')" label="이메일" :required="cols.length === 1">
         <input v-model="form.email" class="input" placeholder="user@example.com">
       </AppFormRow>
+      <div v-if="cols.length > 1" class="multi-hint">
+        휴대폰과 이메일 중 <b>하나 이상</b> 입력해 주세요.
+      </div>
       <div v-if="varKeys.length > 0" style="margin-top: 6px">
         <div style="font-size: 12px; font-weight: 600; color: var(--ink-700); margin-bottom: 8px">
           치환자
@@ -83,3 +134,24 @@ function confirm() {
     </template>
   </AppModal>
 </template>
+
+<style scoped>
+.phone-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.phone-hint b {
+  color: var(--ink-700);
+  font-weight: 700;
+}
+.multi-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.multi-hint b {
+  color: var(--ink-700);
+  font-weight: 700;
+}
+</style>

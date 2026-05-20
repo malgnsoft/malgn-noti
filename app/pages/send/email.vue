@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
+import type { EmailTpl } from '~/types/template'
 
 useHead({ title: '이메일 발송' })
 const toast = useToast()
@@ -10,7 +11,8 @@ const from = ref('')
 const purpose = ref('info')
 const subject = ref('')
 const body = ref('')
-const viewMode = ref<'text' | 'html'>('html')
+const emailHeading = ref('')
+const emailButtonLabel = ref('')
 const files = ref<{ name: string }[]>([])
 const recipients = ref<Recipient[]>([])
 const selectedRcpt = ref<(number | string)[]>([])
@@ -25,11 +27,27 @@ const openAi = ref(false)
 const openTpl = ref(false)
 const emailTemplateName = ref('')
 
-function onPickEmailTpl(t: { name: string, subject: string, from: string, body: string }) {
+// 발송 목적이 광고용이면 제목 앞에 (광고)를 자동·강제로 부착
+const AD_PREFIX = '(광고)'
+watch(purpose, (val, old) => {
+  if (val === 'ad') {
+    if (!subject.value.startsWith(AD_PREFIX)) subject.value = `${AD_PREFIX} ${subject.value}`.trimEnd()
+  }
+  else if (old === 'ad' && subject.value.startsWith(AD_PREFIX)) {
+    subject.value = subject.value.slice(AD_PREFIX.length).replace(/^\s+/, '')
+  }
+})
+watch(subject, (v) => {
+  if (purpose.value === 'ad' && !v.startsWith(AD_PREFIX)) subject.value = `${AD_PREFIX} ${v}`.trimEnd()
+})
+
+function onPickEmailTpl(t: EmailTpl) {
   emailTemplateName.value = t.name
   from.value = t.from
   subject.value = t.subject
   body.value = t.body
+  emailHeading.value = t.heading
+  emailButtonLabel.value = t.buttonLabel ?? ''
   toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
 function onManualConfirm(r: Recipient) {
@@ -153,21 +171,14 @@ function send() {
             <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
-            <div class="mail-preview">
-              <div class="mail-head">
-                <div>보낸사람 <span>{{ from }}</span></div>
-                <div>첨부파일 <span>{{ files.map(f => f.name).join(', ') }}</span></div>
-              </div>
-              <div class="mail-body">
-                {{ body }}
-              </div>
-              <div class="mail-foot">
-                <AppSegmented
-                  v-model="viewMode"
-                  :options="[{ value: 'text', label: '텍스트' }, { value: 'html', label: 'HTML' }]"
-                />
-              </div>
-            </div>
+            <AppEmailPreview
+              :subject="subject"
+              :from="from"
+              :attachments="files.map(f => f.name)"
+              :heading="emailHeading"
+              :body="body"
+              :button-label="emailButtonLabel"
+            />
           </div>
         </div>
       </AppSendFormCard>
@@ -223,44 +234,12 @@ function send() {
 </template>
 
 <style scoped>
-.msg-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+.msg-grid { display: grid; grid-template-columns: 1fr 460px; gap: 24px; }
 @media (max-width: 1023px) { .msg-grid { grid-template-columns: 1fr; } }
 .mail-help {
   margin-top: 8px;
   font-size: 11px;
   color: var(--ink-400);
   line-height: 1.7;
-}
-.mail-preview {
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--white);
-  display: flex;
-  flex-direction: column;
-  min-height: 420px;
-}
-.mail-head {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  font-size: 12px;
-  color: var(--ink-500);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.mail-head span { color: var(--ink-800); margin-left: 4px; }
-.mail-body {
-  flex: 1;
-  padding: 16px;
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--ink-700);
-  white-space: pre-wrap;
-}
-.mail-foot {
-  padding: 10px 16px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: flex-end;
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
+import type { RcsTpl } from '~/types/template'
 
 useHead({ title: 'RCS 발송' })
 const toast = useToast()
@@ -15,7 +16,7 @@ const fallback = ref('sms')
 const body = ref('')
 const hasImage = ref(false)
 const buttons = ref<{ type: string, label: string }[]>([])
-const expiry = ref('24')
+const expiry = ref('24h')
 const recipients = ref<Recipient[]>([])
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '', hour: '09', minute: '00' })
@@ -32,10 +33,54 @@ const openAi = ref(false)
 const brandName = computed(() => brand.value === 'molly' ? '몰리몰리' : brand.value === 'malgn-cs' ? '맑은소프트 고객센터' : '브랜드')
 
 const rcsTemplateName = ref('')
-function onPickRcsTpl(t: { id: number, name: string }) {
+function onPickRcsTpl(t: RcsTpl) {
   rcsTemplateName.value = t.name
+  // 템플릿에 담긴 메시지 설정값으로 각 항목 자동 선택/채움
+  if (t.purpose) purpose.value = t.purpose
+  if (t.msgType) msgType.value = t.msgType
+  if (t.deliveryType) deliveryType.value = t.deliveryType
+  if (t.fallback) fallback.value = t.fallback
+  if (t.expiry) expiry.value = t.expiry
+  body.value = t.body ?? ''
+  hasImage.value = t.hasImage ?? false
+  buttons.value = t.buttons ? t.buttons.map(b => ({ ...b })) : []
   toast.add({ title: `"${t.name}" 템플릿을 선택했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
+// 발신 브랜드·발신 번호를 제외한 페이지 내용값 초기화(템플릿 사용유무 전환 / 전체 초기화 공용)
+function resetContent() {
+  rcsTemplateName.value = ''
+  purpose.value = 'info'
+  msgType.value = 'sms'
+  deliveryType.value = 'standalone'
+  fallback.value = 'sms'
+  body.value = ''
+  hasImage.value = false
+  buttons.value = []
+  expiry.value = '24h'
+  recipients.value = []
+  selectedRcpt.value = []
+  sendOptions.value = { mode: 'now', date: '', hour: '09', minute: '00' }
+}
+
+// 템플릿 사용유무를 바꾸면 페이지 내용값 초기화(전체 초기화 중에는 억제)
+const suppressTplReset = ref(false)
+watch(useTemplate, () => {
+  if (suppressTplReset.value) return
+  resetContent()
+  toast.add({ title: '템플릿 사용 설정이 변경되어 입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
+}, { flush: 'sync' })
+
+function handleReset() {
+  suppressTplReset.value = true
+  useTemplate.value = 'off'
+  suppressTplReset.value = false
+  resetContent()
+  brand.value = ''
+  senderNumber.value = ''
+  openReset.value = false
+  toast.add({ title: '입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
+}
+
 function onManualConfirm(r: Recipient) {
   recipients.value = editTarget.value
     ? recipients.value.map(x => x.id === r.id ? r : x)
@@ -167,19 +212,16 @@ function send() {
                   <option value="standalone">
                     스탠드얼론
                   </option>
-                  <option value="template">
-                    템플릿
+                  <option value="conversation">
+                    대화형
                   </option>
                 </select>
                 <select v-model="fallback" class="select" style="max-width: 160px">
                   <option value="sms">
                     SMS
                   </option>
-                  <option value="lms">
-                    LMS
-                  </option>
-                  <option value="none">
-                    대체 없음
+                  <option value="integrated">
+                    통합 SMS
                   </option>
                 </select>
               </div>
@@ -231,17 +273,17 @@ function send() {
             </AppFormRow>
             <AppFormRow label="수신 대기 만료 기한" required>
               <select v-model="expiry" class="select" style="max-width: 200px">
-                <option value="1">
+                <option value="40s">
+                  40초
+                </option>
+                <option value="3m">
+                  3분
+                </option>
+                <option value="1h">
                   1시간
                 </option>
-                <option value="6">
-                  6시간
-                </option>
-                <option value="24">
+                <option value="24h">
                   24시간
-                </option>
-                <option value="72">
-                  3일
                 </option>
               </select>
             </AppFormRow>
@@ -317,7 +359,7 @@ function send() {
       confirm-label="초기화"
       danger
       @close="openReset = false"
-      @confirm="() => { recipients = []; body = ''; openReset = false }"
+      @confirm="handleReset"
     />
     <AppSendConfirmDialog
       :open="openConfirm"

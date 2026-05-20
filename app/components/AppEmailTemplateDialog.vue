@@ -1,13 +1,5 @@
 <script setup lang="ts">
-interface EmailTpl {
-  id: number
-  name: string
-  subject: string
-  from: string
-  heading: string
-  body: string
-  buttonLabel?: string
-}
+import type { EmailTpl } from '~/types/template'
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [], pick: [EmailTpl] }>()
@@ -27,7 +19,6 @@ const TEMPLATES: EmailTpl[] = [
 
 const search = ref('')
 const picked = ref<EmailTpl | null>(TEMPLATES[0])
-const viewMode = ref<'text' | 'html'>('html')
 const filtered = computed(() => TEMPLATES.filter(t => !search.value || t.name.includes(search.value)))
 
 function confirm() {
@@ -107,35 +98,15 @@ function confirm() {
         </div>
       </div>
 
-      <div class="et-preview">
-        <template v-if="picked">
-          <div class="et-subject">
-            {{ picked.subject }}
-          </div>
-          <div class="et-meta">
-            <div><span>보낸사람</span>{{ picked.from }}</div>
-            <div><span>첨부파일</span>—</div>
-          </div>
-          <div class="et-body">
-            <div class="et-card">
-              <div class="et-heading">
-                {{ picked.heading }}
-              </div>
-              <div class="et-text">
-                {{ picked.body }}
-              </div>
-              <button v-if="picked.buttonLabel" type="button" class="btn btn-sky btn-sm" style="margin-top: 14px">
-                {{ picked.buttonLabel }}
-              </button>
-            </div>
-          </div>
-          <div class="et-foot">
-            <AppSegmented
-              v-model="viewMode"
-              :options="[{ value: 'text', label: '텍스트' }, { value: 'html', label: 'HTML' }]"
-            />
-          </div>
-        </template>
+      <div>
+        <AppEmailPreview
+          v-if="picked"
+          :subject="picked.subject"
+          :from="picked.from"
+          :heading="picked.heading"
+          :body="picked.body"
+          :button-label="picked.buttonLabel"
+        />
         <AppEmptyState
           v-else
           icon="i-lucide-mail"
@@ -154,63 +125,3 @@ function confirm() {
     </template>
   </AppModal>
 </template>
-
-<style scoped>
-.et-preview {
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--white);
-  display: flex;
-  flex-direction: column;
-  min-height: 420px;
-}
-.et-subject {
-  padding: 16px 18px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink-900);
-}
-.et-meta {
-  padding: 0 18px 14px;
-  font-size: 12px;
-  color: var(--ink-700);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-}
-.et-meta span {
-  display: inline-block;
-  width: 64px;
-  color: var(--ink-400);
-}
-.et-body {
-  flex: 1;
-  padding: 18px;
-  background: var(--paper);
-}
-.et-card {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: 24px;
-}
-.et-heading {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--ink-900);
-  margin-bottom: 10px;
-}
-.et-text {
-  font-size: 13px;
-  color: var(--ink-600);
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-.et-foot {
-  padding: 10px 16px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: flex-end;
-}
-</style>
