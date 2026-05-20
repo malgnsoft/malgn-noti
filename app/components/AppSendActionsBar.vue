@@ -10,11 +10,11 @@ const emit = defineEmits<{ reset: [], send: [] }>()
 <template>
   <div class="send-actions">
     <button type="button" class="btn btn-neutral" @click="emit('reset')">
-      <UIcon name="i-lucide-refresh-cw" class="text-[14px]" />
+      <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-lg)]" />
       초기화
     </button>
     <button type="button" class="btn btn-primary btn-lg" :disabled="sendDisabled" @click="emit('send')">
-      <UIcon name="i-lucide-send" class="text-[14px]" />
+      <UIcon name="i-lucide-send" class="text-[length:var(--fz-lg)]" />
       {{ sendLabel }}
     </button>
   </div>

@@ -107,7 +107,7 @@ function onCancel() {
 <style scoped>
 .picker-body { padding: 8px 0 16px; }
 .modal-title {
-  font-size: 18px;
+  font-size: var(--fz-3xl);
   font-weight: 700;
   color: var(--gray-900);
   margin-bottom: 16px;
@@ -122,7 +122,7 @@ function onCancel() {
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
-  font-size: 14px;
+  font-size: var(--fz-lg);
   font-weight: 500;
   color: var(--gray-500);
   cursor: pointer;
@@ -136,7 +136,7 @@ function onCancel() {
   font-weight: 700;
 }
 .tab-sub {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--gray-400);
 }
 .tab.is-active .tab-sub {
@@ -175,7 +175,7 @@ function onCancel() {
 .preview-empty {
   text-align: center;
   color: var(--gray-500);
-  font-size: 13px;
+  font-size: var(--fz-md);
   line-height: 1.6;
 }
 .footer-actions {

@@ -178,7 +178,7 @@ function confirm() {
       </table>
     </div>
     <template #footer>
-      <div class="muted" style="margin-right: auto; font-size: 13px">
+      <div class="muted" style="margin-right: auto; font-size: var(--fz-md)">
         선택: <strong style="color: var(--accent-ink)">{{ total.toLocaleString() }}명</strong>
       </div>
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">

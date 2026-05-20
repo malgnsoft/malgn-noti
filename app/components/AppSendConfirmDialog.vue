@@ -66,7 +66,7 @@ const cells = computed(() => [
   border-radius: var(--r-md);
   padding: 12px 14px;
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-700);
 }
 .scd-grid {
@@ -79,10 +79,10 @@ const cells = computed(() => [
 }
 .scd-cell { padding: 16px; background: var(--white); }
 .scd-cell-br { border-right: 1px solid var(--line); }
-.scd-label { font-size: 11px; color: var(--ink-500); margin-bottom: 4px; }
-.scd-value { font-size: 16px; font-weight: 600; }
+.scd-label { font-size: var(--fz-xs); color: var(--ink-500); margin-bottom: 4px; }
+.scd-value { font-size: var(--fz-2xl); font-weight: 600; }
 .scd-foot {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   display: flex;
   justify-content: space-between;

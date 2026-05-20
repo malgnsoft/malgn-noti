@@ -83,7 +83,7 @@ function send() {
         </AppFormRow>
         <AppFormRow label="템플릿 선택">
           <div class="row" style="gap: 12px; flex-wrap: wrap">
-            <span style="font-size: 13px; color: var(--ink-900)">
+            <span style="font-size: var(--fz-md); color: var(--ink-900)">
               {{ emailTemplateName || '선택된 템플릿 없음' }}
             </span>
             <button
@@ -135,7 +135,7 @@ function send() {
             <AppFormRow label="내용" required>
               <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
                 <button type="button" class="btn btn-outline btn-sm" @click="openAi = true">
-                  <UIcon name="i-lucide-sparkles" class="text-[12px]" style="color: var(--accent-ink)" /> AI 문장 다듬기
+                  <UIcon name="i-lucide-sparkles" class="text-[length:var(--fz-sm)]" style="color: var(--accent-ink)" /> AI 문장 다듬기
                 </button>
               </div>
               <textarea v-model="body" class="textarea" rows="12" placeholder="내용을 입력하세요. 치환자는 #{이름} 형식으로 작성합니다." />
@@ -148,14 +148,14 @@ function send() {
                   class="btn btn-primary btn-sm"
                   @click="files = [...files, { name: `첨부파일-${files.length + 1}.pdf` }]"
                 >
-                  <UIcon name="i-lucide-paperclip" class="text-[12px]" /> 파일 선택
+                  <UIcon name="i-lucide-paperclip" class="text-[length:var(--fz-sm)]" /> 파일 선택
                 </button>
               </div>
               <div v-if="files.length" class="row" style="flex-wrap: wrap; gap: 6px; margin-top: 8px">
                 <div v-for="(f, i) in files" :key="i" class="file-chip">
-                  <UIcon name="i-lucide-paperclip" class="text-[12px]" />{{ f.name }}
+                  <UIcon name="i-lucide-paperclip" class="text-[length:var(--fz-sm)]" />{{ f.name }}
                   <span class="remove" @click="files = files.filter((_, j) => j !== i)">
-                    <UIcon name="i-lucide-x" class="text-[12px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-sm)]" />
                   </span>
                 </div>
               </div>
@@ -168,7 +168,7 @@ function send() {
             </AppFormRow>
           </div>
           <div>
-            <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
+            <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
             <AppEmailPreview
@@ -238,7 +238,7 @@ function send() {
 @media (max-width: 1023px) { .msg-grid { grid-template-columns: 1fr; } }
 .mail-help {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-400);
   line-height: 1.7;
 }

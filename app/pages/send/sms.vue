@@ -184,7 +184,7 @@ function send() {
         </AppFormRow>
         <AppFormRow label="템플릿 선택">
           <div class="row" style="gap: 12px; flex-wrap: wrap">
-            <span style="font-size: 13px; color: var(--ink-900)">
+            <span style="font-size: var(--fz-md); color: var(--ink-900)">
               {{ template ? template.name : '선택된 템플릿 없음' }}
             </span>
             <button
@@ -219,7 +219,7 @@ function send() {
       <AppSendFormCard title="메시지 설정" required>
         <template v-if="tplLock" #headerRight>
           <AppBadge tone="neutral">
-            <UIcon name="i-lucide-lock" class="text-[10px]" /> 템플릿 잠금
+            <UIcon name="i-lucide-lock" class="text-[length:var(--fz-2xs)]" /> 템플릿 잠금
           </AppBadge>
         </template>
         <div class="msg-grid">
@@ -292,7 +292,7 @@ function send() {
             <AppFormRow label="내용" required>
               <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
                 <button type="button" class="btn btn-outline btn-sm" :disabled="tplLock" @click="openAi = true">
-                  <UIcon name="i-lucide-sparkles" class="text-[12px]" style="color: var(--accent-ink)" /> AI 문장 다듬기
+                  <UIcon name="i-lucide-sparkles" class="text-[length:var(--fz-sm)]" style="color: var(--accent-ink)" /> AI 문장 다듬기
                 </button>
               </div>
               <div style="position: relative">
@@ -316,10 +316,10 @@ function send() {
             >
               <div class="row" style="flex-wrap: wrap; gap: 8px">
                 <div v-for="(f, i) in files" :key="i" class="file-chip" :class="{ locked: attachLocked }">
-                  <UIcon :name="attachLocked ? 'i-lucide-lock' : 'i-lucide-image'" class="text-[12px]" />
+                  <UIcon :name="attachLocked ? 'i-lucide-lock' : 'i-lucide-image'" class="text-[length:var(--fz-sm)]" />
                   {{ f.name }}
                   <span v-if="!attachLocked" class="remove" @click="files = files.filter((_, j) => j !== i)">
-                    <UIcon name="i-lucide-x" class="text-[12px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-sm)]" />
                   </span>
                 </div>
                 <input
@@ -336,18 +336,18 @@ function send() {
                   class="btn btn-outline btn-sm"
                   @click="imgInput?.click()"
                 >
-                  <UIcon name="i-lucide-upload" class="text-[12px]" /> 이미지 선택
+                  <UIcon name="i-lucide-upload" class="text-[length:var(--fz-sm)]" /> 이미지 선택
                 </button>
               </div>
               <div v-if="attachLocked" class="attach-locked-hint">
-                <UIcon name="i-lucide-lock" class="text-[11px]" />
+                <UIcon name="i-lucide-lock" class="text-[length:var(--fz-xs)]" />
                 템플릿에 포함된 이미지로 자동 설정되었습니다. (수정 불가)
               </div>
             </AppFormRow>
           </div>
 
           <div>
-            <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
+            <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
             <div style="display: grid; place-items: center">
@@ -446,7 +446,7 @@ function send() {
   bottom: 8px;
   text-align: right;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   line-height: 1.5;
   color: var(--ink-400);
   pointer-events: none;
@@ -461,7 +461,7 @@ function send() {
   align-items: center;
   gap: 5px;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
 }
 </style>

@@ -45,7 +45,7 @@ function btnIcon(type: string) {
           </div>
           <div v-if="buttons.length > 0" class="button-list">
             <div v-for="(b, i) in buttons" :key="i" class="btn-row">
-              <UIcon :name="btnIcon(b.type)" class="text-[12px]" />
+              <UIcon :name="btnIcon(b.type)" class="text-[length:var(--fz-sm)]" />
               {{ b.label }}
             </div>
           </div>

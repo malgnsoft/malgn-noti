@@ -56,13 +56,13 @@ const viewMode = ref<'text' | 'html'>('html')
 }
 .ep-subject {
   padding: 16px 18px 12px;
-  font-size: 14px;
+  font-size: var(--fz-lg);
   font-weight: 700;
   color: var(--ink-900);
 }
 .ep-meta {
   padding: 0 18px 14px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-700);
   display: flex;
   flex-direction: column;
@@ -86,13 +86,13 @@ const viewMode = ref<'text' | 'html'>('html')
   padding: 24px;
 }
 .ep-heading {
-  font-size: 17px;
+  font-size: calc(17px * var(--fz-scale));
   font-weight: 700;
   color: var(--ink-900);
   margin-bottom: 10px;
 }
 .ep-text {
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-600);
   line-height: 1.7;
   white-space: pre-wrap;

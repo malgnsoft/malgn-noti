@@ -152,7 +152,7 @@ function send() {
               <div v-if="selectedFlow" class="flow-chips">
                 <template v-for="(n, i) in selectedFlow.nodes" :key="i">
                   <div class="flow-chip" :class="{ active: activeNode === i }" @click="activeNode = i">
-                    <span :class="['ch-tile', n.ch]" style="width: 18px; height: 18px; border-radius: 4px; font-size: 10px">{{ n.tag }}</span>
+                    <span :class="['ch-tile', n.ch]" style="width: 18px; height: 18px; border-radius: 4px; font-size: var(--fz-2xs)">{{ n.tag }}</span>
                     {{ n.label }}
                   </div>
                   <span v-if="i < selectedFlow.nodes.length - 1" class="flow-arrow">
@@ -160,7 +160,7 @@ function send() {
                   </span>
                 </template>
               </div>
-              <div v-else class="muted" style="font-size: 12px">
+              <div v-else class="muted" style="font-size: var(--fz-sm)">
                 플로우를 선택하세요.
               </div>
             </AppFormRow>
@@ -207,7 +207,7 @@ function send() {
             </AppFormRow>
           </div>
           <div>
-            <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
+            <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
             <div style="display: grid; place-items: center">
@@ -273,14 +273,14 @@ function send() {
   border-radius: var(--r-lg);
   padding: 14px 16px;
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-700);
   line-height: 1.7;
 }
 .msg-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; }
 @media (max-width: 1023px) { .msg-grid { grid-template-columns: 1fr; } }
 .ro-text {
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-800);
   padding-top: 2px;
 }

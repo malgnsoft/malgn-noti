@@ -85,7 +85,7 @@ function toggleRow(id: string, e: Event) {
   background: var(--gray-50);
   border-bottom: 1px solid var(--gray-200);
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 600;
   color: var(--gray-700);
   text-align: center;
@@ -94,7 +94,7 @@ function toggleRow(id: string, e: Event) {
   border-bottom: 1px solid var(--gray-200);
   padding: 12px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--gray-700);
 }
 .th-check {
@@ -105,7 +105,7 @@ function toggleRow(id: string, e: Event) {
   border: 1px solid var(--gray-300);
   border-radius: 4px;
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-family: var(--font-sans);
 }
 .substitution-input:focus {

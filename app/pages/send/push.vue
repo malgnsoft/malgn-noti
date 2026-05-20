@@ -214,7 +214,7 @@ function send() {
         </AppFormRow>
         <AppFormRow label="템플릿 선택">
           <div class="row" style="gap: 12px; flex-wrap: wrap">
-            <span style="font-size: 13px; color: var(--ink-900)">
+            <span style="font-size: var(--fz-md); color: var(--ink-900)">
               {{ pushTemplateName || '선택된 템플릿 없음' }}
             </span>
             <button
@@ -278,7 +278,7 @@ function send() {
                 v-model="jsonPayload"
                 class="textarea"
                 rows="12"
-                style="font-family: var(--font-mono); font-size: 12px"
+                style="font-family: var(--font-mono); font-size: var(--fz-sm)"
               />
             </AppFormRow>
 
@@ -288,15 +288,15 @@ function send() {
             <AppFormRow label="버튼">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
                 <button type="button" class="btn btn-primary btn-sm" @click="openPushBtnAdd">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
                 <div v-for="b in pushButtons" :key="b.id" class="push-btn-chip">
                   <span>{{ b.type }}</span>
                   <button type="button" class="pbc-act" aria-label="수정" @click="openPushBtnEdit(b)">
-                    <UIcon name="i-lucide-pencil" class="text-[11px]" />
+                    <UIcon name="i-lucide-pencil" class="text-[length:var(--fz-xs)]" />
                   </button>
                   <button type="button" class="pbc-act" aria-label="삭제" @click="removePushBtn(b.id)">
-                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-xs)]" />
                   </button>
                 </div>
               </div>
@@ -304,7 +304,7 @@ function send() {
             <AppFormRow label="미디어">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
                 <button type="button" class="btn btn-primary btn-sm" @click="openPushMediaAdd">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
                 <div
                   v-for="m in pushMedia"
@@ -315,7 +315,7 @@ function send() {
                 >
                   <span>{{ m.mediaType }} · {{ shortUrl(m.url) }}</span>
                   <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushMedia(m.id)">
-                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-xs)]" />
                   </button>
                 </div>
               </div>
@@ -323,7 +323,7 @@ function send() {
             <AppFormRow label="iOS 미디어">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
                 <button type="button" class="btn btn-primary btn-sm" @click="openPushIosMediaAdd">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
                 <div
                   v-for="m in pushIosMedia"
@@ -334,7 +334,7 @@ function send() {
                 >
                   <span>{{ m.mediaType }} · {{ shortUrl(m.url) }}</span>
                   <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushIosMedia(m.id)">
-                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-xs)]" />
                   </button>
                 </div>
               </div>
@@ -342,7 +342,7 @@ function send() {
             <AppFormRow label="Android 미디어">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
                 <button type="button" class="btn btn-primary btn-sm" @click="openPushAndroidMediaAdd">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
                 <div
                   v-for="m in pushAndroidMedia"
@@ -353,7 +353,7 @@ function send() {
                 >
                   <span>{{ m.mediaType }} · {{ shortUrl(m.url) }}</span>
                   <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushAndroidMedia(m.id)">
-                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-xs)]" />
                   </button>
                 </div>
               </div>
@@ -361,7 +361,7 @@ function send() {
             <AppFormRow label="Android 큰 아이콘">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
                 <button type="button" class="btn btn-primary btn-sm" @click="openPushBigIconAdd">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
                 <div
                   v-for="m in pushAndroidBigIcon"
@@ -372,7 +372,7 @@ function send() {
                 >
                   <span>{{ shortUrl(m.url) }}</span>
                   <button type="button" class="pbc-act" aria-label="삭제" @click.stop="removePushBigIcon(m.id)">
-                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-xs)]" />
                   </button>
                 </div>
               </div>
@@ -380,15 +380,15 @@ function send() {
             <AppFormRow label="그룹">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
                 <button type="button" class="btn btn-primary btn-sm" @click="openPushGroupAdd">
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
                 <div v-for="g in pushGroups" :key="g.id" class="push-btn-chip">
                   <span>{{ g.key }}</span>
                   <button type="button" class="pbc-act" aria-label="수정" @click="openPushGroupEdit(g)">
-                    <UIcon name="i-lucide-pencil" class="text-[11px]" />
+                    <UIcon name="i-lucide-pencil" class="text-[length:var(--fz-xs)]" />
                   </button>
                   <button type="button" class="pbc-act" aria-label="삭제" @click="removePushGroup(g.id)">
-                    <UIcon name="i-lucide-x" class="text-[11px]" />
+                    <UIcon name="i-lucide-x" class="text-[length:var(--fz-xs)]" />
                   </button>
                 </div>
               </div>
@@ -404,7 +404,7 @@ function send() {
               <AppPushPreview platform="ios" app-name="앱 알림" :title="title" :body="body" />
             </div>
             <div class="push-help">
-              <UIcon name="i-lucide-info" class="text-[12px]" />
+              <UIcon name="i-lucide-info" class="text-[length:var(--fz-sm)]" />
               <span>디바이스에 따라 실제 메시지 수신 화면과 미리보기 화면이 다를 수 있으며, 일부 기능(애니메이션, 사운드 등)은 미리보기에서 지원되지 않을 수 있습니다.</span>
             </div>
           </div>
@@ -515,7 +515,7 @@ function send() {
 .push-prev-caps span {
   flex: 1;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   margin-bottom: 8px;
 }
@@ -531,7 +531,7 @@ function send() {
   background: var(--accent-soft);
   border: 1px solid rgba(0, 220, 130, 0.25);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-800);
 }
 .push-btn-chip .pbc-act {
@@ -555,7 +555,7 @@ function send() {
   padding: 10px 12px;
   background: var(--ink-50);
   border-radius: var(--r-md);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-500);
   line-height: 1.6;
   max-width: 576px;

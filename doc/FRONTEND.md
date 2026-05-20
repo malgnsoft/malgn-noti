@@ -86,8 +86,7 @@ app/
 
 /* 시맨틱: --{success|warning|danger|info}-{soft|line|ink} */
 /* 레이아웃 */
---ui-scale      1.15                       /* html { zoom } */
---container-max calc(1400px / var(--ui-scale))
+--container-max 1400px
 ```
 
 ### 3.2 Nuxt UI 테마 ([app.config.ts](../app/app.config.ts))
@@ -116,10 +115,10 @@ export default defineAppConfig({
 | 영역 | max-width | 비고 |
 | --- | --- | --- |
 | Topbar(GNB) | 화면 폭 | 56px 높이, sticky, 단일 행 |
-| 본문 (`.app-container`) | **1400px** (`--container-max`, zoom 보정) | 좌우·상하 32px |
+| 본문 (`.app-container`) | **1400px** (`--container-max`) | 좌우·상하 32px |
 | 푸터 | 1400px | 본문과 끝 정렬 (다크 배경) |
 
-`html { zoom: 1.15 }`로 전체 115% 확대 — 모달 스크롤 잠금 등은 zoom을 고려해야 함([utils/scrollLock.ts](../app/utils/scrollLock.ts) 참조).
+UI는 100% 네이티브 스케일로 렌더된다. (구 `html { zoom: 1.15 }` 전역 확대 방식은 2026-05-20 폐기 — 좌표계 어긋남으로 팝오버·정렬 버그를 유발해 제거.)
 
 ### 3.5 2단 콘텐츠 (`.content-2col`)
 

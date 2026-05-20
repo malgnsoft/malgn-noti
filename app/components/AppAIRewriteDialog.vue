@@ -41,7 +41,7 @@ function ask(prompt: string) {
     <div style="display: grid; grid-template-columns: 1fr 280px; gap: 20px">
       <div>
         <div class="ai-log">
-          <div v-if="history.length === 0" class="muted" style="font-size: 13px">
+          <div v-if="history.length === 0" class="muted" style="font-size: var(--fz-md)">
             아래 빠른 액션을 누르거나, 원하는 톤을 직접 입력해 주세요.
           </div>
           <div v-for="(h, i) in history" :key="i" style="margin-bottom: 12px">
@@ -51,7 +51,7 @@ function ask(prompt: string) {
             >
               {{ h.role === 'ai' ? '✨ AI' : '나' }}
             </div>
-            <div style="font-size: 13px; line-height: 1.6; white-space: pre-wrap">
+            <div style="font-size: var(--fz-md); line-height: 1.6; white-space: pre-wrap">
               {{ h.text }}
             </div>
           </div>
@@ -80,17 +80,17 @@ function ask(prompt: string) {
             :disabled="!input.trim()"
             @click="ask(input)"
           >
-            <UIcon name="i-lucide-sparkles" class="text-[12px]" /> 다듬기
+            <UIcon name="i-lucide-sparkles" class="text-[length:var(--fz-sm)]" /> 다듬기
           </button>
         </div>
         <div class="ai-result">
           <div class="row" style="justify-content: space-between; margin-bottom: 6px">
-            <div style="font-size: 12px; font-weight: 600; color: var(--ink-600)">
+            <div style="font-size: var(--fz-sm); font-weight: 600; color: var(--ink-600)">
               적용 후 본문
             </div>
-            <span class="num" style="font-size: 11px; color: var(--ink-500)">{{ byteLen(draft) }} byte</span>
+            <span class="num" style="font-size: var(--fz-xs); color: var(--ink-500)">{{ byteLen(draft) }} byte</span>
           </div>
-          <div style="font-size: 13px; white-space: pre-wrap; line-height: 1.6; color: var(--ink-800)">
+          <div style="font-size: var(--fz-md); white-space: pre-wrap; line-height: 1.6; color: var(--ink-800)">
             {{ draft || '(빈 본문)' }}
           </div>
         </div>
@@ -120,7 +120,7 @@ function ask(prompt: string) {
   max-height: 280px;
   overflow: auto;
 }
-.ai-role { font-size: 11px; margin-bottom: 4px; font-weight: 600; }
+.ai-role { font-size: var(--fz-xs); margin-bottom: 4px; font-weight: 600; }
 .ai-result {
   margin-top: 14px;
   padding: 12px;

@@ -55,13 +55,13 @@ function toggleOne(id: number) {
         </div>
         <div class="row" style="gap: 6px">
           <button class="btn btn-outline btn-sm">
-            <UIcon name="i-lucide-upload" class="text-[12px]" /> CSV 가져오기
+            <UIcon name="i-lucide-upload" class="text-[length:var(--fz-sm)]" /> CSV 가져오기
           </button>
           <button
             class="btn btn-primary btn-sm"
             @click="toast.add({ title: '연락처 추가 모달은 별도 화면에서 제공됩니다.', color: 'info', icon: 'i-lucide-info' })"
           >
-            <UIcon name="i-lucide-plus" class="text-[12px]" /> 연락처 추가
+            <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 연락처 추가
           </button>
         </div>
       </div>
@@ -81,13 +81,13 @@ function toggleOne(id: number) {
             @click="activeGroup = g.id"
           >
             <span class="row" style="gap: 8px">
-              <UIcon name="i-lucide-users" class="text-[14px]" />{{ g.name }}
+              <UIcon name="i-lucide-users" class="text-[length:var(--fz-lg)]" />{{ g.name }}
             </span>
-            <span class="muted num" style="font-size: 12px">{{ g.count }}</span>
+            <span class="muted num" style="font-size: var(--fz-sm)">{{ g.count }}</span>
           </div>
           <div class="h-divider" />
           <button class="btn btn-ghost btn-sm" style="justify-content: flex-start">
-            <UIcon name="i-lucide-plus" class="text-[12px]" /> 새 그룹
+            <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 새 그룹
           </button>
         </div>
       </aside>
@@ -99,16 +99,16 @@ function toggleOne(id: number) {
             <input v-model="search" class="input" placeholder="이름 / 휴대폰 / 이메일 검색" style="padding-left: 32px">
           </div>
           <template v-if="selected.length > 0">
-            <span class="muted" style="font-size: 12px">{{ selected.length }}명 선택됨</span>
+            <span class="muted" style="font-size: var(--fz-sm)">{{ selected.length }}명 선택됨</span>
             <button class="btn btn-outline btn-sm">
-              <UIcon name="i-lucide-users" class="text-[12px]" /> 그룹 이동
+              <UIcon name="i-lucide-users" class="text-[length:var(--fz-sm)]" /> 그룹 이동
             </button>
             <button class="btn btn-error btn-sm">
-              <UIcon name="i-lucide-trash-2" class="text-[12px]" /> 삭제
+              <UIcon name="i-lucide-trash-2" class="text-[length:var(--fz-sm)]" /> 삭제
             </button>
           </template>
           <button class="btn btn-soft btn-sm" @click="router.push('/send/sms')">
-            <UIcon name="i-lucide-send" class="text-[12px]" /> 선택 발송
+            <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 선택 발송
           </button>
         </div>
 
@@ -140,7 +140,7 @@ function toggleOne(id: number) {
                 <td class="cell-mono">
                   {{ c.phone }}
                 </td>
-                <td class="cell-mono" style="font-size: 12px">
+                <td class="cell-mono" style="font-size: var(--fz-sm)">
                   {{ c.email }}
                 </td>
                 <td><AppBadge :tone="groupTone(c.group) as any">{{ c.group }}</AppBadge></td>
@@ -173,7 +173,7 @@ function toggleOne(id: number) {
 }
 .ct-aside-title {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   font-weight: 600;
   color: var(--ink-400);
   letter-spacing: 0.06em;
@@ -186,7 +186,7 @@ function toggleOne(id: number) {
   cursor: pointer;
   color: var(--ink-700);
   font-weight: 500;
-  font-size: 13px;
+  font-size: var(--fz-md);
   display: flex;
   justify-content: space-between;
   align-items: center;

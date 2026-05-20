@@ -122,13 +122,13 @@ function confirm() {
   min-height: 240px;
 }
 .pt-title {
-  font-size: 15px;
+  font-size: var(--fz-xl);
   font-weight: 700;
   color: var(--ink-900);
   margin-bottom: 8px;
 }
 .pt-body {
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-600);
   line-height: 1.7;
   white-space: pre-wrap;

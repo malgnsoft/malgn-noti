@@ -62,10 +62,10 @@ const recent = [
       </div>
       <div class="home-head-actions">
         <NuxtLink to="/history/sms" class="btn btn-outline">
-          <UIcon name="i-lucide-history" class="text-[14px]" /> 이력
+          <UIcon name="i-lucide-history" class="text-[length:var(--fz-lg)]" /> 이력
         </NuxtLink>
         <NuxtLink to="/send/sms" class="btn btn-primary">
-          <UIcon name="i-lucide-send" class="text-[14px]" /> 새 발송
+          <UIcon name="i-lucide-send" class="text-[length:var(--fz-lg)]" /> 새 발송
         </NuxtLink>
       </div>
     </header>
@@ -82,7 +82,7 @@ const recent = [
         </div>
         <div :class="['delta', s.dir]">
           <template v-if="s.delta">
-            <UIcon :name="s.dir === 'up' ? 'i-lucide-trending-up' : 'i-lucide-trending-down'" class="text-[11px]" />{{ s.delta }} ·
+            <UIcon :name="s.dir === 'up' ? 'i-lucide-trending-up' : 'i-lucide-trending-down'" class="text-[length:var(--fz-xs)]" />{{ s.delta }} ·
           </template>
           {{ s.sub }}
         </div>
@@ -92,7 +92,7 @@ const recent = [
     <!-- AI 요약 -->
     <section class="ai-card">
       <div class="ai-icon">
-        <UIcon name="i-lucide-sparkles" class="text-[14px]" />
+        <UIcon name="i-lucide-sparkles" class="text-[length:var(--fz-lg)]" />
       </div>
       <div class="ai-body">
         <div class="ai-meta">
@@ -106,7 +106,7 @@ const recent = [
           <button v-for="a in aiActions" :key="a.label" type="button" class="ai-chip">
             {{ a.label }}
             <span class="ai-chip-hint">{{ a.hint }}</span>
-            <UIcon name="i-lucide-arrow-right" class="text-[11px] ai-chip-arrow" />
+            <UIcon name="i-lucide-arrow-right" class="text-[length:var(--fz-xs)] ai-chip-arrow" />
           </button>
         </div>
       </div>
@@ -143,7 +143,7 @@ const recent = [
             <div class="ch-price num">
               {{ ch.price }}
             </div>
-            <UIcon name="i-lucide-arrow-right" class="text-[12px] ch-arrow" />
+            <UIcon name="i-lucide-arrow-right" class="text-[length:var(--fz-sm)] ch-arrow" />
           </NuxtLink>
         </div>
       </div>
@@ -161,7 +161,7 @@ const recent = [
             이번 달 사용 12,420 C · SMS 약 1,254건 분
           </div>
           <NuxtLink to="/charge" class="credit-charge-btn">
-            <UIcon name="i-lucide-plus" class="text-[12px]" /> 충전하기
+            <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 충전하기
           </NuxtLink>
         </div>
 
@@ -176,9 +176,9 @@ const recent = [
               :to="q.to"
               class="quick-item"
             >
-              <UIcon :name="q.icon" class="text-[14px] quick-icon" />
+              <UIcon :name="q.icon" class="text-[length:var(--fz-lg)] quick-icon" />
               <span class="quick-label">{{ q.label }}</span>
-              <UIcon name="i-lucide-arrow-right" class="text-[12px] quick-arrow" />
+              <UIcon name="i-lucide-arrow-right" class="text-[length:var(--fz-sm)] quick-arrow" />
             </NuxtLink>
           </div>
         </div>
@@ -262,7 +262,7 @@ const recent = [
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-400);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -275,7 +275,7 @@ const recent = [
   background: var(--accent);
 }
 .home-title {
-  font-size: 22px;
+  font-size: var(--fz-4xl);
   font-weight: 600;
   color: var(--ink-900);
   letter-spacing: -0.01em;
@@ -283,7 +283,7 @@ const recent = [
   line-height: 1.27;
 }
 .home-lead {
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-500);
   margin: 6px 0 0;
   line-height: 1.55;
@@ -301,7 +301,7 @@ const recent = [
 }
 .kpi-value { display: flex; align-items: baseline; gap: 4px; margin-top: 10px; }
 .kpi-unit {
-  font-size: 14px;
+  font-size: var(--fz-lg);
   color: var(--ink-400);
   font-family: var(--font-mono);
 }
@@ -333,13 +333,13 @@ const recent = [
 .ai-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .ai-tag {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fz-2xs);
   color: var(--accent);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.ai-sub { font-family: var(--font-mono); font-size: 10px; color: var(--ink-400); }
-.ai-text { font-size: 15px; line-height: 1.55; color: var(--white); margin: 0; }
+.ai-sub { font-family: var(--font-mono); font-size: var(--fz-2xs); color: var(--ink-400); }
+.ai-text { font-size: var(--fz-xl); line-height: 1.55; color: var(--white); margin: 0; }
 .ai-hl { color: var(--accent); }
 .ai-actions { display: flex; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
 .ai-chip {
@@ -348,7 +348,7 @@ const recent = [
   color: var(--white);
   border-radius: var(--r-md);
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 500;
   cursor: pointer;
   display: inline-flex;
@@ -357,7 +357,7 @@ const recent = [
   transition: background 0.12s;
 }
 .ai-chip:hover { background: rgba(255, 255, 255, 0.1); }
-.ai-chip-hint { color: var(--ink-400); font-family: var(--font-mono); font-size: 10px; }
+.ai-chip-hint { color: var(--ink-400); font-family: var(--font-mono); font-size: var(--fz-2xs); }
 .ai-chip-arrow { color: var(--ink-400); transition: transform 0.15s; }
 .ai-chip:hover .ai-chip-arrow { transform: translateX(2px); }
 
@@ -382,11 +382,11 @@ const recent = [
 .ch-row-first { border-top: 0; }
 .ch-row:hover { background: var(--paper); }
 .ch-info { min-width: 0; }
-.ch-name { font-size: 13px; font-weight: 500; color: var(--ink-900); }
-.ch-desc { font-size: 12px; color: var(--ink-500); margin-top: 2px; }
-.ch-count { font-size: 12px; color: var(--ink-500); text-align: right; }
+.ch-name { font-size: var(--fz-md); font-weight: 500; color: var(--ink-900); }
+.ch-desc { font-size: var(--fz-sm); color: var(--ink-500); margin-top: 2px; }
+.ch-count { font-size: var(--fz-sm); color: var(--ink-500); text-align: right; }
 .ch-count .strong { color: var(--ink-900); }
-.ch-price { font-size: 11px; color: var(--ink-500); text-align: right; }
+.ch-price { font-size: var(--fz-xs); color: var(--ink-500); text-align: right; }
 .ch-arrow { color: var(--ink-300); }
 
 .credit-charge-btn {
@@ -396,7 +396,7 @@ const recent = [
   color: var(--ink-900);
   border-radius: var(--r-md);
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -411,7 +411,7 @@ const recent = [
   align-items: center;
   gap: 10px;
   padding: 8px 20px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-700);
   transition: background 0.1s;
 }
@@ -428,25 +428,25 @@ const recent = [
 }
 .recent-eyebrow {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fz-2xs);
   color: var(--ink-400);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-bottom: 4px;
 }
 .recent-title {
-  font-size: 15px;
+  font-size: var(--fz-xl);
   font-weight: 600;
   color: var(--ink-900);
   margin: 0;
   letter-spacing: -0.005em;
 }
 .recent-all {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-600);
   font-family: var(--font-mono);
 }
 .recent-all:hover { color: var(--ink-900); }
 .recent-subject { color: var(--ink-900); }
-.recent-time { color: var(--ink-500); font-family: var(--font-mono); font-size: 12px; }
+.recent-time { color: var(--ink-500); font-family: var(--font-mono); font-size: var(--fz-sm); }
 </style>

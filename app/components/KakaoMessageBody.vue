@@ -127,12 +127,12 @@ const showExtra = computed(() => value.value.messageType === 'extra')
   padding: 10px 0;
 }
 .ro-label {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 500;
   color: var(--gray-700);
 }
 .ro-value {
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--gray-900);
 }
 
@@ -144,7 +144,7 @@ const showExtra = computed(() => value.value.messageType === 'extra')
   padding: 12px 0;
 }
 .form-label {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 500;
   color: var(--gray-700);
   padding-top: 8px;
@@ -163,7 +163,7 @@ const showExtra = computed(() => value.value.messageType === 'extra')
   border: 1px solid var(--gray-200);
   border-radius: 6px;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--fz-md);
 }
 .link-table td, .button-table td, .button-table th {
   border-bottom: 1px solid var(--gray-200);

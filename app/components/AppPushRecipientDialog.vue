@@ -86,7 +86,7 @@ function confirm() {
         토큰
       </div>
       <button v-if="!edit" type="button" class="btn btn-primary btn-sm" @click="openAddForm">
-        <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+        <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
       </button>
     </div>
 
@@ -97,7 +97,7 @@ function confirm() {
         </AppBadge>
         <span class="pr-token">{{ e.token }}</span>
         <button v-if="!edit" type="button" class="btn btn-ghost btn-sm" style="margin-left: auto" @click="removeEntry(e.id)">
-          <UIcon name="i-lucide-x" class="text-[12px]" />
+          <UIcon name="i-lucide-x" class="text-[length:var(--fz-sm)]" />
         </button>
       </div>
     </div>
@@ -144,7 +144,7 @@ function confirm() {
   gap: 16px;
 }
 .pr-label {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 600;
   color: var(--ink-700);
   min-width: 48px;
@@ -166,7 +166,7 @@ function confirm() {
 }
 .pr-token {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-800);
   overflow: hidden;
   text-overflow: ellipsis;

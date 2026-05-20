@@ -114,7 +114,7 @@ function send() {
         </AppFormRow>
         <AppFormRow label="템플릿 선택">
           <div class="row" style="gap: 12px; flex-wrap: wrap">
-            <span style="font-size: 13px; color: var(--ink-900)">
+            <span style="font-size: var(--fz-md); color: var(--ink-900)">
               {{ rcsTemplateName || '선택된 템플릿 없음' }}
             </span>
             <button
@@ -229,7 +229,7 @@ function send() {
             <AppFormRow label="내용" required>
               <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
                 <button type="button" class="btn btn-outline btn-sm" @click="openAi = true">
-                  <UIcon name="i-lucide-sparkles" class="text-[12px]" style="color: var(--accent-ink)" /> AI 문장 다듬기
+                  <UIcon name="i-lucide-sparkles" class="text-[length:var(--fz-sm)]" style="color: var(--accent-ink)" /> AI 문장 다듬기
                 </button>
               </div>
               <div style="position: relative">
@@ -250,14 +250,14 @@ function send() {
                 <div v-for="(b, i) in buttons" :key="i" class="rcs-btn-row">
                   <UIcon
                     :name="b.type === 'web' ? 'i-lucide-external-link' : b.type === 'phone' ? 'i-lucide-phone' : 'i-lucide-message-square'"
-                    class="text-[12px]"
+                    class="text-[length:var(--fz-sm)]"
                   />
                   <span>{{ b.label }}</span>
                   <AppBadge tone="neutral" style="margin-left: auto">
                     {{ b.type }}
                   </AppBadge>
                   <button type="button" class="btn btn-ghost btn-sm" @click="buttons = buttons.filter((_, j) => j !== i)">
-                    <UIcon name="i-lucide-trash-2" class="text-[12px]" />
+                    <UIcon name="i-lucide-trash-2" class="text-[length:var(--fz-sm)]" />
                   </button>
                 </div>
                 <button
@@ -267,7 +267,7 @@ function send() {
                   :disabled="buttons.length >= 4"
                   @click="openButton = true"
                 >
-                  <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
+                  <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 추가
                 </button>
               </div>
             </AppFormRow>
@@ -289,7 +289,7 @@ function send() {
             </AppFormRow>
           </div>
           <div>
-            <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
+            <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
             <div style="display: grid; place-items: center">
@@ -384,14 +384,14 @@ function send() {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  font-size: 12px;
+  font-size: var(--fz-sm);
 }
 .rcs-counter {
   position: absolute;
   right: 12px;
   bottom: 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-400);
   pointer-events: none;
 }

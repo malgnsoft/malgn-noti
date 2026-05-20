@@ -50,7 +50,7 @@ defineEmits<{
 .btn-delete {
   padding: 8px 16px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 500;
   border: 0;
   cursor: pointer;

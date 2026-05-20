@@ -18,7 +18,7 @@ defineProps<{
   border: 1px solid var(--gray-200);
   border-radius: 10px;
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--gray-800);
   line-height: 1.5;
   white-space: pre-wrap;

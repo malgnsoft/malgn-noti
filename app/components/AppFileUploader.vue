@@ -164,7 +164,7 @@ const fileNames = computed(() => files.value.map(f => f.name).join(', '))
   color: white;
   border: 0;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -191,7 +191,7 @@ const fileNames = computed(() => files.value.map(f => f.name).join(', '))
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--gray-700);
 }
 .file-name {
@@ -201,7 +201,7 @@ const fileNames = computed(() => files.value.map(f => f.name).join(', '))
   white-space: nowrap;
 }
 .file-size {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--gray-500);
 }
 .file-remove {
@@ -217,11 +217,11 @@ const fileNames = computed(() => files.value.map(f => f.name).join(', '))
   color: var(--gray-900);
 }
 .file-error {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: #ef4444;
 }
 .file-guide {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--gray-500);
   list-style: disc;
   padding-left: 16px;

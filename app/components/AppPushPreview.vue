@@ -109,21 +109,21 @@ withDefaults(defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fz-xs);
   font-weight: 600;
 }
 .pp-ic {
   display: flex;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   opacity: 0.85;
 }
 .pp-ttl {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 700;
 }
 .pp-msg {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   opacity: 0.9;
   margin-top: 2px;
   line-height: 1.45;
@@ -136,13 +136,13 @@ withDefaults(defineProps<{
 /* Android */
 .and-clock {
   margin-top: 18px;
-  font-size: 56px;
+  font-size: calc(56px * var(--fz-scale));
   font-weight: 300;
   letter-spacing: -0.03em;
   line-height: 1;
 }
 .and-date {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   opacity: 0.7;
   margin-top: 4px;
 }
@@ -158,7 +158,7 @@ withDefaults(defineProps<{
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 14px;
-  font-size: 10px;
+  font-size: var(--fz-2xs);
   font-family: var(--font-mono);
   opacity: 0.85;
 }
@@ -173,7 +173,7 @@ withDefaults(defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fz-xs);
   opacity: 0.55;
   padding-top: 24px;
 }
@@ -181,14 +181,14 @@ withDefaults(defineProps<{
 /* iOS */
 .ios-date {
   text-align: center;
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 600;
   opacity: 0.85;
   margin-top: 16px;
 }
 .ios-clock {
   text-align: center;
-  font-size: 64px;
+  font-size: calc(64px * var(--fz-scale));
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -209,7 +209,7 @@ withDefaults(defineProps<{
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: var(--fz-xs);
   margin-bottom: 5px;
 }
 .ios-appicon {
@@ -220,7 +220,7 @@ withDefaults(defineProps<{
   color: var(--ink-900);
   display: grid;
   place-items: center;
-  font-size: 9px;
+  font-size: calc(9px * var(--fz-scale));
   font-weight: 700;
 }
 .ios-appname {
@@ -230,7 +230,7 @@ withDefaults(defineProps<{
 .ios-x {
   margin-left: auto;
   opacity: 0.5;
-  font-size: 12px;
+  font-size: var(--fz-sm);
 }
 .ios-foot {
   margin-top: 20px;
@@ -246,6 +246,6 @@ withDefaults(defineProps<{
   background: rgba(255, 255, 255, 0.16);
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: var(--fz-lg);
 }
 </style>

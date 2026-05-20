@@ -239,7 +239,7 @@ function confirm() {
                   aria-label="삭제"
                   @click="removeRow(r.id)"
                 >
-                  <UIcon name="i-lucide-minus" class="text-[12px]" />
+                  <UIcon name="i-lucide-minus" class="text-[length:var(--fz-sm)]" />
                 </button>
               </td>
             </tr>
@@ -283,7 +283,7 @@ function confirm() {
   background: var(--white);
 }
 .fc-card-title {
-  font-size: 14px;
+  font-size: var(--fz-lg);
   font-weight: 700;
   color: var(--ink-900);
   margin-bottom: 14px;
@@ -300,7 +300,7 @@ function confirm() {
   top: 50%;
   transform: translateY(-50%);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-400);
   pointer-events: none;
 }
@@ -309,13 +309,13 @@ function confirm() {
   border-radius: var(--r-sm);
   padding: 12px 16px 12px 30px;
   margin-bottom: 14px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-600);
   line-height: 1.75;
   list-style: disc;
 }
 .fc-help .fc-sub {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-500);
   margin-top: 2px;
 }
@@ -330,7 +330,7 @@ function confirm() {
   background: var(--paper);
   border: 1px dashed var(--ink-300);
   border-radius: var(--r-sm);
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-700);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;

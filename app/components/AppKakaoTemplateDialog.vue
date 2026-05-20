@@ -43,14 +43,14 @@ function confirm() {
             @click="picked = t"
           >
             <div class="row" style="justify-content: space-between">
-              <div style="font-size: 13px; font-weight: 600; color: var(--ink-900)">
+              <div style="font-size: var(--fz-md); font-weight: 600; color: var(--ink-900)">
                 {{ t.name }}
               </div>
               <AppBadge :tone="typeTone(t.type)">
                 {{ typeLabel(t.type) }}
               </AppBadge>
             </div>
-            <div style="font-size: 11px; color: var(--ink-500); margin-top: 6px; line-height: 1.4">
+            <div style="font-size: var(--fz-xs); color: var(--ink-500); margin-top: 6px; line-height: 1.4">
               {{ t.body.split('\n')[0].slice(0, 36) }}…
             </div>
           </div>

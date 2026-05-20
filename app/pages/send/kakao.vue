@@ -100,7 +100,7 @@ function send() {
         </AppFormRow>
         <AppFormRow label="템플릿 선택" required help="알림톡은 사전 승인된 템플릿만 사용할 수 있습니다.">
           <div class="row" style="gap: 12px; flex-wrap: wrap">
-            <span style="font-size: 13px; color: var(--ink-900)">
+            <span style="font-size: var(--fz-md); color: var(--ink-900)">
               {{ template ? template.name : '선택된 템플릿 없음' }}
             </span>
             <button type="button" class="btn btn-primary btn-sm" :disabled="!profile" @click="openTpl = true">
@@ -177,7 +177,7 @@ function send() {
             </AppFormRow>
           </div>
           <div>
-            <div style="font-size: 12px; color: var(--ink-500); margin-bottom: 8px; text-align: center">
+            <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-bottom: 8px; text-align: center">
               미리보기
             </div>
             <div style="display: grid; place-items: center">
@@ -241,7 +241,7 @@ function send() {
 .msg-grid { display: grid; grid-template-columns: 1fr 280px; gap: 24px; }
 @media (max-width: 1023px) { .msg-grid { grid-template-columns: 1fr; } }
 .ro-text {
-  font-size: 13px;
+  font-size: var(--fz-md);
   color: var(--ink-800);
   padding-top: 2px;
 }

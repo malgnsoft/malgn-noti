@@ -105,7 +105,7 @@ function confirm() {
         휴대폰과 이메일 중 <b>하나 이상</b> 입력해 주세요.
       </div>
       <div v-if="varKeys.length > 0" style="margin-top: 6px">
-        <div style="font-size: 12px; font-weight: 600; color: var(--ink-700); margin-bottom: 8px">
+        <div style="font-size: var(--fz-sm); font-weight: 600; color: var(--ink-700); margin-bottom: 8px">
           치환자
         </div>
         <div
@@ -113,7 +113,7 @@ function confirm() {
           :key="k"
           style="display: grid; grid-template-columns: 100px 1fr; gap: 8px; align-items: center; margin-bottom: 6px"
         >
-          <div style="font-size: 12px; color: var(--ink-600); font-family: var(--font-mono)">
+          <div style="font-size: var(--fz-sm); color: var(--ink-600); font-family: var(--font-mono)">
             #{{ '{' + k + '}' }}
           </div>
           <input
@@ -138,7 +138,7 @@ function confirm() {
 <style scoped>
 .phone-hint {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
 }
 .phone-hint b {
@@ -147,7 +147,7 @@ function confirm() {
 }
 .multi-hint {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
 }
 .multi-hint b {

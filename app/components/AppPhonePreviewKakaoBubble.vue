@@ -61,7 +61,7 @@ defineProps<{
   min-width: 0;
 }
 .kakao-channel {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--gray-800);
   margin-bottom: 2px;
   font-weight: 500;
@@ -78,7 +78,7 @@ defineProps<{
   color: var(--gray-900);
   padding: 6px 12px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--fz-md);
 }
 .kakao-body {
   padding: 10px 12px;
@@ -90,7 +90,7 @@ defineProps<{
 }
 .kakao-extra {
   padding: 0 12px 10px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--gray-700);
   white-space: pre-wrap;
   word-break: break-word;
@@ -108,7 +108,7 @@ defineProps<{
   border: 0;
   border-radius: 6px;
   padding: 8px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 500;
   cursor: pointer;
 }

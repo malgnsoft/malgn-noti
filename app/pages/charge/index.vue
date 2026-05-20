@@ -48,7 +48,7 @@ const recent = [
                 v-for="p in presets"
                 :key="p"
                 :class="amount === p ? 'btn btn-primary' : 'btn btn-outline'"
-                style="height: 56px; font-size: 14px; font-weight: 600"
+                style="height: 56px; font-size: var(--fz-lg); font-weight: 600"
                 @click="amount = p"
               >
                 {{ (p / 10000).toLocaleString() }}만
@@ -60,15 +60,15 @@ const recent = [
                 type="number"
                 class="input"
                 step="10000"
-                style="flex: 1; font-size: 18px; text-align: right; padding-right: 14px; height: 48px"
+                style="flex: 1; font-size: var(--fz-3xl); text-align: right; padding-right: 14px; height: 48px"
               >
-              <strong style="font-size: 16px">원</strong>
+              <strong style="font-size: var(--fz-2xl)">원</strong>
             </div>
             <div class="charge-credit">
-              <span style="font-size: 13px; color: var(--ink-700)">지급 크레딧</span>
-              <strong class="num" style="font-size: 18px; color: var(--accent-ink)">
+              <span style="font-size: var(--fz-md); color: var(--ink-700)">지급 크레딧</span>
+              <strong class="num" style="font-size: var(--fz-3xl); color: var(--accent-ink)">
                 {{ (amount + bonus).toLocaleString() }} C
-                <span v-if="bonus > 0" style="font-size: 12px; font-weight: 500; margin-left: 8px; color: var(--accent-ink)">
+                <span v-if="bonus > 0" style="font-size: var(--fz-sm); font-weight: 500; margin-left: 8px; color: var(--accent-ink)">
                   +{{ bonus.toLocaleString() }} 보너스
                 </span>
               </strong>
@@ -94,10 +94,10 @@ const recent = [
                 <div class="row" style="flex: 1; gap: 12px">
                   <UIcon :name="m.icon" class="text-xl" style="color: var(--accent-ink)" />
                   <div>
-                    <div style="font-size: 14px; font-weight: 600; color: var(--ink-900)">
+                    <div style="font-size: var(--fz-lg); font-weight: 600; color: var(--ink-900)">
                       {{ m.name }}
                     </div>
-                    <div style="font-size: 12px; color: var(--ink-500); margin-top: 2px">
+                    <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-top: 2px">
                       {{ m.desc }}
                     </div>
                   </div>
@@ -126,13 +126,13 @@ const recent = [
                     {{ r.d }}
                   </td>
                   <td class="num">
-                    <strong>{{ r.amt }}</strong> <span class="muted" style="font-size: 11px">({{ r.g.toLocaleString() }} C)</span>
+                    <strong>{{ r.amt }}</strong> <span class="muted" style="font-size: var(--fz-xs)">({{ r.g.toLocaleString() }} C)</span>
                   </td>
                   <td>{{ r.m }}</td>
                   <td><AppBadge tone="success" dot>완료</AppBadge></td>
                   <td>
                     <button class="btn btn-ghost btn-sm">
-                      <UIcon name="i-lucide-download" class="text-[12px]" /> 영수증
+                      <UIcon name="i-lucide-download" class="text-[length:var(--fz-sm)]" /> 영수증
                     </button>
                   </td>
                 </tr>
@@ -153,10 +153,10 @@ const recent = [
         </div>
         <div class="card">
           <div class="card-body">
-            <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--ink-900)">
+            <div style="font-size: var(--fz-md); font-weight: 700; margin-bottom: 10px; color: var(--ink-900)">
               결제 요약
             </div>
-            <div class="col" style="gap: 8px; font-size: 13px">
+            <div class="col" style="gap: 8px; font-size: var(--fz-md)">
               <div class="row" style="justify-content: space-between">
                 <span class="muted">충전 금액</span><span class="num">{{ amount.toLocaleString() }}원</span>
               </div>
@@ -168,7 +168,7 @@ const recent = [
                 <span class="muted">부가세 (10%)</span><span class="num">{{ vat.toLocaleString() }}원</span>
               </div>
               <div class="h-divider" />
-              <div class="row" style="justify-content: space-between; font-size: 15px">
+              <div class="row" style="justify-content: space-between; font-size: var(--fz-xl)">
                 <strong>총 결제 금액</strong>
                 <strong class="num" style="color: var(--accent-ink)">{{ total.toLocaleString() }}원</strong>
               </div>
@@ -178,9 +178,9 @@ const recent = [
               style="width: 100%; margin-top: 14px"
               @click="toast.add({ title: '결제 페이지로 이동합니다.', color: 'success', icon: 'i-lucide-credit-card' })"
             >
-              <UIcon name="i-lucide-credit-card" class="text-[14px]" /> 결제하기
+              <UIcon name="i-lucide-credit-card" class="text-[length:var(--fz-lg)]" /> 결제하기
             </button>
-            <div class="muted" style="font-size: 11px; margin-top: 8px; text-align: center; line-height: 1.5">
+            <div class="muted" style="font-size: var(--fz-xs); margin-top: 8px; text-align: center; line-height: 1.5">
               결제 즉시 크레딧이 충전됩니다. 세금계산서 발행 가능합니다.
             </div>
           </div>

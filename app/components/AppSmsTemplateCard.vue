@@ -47,13 +47,13 @@ defineEmits<{
   border-color: var(--color-sky-vivid);
 }
 .card-name {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 700;
   color: var(--gray-900);
 }
 .card-text {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--gray-600);
   line-height: 1.5;
   overflow: hidden;
@@ -62,7 +62,7 @@ defineEmits<{
   -webkit-box-orient: vertical;
 }
 .card-byte {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--color-sky-vivid);
   text-align: right;
   font-weight: 600;

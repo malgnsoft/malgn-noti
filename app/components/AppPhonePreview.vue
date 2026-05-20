@@ -74,7 +74,7 @@ withDefaults(defineProps<{
   padding: 12px 14px;
 }
 .imsg-photo-ico {
-  font-size: 22px;
+  font-size: var(--fz-4xl);
   color: var(--ink-400);
   flex-shrink: 0;
 }
@@ -82,7 +82,7 @@ withDefaults(defineProps<{
   min-width: 0;
 }
 .imsg-photo-name {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-800);
   font-weight: 600;
   overflow: hidden;
@@ -91,7 +91,7 @@ withDefaults(defineProps<{
 }
 .imsg-photo-size {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-400);
   margin-top: 2px;
 }

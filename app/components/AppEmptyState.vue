@@ -9,7 +9,7 @@ withDefaults(defineProps<{
 <template>
   <div class="empty">
     <div class="icon">
-      <UIcon :name="icon" class="text-[32px]" />
+      <UIcon :name="icon" class="text-[length:calc(32px*var(--fz-scale))]" />
     </div>
     <h3>{{ title }}</h3>
     <p v-if="desc">

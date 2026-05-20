@@ -12,7 +12,7 @@ const emit = defineEmits<{ close: [], confirm: [] }>()
 
 <template>
   <AppModal :open="open" :title="title" :width="400" @close="emit('close')">
-    <div style="font-size: 13px; color: var(--ink-700); line-height: 1.6; white-space: pre-line">
+    <div style="font-size: var(--fz-md); color: var(--ink-700); line-height: 1.6; white-space: pre-line">
       {{ message }}
     </div>
     <template #footer>

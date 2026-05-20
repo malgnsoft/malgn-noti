@@ -149,7 +149,7 @@ function avatarChar(name: string) {
             </NuxtLink>
             <div v-else class="gnb-menu-item">
               {{ item.label }}
-              <span class="icn-chev"><UIcon name="i-lucide-chevron-down" class="text-[10px]" /></span>
+              <span class="icn-chev"><UIcon name="i-lucide-chevron-down" class="text-[length:var(--fz-2xs)]" /></span>
             </div>
 
             <div v-if="item.children" class="gnb-dropdown">
@@ -180,7 +180,7 @@ function avatarChar(name: string) {
               <button type="button" class="pill-user">
                 <span class="avatar">{{ avatarChar(user.name) }}</span>
                 <span class="gnb-user-name">{{ user.name }}</span>
-                <UIcon name="i-lucide-chevron-down" class="text-[10px] text-[color:var(--ink-400)]" />
+                <UIcon name="i-lucide-chevron-down" class="text-[length:var(--fz-2xs)] text-[color:var(--ink-400)]" />
               </button>
               <div class="gnb-dropdown gnb-user-menu">
                 <div class="gnb-credit-block">
@@ -307,7 +307,7 @@ function avatarChar(name: string) {
 .gnb-credit-block { padding: 14px 16px 10px; }
 .gnb-credit-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--fz-2xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-400);
@@ -315,16 +315,16 @@ function avatarChar(name: string) {
 }
 .gnb-credit-value { display: flex; align-items: baseline; gap: 4px; }
 .gnb-credit-amount {
-  font-size: 20px;
+  font-size: calc(20px * var(--fz-scale));
   font-weight: 500;
   color: var(--ink-900);
   letter-spacing: -0.02em;
 }
-.gnb-credit-unit { font-size: 12px; color: var(--ink-400); font-family: var(--font-mono); }
+.gnb-credit-unit { font-size: var(--fz-sm); color: var(--ink-400); font-family: var(--font-mono); }
 .gnb-credit-link {
   display: inline-block;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   font-family: var(--font-mono);
 }

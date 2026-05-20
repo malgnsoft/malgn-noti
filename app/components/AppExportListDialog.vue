@@ -75,12 +75,12 @@ const JOBS: ExportJob[] = [
 
 <style scoped>
 .export-note {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   margin-bottom: 12px;
 }
 .export-st {
-  font-size: 12px;
+  font-size: var(--fz-sm);
 }
 .export-st--active {
   color: var(--ink-900);

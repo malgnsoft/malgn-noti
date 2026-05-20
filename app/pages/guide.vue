@@ -153,11 +153,11 @@ const segDemo = ref('a')
           </div>
         </nav>
         <div class="h-divider" />
-        <p style="font-size: 12px; color: var(--ink-500); line-height: 1.6">
+        <p style="font-size: var(--fz-sm); color: var(--ink-500); line-height: 1.6">
           살아있는 컴포넌트로 만든 시스템입니다. 모든 예시는 실제 main.css를 사용합니다.
         </p>
         <NuxtLink to="/home" class="btn btn-soft btn-sm" style="margin-top: 12px; width: 100%">
-          <UIcon name="i-lucide-arrow-left" class="text-[12px]" /> 대시보드로
+          <UIcon name="i-lucide-arrow-left" class="text-[length:var(--fz-sm)]" /> 대시보드로
         </NuxtLink>
       </aside>
 
@@ -205,12 +205,12 @@ const segDemo = ref('a')
           <div class="g-grid g-grid-3">
             <div v-for="p in principles" :key="p.t" class="card" style="padding: 20px">
               <div class="g-icon">
-                <UIcon :name="p.icon" class="text-[18px]" />
+                <UIcon :name="p.icon" class="text-[length:var(--fz-3xl)]" />
               </div>
-              <div style="font-size: 14px; font-weight: 600; color: var(--ink-900); margin: 12px 0 6px">
+              <div style="font-size: var(--fz-lg); font-weight: 600; color: var(--ink-900); margin: 12px 0 6px">
                 {{ p.t }}
               </div>
-              <div style="font-size: 13px; color: var(--ink-600); line-height: 1.6">
+              <div style="font-size: var(--fz-md); color: var(--ink-600); line-height: 1.6">
                 {{ p.d }}
               </div>
             </div>
@@ -286,7 +286,7 @@ const segDemo = ref('a')
             Channel dots (점 표시 전용)
           </div>
           <div class="row" style="flex-wrap: wrap; gap: 16px">
-            <span v-for="c in channels" :key="c.t" class="row" style="gap: 6px; font-size: 12px; font-family: var(--font-mono)">
+            <span v-for="c in channels" :key="c.t" class="row" style="gap: 6px; font-size: var(--fz-sm); font-family: var(--font-mono)">
               <span style="width: 8px; height: 8px; border-radius: 50%" :style="{ background: c.h }" />{{ c.t }}
             </span>
           </div>
@@ -311,14 +311,14 @@ const segDemo = ref('a')
               :style="{ borderBottom: i < typeScale.length - 1 ? '1px solid var(--line)' : 'none' }"
             >
               <div>
-                <div style="font-size: 11px; font-weight: 600; color: var(--accent-ink); letter-spacing: 0.06em">
+                <div style="font-size: var(--fz-xs); font-weight: 600; color: var(--accent-ink); letter-spacing: 0.06em">
                   {{ s.role.toUpperCase() }}
                 </div>
               </div>
               <div :style="{ fontSize: s.size + 'px', fontWeight: s.weight, letterSpacing: s.ls, color: 'var(--ink-900)', fontFamily: s.mono ? 'var(--font-mono)' : 'var(--font-sans)', lineHeight: 1.4 }">
                 {{ s.text }}
               </div>
-              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--ink-500)">
+              <div style="font-family: var(--font-mono); font-size: var(--fz-xs); color: var(--ink-500)">
                 {{ s.size }}px / {{ s.weight }}
               </div>
             </div>
@@ -339,7 +339,7 @@ const segDemo = ref('a')
           <div class="card" style="padding: 24px">
             <div style="display: flex; flex-direction: column; gap: 12px">
               <div v-for="n in spacing" :key="n" style="display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 16px">
-                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--ink-600)">
+                <div style="font-family: var(--font-mono); font-size: var(--fz-sm); color: var(--ink-600)">
                   {{ n }}px
                 </div>
                 <div :style="{ height: '16px', width: n + 'px', background: 'var(--accent)', borderRadius: '3px' }" />
@@ -365,13 +365,13 @@ const segDemo = ref('a')
           <div class="g-grid g-grid-4">
             <div v-for="r in radii" :key="r.n" class="card" style="padding: 20px; text-align: center">
               <div class="g-radius-box" :style="{ borderRadius: r.r + 'px' }" />
-              <div style="font-size: 13px; font-weight: 600; color: var(--ink-900)">
+              <div style="font-size: var(--fz-md); font-weight: 600; color: var(--ink-900)">
                 {{ r.n }}
               </div>
-              <div style="font-size: 11px; color: var(--ink-500); font-family: var(--font-mono)">
+              <div style="font-size: var(--fz-xs); color: var(--ink-500); font-family: var(--font-mono)">
                 {{ r.v }}
               </div>
-              <div style="font-size: 11px; color: var(--ink-600); margin-top: 4px">
+              <div style="font-size: var(--fz-xs); color: var(--ink-600); margin-top: 4px">
                 {{ r.u }}
               </div>
             </div>
@@ -385,13 +385,13 @@ const segDemo = ref('a')
               :key="s.n"
               :style="{ background: 'var(--white)', borderRadius: 'var(--r-lg)', padding: '20px', boxShadow: `var(--shadow-${s.n})`, border: '1px solid var(--line)' }"
             >
-              <div style="font-size: 13px; font-weight: 600; color: var(--ink-900)">
+              <div style="font-size: var(--fz-md); font-weight: 600; color: var(--ink-900)">
                 {{ s.n }}
               </div>
-              <div style="font-size: 11px; color: var(--ink-500); font-family: var(--font-mono); margin: 4px 0 6px">
+              <div style="font-size: var(--fz-xs); color: var(--ink-500); font-family: var(--font-mono); margin: 4px 0 6px">
                 {{ s.v }}
               </div>
-              <div style="font-size: 11px; color: var(--ink-600)">
+              <div style="font-size: var(--fz-xs); color: var(--ink-600)">
                 {{ s.u }}
               </div>
             </div>
@@ -415,7 +415,7 @@ const segDemo = ref('a')
                 발송하기
               </button>
               <button class="btn btn-accent">
-                <UIcon name="i-lucide-sparkles" class="text-[14px]" /> AI 생성
+                <UIcon name="i-lucide-sparkles" class="text-[length:var(--fz-lg)]" /> AI 생성
               </button>
               <button class="btn btn-soft">
                 직접 입력
@@ -447,7 +447,7 @@ const segDemo = ref('a')
                 Large 36
               </button>
               <button class="btn btn-primary btn-icon" aria-label="추가">
-                <UIcon name="i-lucide-plus" class="text-[14px]" />
+                <UIcon name="i-lucide-plus" class="text-[length:var(--fz-lg)]" />
               </button>
             </div>
           </div>
@@ -478,7 +478,7 @@ const segDemo = ref('a')
               <button class="pill-user">
                 <span class="avatar">관</span>
                 <span>관리자</span>
-                <UIcon name="i-lucide-chevron-down" class="text-[10px]" />
+                <UIcon name="i-lucide-chevron-down" class="text-[length:var(--fz-2xs)]" />
               </button>
             </div>
           </div>
@@ -516,7 +516,7 @@ const segDemo = ref('a')
               </AppFormRow>
               <AppFormRow label="에러">
                 <input class="input" value="잘못된 값" style="border-color: var(--danger)">
-                <div style="font-size: 12px; color: var(--danger-ink); margin-top: 4px">
+                <div style="font-size: var(--fz-sm); color: var(--danger-ink); margin-top: 4px">
                   올바른 형식이 아닙니다.
                 </div>
               </AppFormRow>
@@ -591,7 +591,7 @@ const segDemo = ref('a')
                 VIP 고객
               </AppBadge>
               <AppBadge tone="neutral">
-                <UIcon name="i-lucide-lock" class="text-[10px]" /> 템플릿 잠금
+                <UIcon name="i-lucide-lock" class="text-[length:var(--fz-2xs)]" /> 템플릿 잠금
               </AppBadge>
             </div>
           </div>
@@ -705,7 +705,7 @@ const segDemo = ref('a')
               <AppEmptyState icon="i-lucide-inbox" title="아직 발송 이력이 없습니다." desc="첫 메시지를 발송해 보세요.">
                 <template #action>
                   <button class="btn btn-primary btn-sm">
-                    <UIcon name="i-lucide-send" class="text-[12px]" /> 첫 발송 시작하기
+                    <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 첫 발송 시작하기
                   </button>
                 </template>
               </AppEmptyState>
@@ -714,7 +714,7 @@ const segDemo = ref('a')
               <AppEmptyState icon="i-lucide-users" title="수신자를 선택해 주세요." desc="직접 입력하거나 주소록에서 선택할 수 있습니다.">
                 <template #action>
                   <button class="btn btn-primary btn-sm">
-                    <UIcon name="i-lucide-contact-round" class="text-[12px]" /> 주소록 열기
+                    <UIcon name="i-lucide-contact-round" class="text-[length:var(--fz-sm)]" /> 주소록 열기
                   </button>
                 </template>
               </AppEmptyState>
@@ -816,7 +816,7 @@ const segDemo = ref('a')
                 보조 (320px)
               </div>
             </div>
-            <div style="font-size: 12px; color: var(--ink-500); margin-top: 12px">
+            <div style="font-size: var(--fz-sm); color: var(--ink-500); margin-top: 12px">
               1024px 미만에서 1단 전환, 보조 영역이 위로.
             </div>
           </div>
@@ -854,9 +854,9 @@ const segDemo = ref('a')
             >
               <div class="row" style="margin-bottom: 8px; gap: 8px">
                 <span class="g-card-num">{{ c.n }}</span>
-                <code style="font-size: 13px; font-weight: 600; color: var(--ink-900)">{{ c.name }}</code>
+                <code style="font-size: var(--fz-md); font-weight: 600; color: var(--ink-900)">{{ c.name }}</code>
               </div>
-              <div style="font-size: 13px; color: var(--ink-600); line-height: 1.6">
+              <div style="font-size: var(--fz-md); color: var(--ink-600); line-height: 1.6">
                 {{ c.role }}
               </div>
             </div>
@@ -936,7 +936,7 @@ const segDemo = ref('a')
 }
 .guide-nav { position: sticky; top: 72px; align-self: start; }
 .guide-nav-title {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   font-weight: 600;
   color: var(--ink-400);
   letter-spacing: 0.06em;
@@ -946,7 +946,7 @@ const segDemo = ref('a')
 }
 .guide-nav-item {
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   border-radius: var(--r-sm);
   cursor: pointer;
   color: var(--ink-600);
@@ -971,32 +971,32 @@ const segDemo = ref('a')
 }
 .g-hero-eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--accent);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 14px;
 }
-.g-hero-h1 { font-size: 36px; font-weight: 600; margin: 0; letter-spacing: -0.02em; line-height: 1.2; }
-.g-hero-p { font-size: 14px; line-height: 1.7; color: rgba(255, 255, 255, 0.7); margin: 16px 0 0; max-width: 520px; }
-.g-hero-meta { display: flex; gap: 24px; margin-top: 28px; font-size: 13px; }
-.g-hero-meta .o { color: rgba(255, 255, 255, 0.5); font-family: var(--font-mono); font-size: 11px; }
+.g-hero-h1 { font-size: calc(36px * var(--fz-scale)); font-weight: 600; margin: 0; letter-spacing: -0.02em; line-height: 1.2; }
+.g-hero-p { font-size: var(--fz-lg); line-height: 1.7; color: rgba(255, 255, 255, 0.7); margin: 16px 0 0; max-width: 520px; }
+.g-hero-meta { display: flex; gap: 24px; margin-top: 28px; font-size: var(--fz-md); }
+.g-hero-meta .o { color: rgba(255, 255, 255, 0.5); font-family: var(--font-mono); font-size: var(--fz-xs); }
 .g-hero-meta .v { font-weight: 600; margin-top: 4px; }
 .g-hero-meta .bar { width: 1px; background: rgba(255, 255, 255, 0.15); }
 
 .g-sec { margin-bottom: 56px; scroll-margin-top: 80px; }
 .g-eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   font-weight: 600;
   color: var(--accent-ink);
   letter-spacing: 0.06em;
   margin-bottom: 6px;
 }
-.g-h2 { font-size: 22px; font-weight: 600; color: var(--ink-900); margin: 0; letter-spacing: -0.01em; }
-.g-desc { font-size: 13px; color: var(--ink-500); margin: 8px 0 20px; line-height: 1.6; }
-.g-block-t { font-size: 12px; font-weight: 600; color: var(--ink-700); margin: 24px 0 10px; }
-.g-mini-t { font-size: 12px; font-weight: 600; color: var(--ink-600); margin-bottom: 10px; }
+.g-h2 { font-size: var(--fz-4xl); font-weight: 600; color: var(--ink-900); margin: 0; letter-spacing: -0.01em; }
+.g-desc { font-size: var(--fz-md); color: var(--ink-500); margin: 8px 0 20px; line-height: 1.6; }
+.g-block-t { font-size: var(--fz-sm); font-weight: 600; color: var(--ink-700); margin: 24px 0 10px; }
+.g-mini-t { font-size: var(--fz-sm); font-weight: 600; color: var(--ink-600); margin-bottom: 10px; }
 
 .g-grid { display: grid; gap: 16px; }
 .g-grid-2 { grid-template-columns: repeat(2, 1fr); }
@@ -1033,9 +1033,9 @@ const segDemo = ref('a')
 }
 .g-swatch .sw { height: 56px; }
 .g-swatch-meta { padding: 10px 12px; }
-.g-swatch-meta .tk { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--ink-800); }
-.g-swatch-meta .hx { font-family: var(--font-mono); font-size: 11px; color: var(--ink-500); margin-top: 2px; }
-.g-swatch-meta .us { font-size: 11px; color: var(--ink-500); margin-top: 4px; line-height: 1.4; }
+.g-swatch-meta .tk { font-family: var(--font-mono); font-size: var(--fz-xs); font-weight: 600; color: var(--ink-800); }
+.g-swatch-meta .hx { font-family: var(--font-mono); font-size: var(--fz-xs); color: var(--ink-500); margin-top: 2px; }
+.g-swatch-meta .us { font-size: var(--fz-xs); color: var(--ink-500); margin-top: 4px; line-height: 1.4; }
 
 .g-type-row {
   display: grid;
@@ -1061,7 +1061,7 @@ const segDemo = ref('a')
   justify-items: center;
 }
 .g-phone-cap {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 600;
   color: var(--ink-700);
   margin-bottom: 10px;
@@ -1075,7 +1075,7 @@ const segDemo = ref('a')
   padding: 40px;
   text-align: center;
   color: var(--ink-500);
-  font-size: 13px;
+  font-size: var(--fz-md);
 }
 .g-card-num {
   width: 26px;
@@ -1083,7 +1083,7 @@ const segDemo = ref('a')
   border-radius: var(--r-sm);
   background: var(--ink-900);
   color: var(--white);
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 700;
   display: grid;
   place-items: center;

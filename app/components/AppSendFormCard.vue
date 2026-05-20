@@ -73,13 +73,13 @@ const showToggle = computed(() => props.collapsible && !props.locked)
   padding: 0 6px;
   border-radius: var(--r-sm);
   color: var(--accent-ink);
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 500;
   flex-shrink: 0;
 }
 .card-toggle:hover { background: var(--ink-50); }
 .card-toggle-ico {
-  font-size: 14px;
+  font-size: var(--fz-lg);
   transition: transform 0.15s ease;
 }
 .card-toggle-ico.is-open {

@@ -136,7 +136,7 @@ const subjectBytes = computed(() => utf8Bytes(value.value.subject))
   padding: 12px 0;
 }
 .form-label {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 500;
   color: var(--gray-700);
   padding-top: 8px;
@@ -145,10 +145,10 @@ const subjectBytes = computed(() => utf8Bytes(value.value.subject))
 .form-control { display: flex; flex-direction: column; gap: 8px; }
 
 .radio-group { display: flex; gap: 24px; padding: 6px 0; }
-.radio { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--gray-700); }
+.radio { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: var(--fz-md); color: var(--gray-700); }
 .radio input[type='radio'] { accent-color: var(--primary-color); cursor: pointer; }
 .radio input:disabled { cursor: not-allowed; }
-.help-text { font-size: 12px; color: var(--gray-500); line-height: 1.6; margin-top: 4px; }
+.help-text { font-size: var(--fz-sm); color: var(--gray-500); line-height: 1.6; margin-top: 4px; }
 
 .input-with-counter { position: relative; width: 100%; }
 .inline-counter {
@@ -156,7 +156,7 @@ const subjectBytes = computed(() => utf8Bytes(value.value.subject))
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--gray-500);
   pointer-events: none;
 }
@@ -171,7 +171,7 @@ const subjectBytes = computed(() => utf8Bytes(value.value.subject))
   border: 1px solid var(--primary-color);
   border-radius: 999px;
   color: var(--primary-color);
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 500;
   cursor: pointer;
 }
@@ -187,7 +187,7 @@ const subjectBytes = computed(() => utf8Bytes(value.value.subject))
   right: 12px;
   bottom: 8px;
   text-align: right;
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--gray-500);
   line-height: 1.5;
   pointer-events: none;

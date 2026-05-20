@@ -48,7 +48,7 @@ function onLogin() {
           </button>
         </div>
       </div>
-      <div class="row" style="justify-content: space-between; font-size: 12px; margin-top: 4px">
+      <div class="row" style="justify-content: space-between; font-size: var(--fz-sm); margin-top: 4px">
         <label class="checkbox"><input v-model="keep" type="checkbox"> 로그인 상태 유지</label>
         <NuxtLink to="/reset-password" style="color: var(--accent-ink)">
           비밀번호 찾기
@@ -67,7 +67,7 @@ function onLogin() {
 
 <style scoped>
 .auth-label {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 600;
   color: var(--ink-700);
   display: block;

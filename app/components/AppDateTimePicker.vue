@@ -131,7 +131,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 }
 .dtp-icon {
   flex: none;
-  font-size: 14px;
+  font-size: var(--fz-lg);
   color: var(--ink-400);
 }
 .dtp-value {
@@ -139,7 +139,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--fz-md);
 }
 .dtp-placeholder {
   color: var(--ink-400);
@@ -165,7 +165,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
   border-top: 1px solid var(--line);
 }
 .time-label {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 500;
   color: var(--ink-700);
 }

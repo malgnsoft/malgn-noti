@@ -104,7 +104,7 @@ function placeholder(msg: string) {
 
     <div class="fm-bar">
       <button type="button" class="btn btn-primary btn-sm" @click="startCreate">
-        <UIcon name="i-lucide-plus" class="text-[12px]" /> 플로우 등록
+        <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 플로우 등록
       </button>
       <button
         type="button"
@@ -119,7 +119,7 @@ function placeholder(msg: string) {
         <UIcon name="i-lucide-search" class="text-sm" style="position: absolute; right: 10px; top: 11px; color: var(--ink-400)" />
       </div>
       <button type="button" class="btn btn-outline btn-sm" @click="placeholder('새로고침했습니다.')">
-        <UIcon name="i-lucide-refresh-cw" class="text-[12px]" /> 새로고침
+        <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
       </button>
       <button type="button" class="btn btn-outline btn-sm" disabled>
         ‹ 이전
@@ -127,7 +127,7 @@ function placeholder(msg: string) {
       <button type="button" class="btn btn-outline btn-sm" disabled>
         다음 ›
       </button>
-      <span class="muted" style="font-size: 12px">총 {{ filtered.length }}개</span>
+      <span class="muted" style="font-size: var(--fz-sm)">총 {{ filtered.length }}개</span>
     </div>
 
     <div class="table-wrap">
@@ -194,7 +194,7 @@ function placeholder(msg: string) {
   background: var(--ink-50);
   border-radius: var(--r-md);
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-600);
   line-height: 1.7;
   margin-bottom: 14px;

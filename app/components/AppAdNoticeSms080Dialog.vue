@@ -8,7 +8,7 @@ const formatted = computed(() => num.value.replace(/(\d{3})(\d{3})(\d{4})/, '$1-
 
 <template>
   <AppModal :open="open" title="광고 메시지 설정" :width="520" @close="emit('close')">
-    <p style="font-size: 13px; color: var(--ink-700); margin-top: 0; line-height: 1.7">
+    <p style="font-size: var(--fz-md); color: var(--ink-700); margin-top: 0; line-height: 1.7">
       영리 목적의 광고성 메시지는 정보통신망법에 따라 <strong>(광고)</strong> 표시와
       <strong>080 무료 수신거부 번호</strong>를 포함해야 합니다.
     </p>
@@ -46,7 +46,7 @@ const formatted = computed(() => num.value.replace(/(\d{3})(\d{3})(\d{4})/, '$1-
   padding: 12px;
   background: var(--ink-50);
   border-radius: var(--r-md);
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-600);
   line-height: 1.7;
 }

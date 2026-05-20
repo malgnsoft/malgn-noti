@@ -45,7 +45,7 @@ function widthCh(k: string) {
   border-radius: var(--r-md);
   padding: 14px;
   min-height: 140px;
-  font-size: 13px;
+  font-size: var(--fz-md);
   line-height: 1.9;
   white-space: pre-wrap;
   color: var(--ink-800);
@@ -58,7 +58,7 @@ function widthCh(k: string) {
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--accent-ink);
   outline: none;
   margin: 0 2px;

@@ -93,7 +93,7 @@ function onDelete() {
           :key="k"
           style="display: grid; grid-template-columns: 100px 1fr; gap: 8px; align-items: center"
         >
-          <div style="font-size: 12px; color: var(--ink-600); font-family: var(--font-mono)">
+          <div style="font-size: var(--fz-sm); color: var(--ink-600); font-family: var(--font-mono)">
             #{{ '{' + k + '}' }}
           </div>
           <input
@@ -108,10 +108,10 @@ function onDelete() {
 
     <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px">
       <button type="button" class="btn btn-primary btn-sm" @click="emit('addManual', undefined)">
-        <UIcon name="i-lucide-plus" class="text-[12px]" /> 직접 입력
+        <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 직접 입력
       </button>
       <button type="button" class="btn btn-primary btn-sm" @click="emit('addressBook')">
-        <UIcon name="i-lucide-plus" class="text-[12px]" /> 주소록에서 선택
+        <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 주소록에서 선택
       </button>
       <button
         type="button"
@@ -132,7 +132,7 @@ function onDelete() {
       >
         <template #action>
           <button type="button" class="btn btn-primary btn-sm" @click="emit('addressBook')">
-            <UIcon name="i-lucide-contact-round" class="text-[14px]" /> 주소록 열기
+            <UIcon name="i-lucide-contact-round" class="text-[length:var(--fz-lg)]" /> 주소록 열기
           </button>
         </template>
       </AppEmptyState>

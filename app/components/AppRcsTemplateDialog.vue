@@ -97,7 +97,7 @@ function confirm() {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   padding: 20px;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   line-height: 1.7;
 }

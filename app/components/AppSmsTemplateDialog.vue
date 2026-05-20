@@ -152,19 +152,19 @@ function confirm() {
 .tpl-card:hover { border-color: var(--ink-200); }
 .tpl-card.on { border-color: var(--accent); background: var(--accent-soft); }
 .tpl-name {
-  font-size: 13px;
+  font-size: var(--fz-md);
   font-weight: 700;
   color: var(--ink-900);
   margin-bottom: 6px;
 }
 .tpl-subject {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 600;
   color: var(--ink-700);
   margin-bottom: 4px;
 }
 .tpl-body {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-600);
   line-height: 1.6;
   display: -webkit-box;
@@ -177,7 +177,7 @@ function confirm() {
   right: 12px;
   bottom: 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--info);
 }
 </style>

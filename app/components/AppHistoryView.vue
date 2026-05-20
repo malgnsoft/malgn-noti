@@ -300,11 +300,8 @@ function onExportList() {
           <p>최근 발송한 메시지의 이력과 상태를 조회합니다.</p>
         </div>
         <div class="row" style="gap: 6px">
-          <button class="btn btn-outline btn-sm">
-            <UIcon name="i-lucide-download" class="text-[12px]" /> CSV 다운로드
-          </button>
           <button class="btn btn-primary btn-sm" @click="router.push('/send/sms')">
-            <UIcon name="i-lucide-send" class="text-[12px]" /> 새 발송
+            <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 새 발송
           </button>
         </div>
       </div>
@@ -313,18 +310,18 @@ function onExportList() {
     <div class="grid-cards grid-4" style="margin-bottom: 16px">
       <div class="stat-card">
         <div class="label">
-          <UIcon name="i-lucide-send" class="text-[12px]" /> 총 발송
+          <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 총 발송
         </div>
         <div class="value">
           6,284
         </div>
         <div class="delta up">
-          <UIcon name="i-lucide-trending-up" class="text-[12px]" /> +12.4% 지난주
+          <UIcon name="i-lucide-trending-up" class="text-[length:var(--fz-sm)]" /> +12.4% 지난주
         </div>
       </div>
       <div class="stat-card">
         <div class="label" style="color: var(--accent-ink)">
-          <UIcon name="i-lucide-circle-check" class="text-[12px]" /> 성공
+          <UIcon name="i-lucide-circle-check" class="text-[length:var(--fz-sm)]" /> 성공
         </div>
         <div class="value">
           6,196
@@ -335,7 +332,7 @@ function onExportList() {
       </div>
       <div class="stat-card">
         <div class="label" style="color: var(--danger-ink)">
-          <UIcon name="i-lucide-octagon-alert" class="text-[12px]" /> 실패
+          <UIcon name="i-lucide-octagon-alert" class="text-[length:var(--fz-sm)]" /> 실패
         </div>
         <div class="value">
           62
@@ -346,7 +343,7 @@ function onExportList() {
       </div>
       <div class="stat-card">
         <div class="label" style="color: var(--warning-ink)">
-          <UIcon name="i-lucide-clock" class="text-[12px]" /> 대기 / 예약
+          <UIcon name="i-lucide-clock" class="text-[length:var(--fz-sm)]" /> 대기 / 예약
         </div>
         <div class="value">
           26
@@ -421,7 +418,7 @@ function onExportList() {
           초기화
         </button>
         <button type="button" class="btn btn-primary btn-sm" @click="onSearch">
-          <UIcon name="i-lucide-search" class="text-[12px]" /> 조회
+          <UIcon name="i-lucide-search" class="text-[length:var(--fz-sm)]" /> 조회
         </button>
       </div>
     </div>
@@ -447,7 +444,7 @@ function onExportList() {
                 @click="fieldMenuOpen = !fieldMenuOpen"
               >
                 <span :class="{ 'field-select-placeholder': !activeFields.length }">{{ fieldLabel }}</span>
-                <UIcon :name="fieldMenuOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="text-[13px]" />
+                <UIcon :name="fieldMenuOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="text-[length:var(--fz-md)]" />
               </button>
               <div v-if="fieldMenuOpen" class="field-menu" role="group" aria-label="조회 필드 추가 설정">
                 <label v-for="opt in FIELD_OPTIONS" :key="opt.value" class="checkbox field-option">
@@ -460,10 +457,10 @@ function onExportList() {
         </div>
         <div class="row" style="gap: 6px; flex-wrap: wrap">
           <button class="btn btn-outline btn-sm" @click="onExportRequest">
-            <UIcon name="i-lucide-download" class="text-[12px]" /> 검색 결과 다운로드 요청
+            <UIcon name="i-lucide-download" class="text-[length:var(--fz-sm)]" /> 검색 결과 다운로드 요청
           </button>
           <button class="btn btn-outline btn-sm" @click="onExportList">
-            <UIcon name="i-lucide-list" class="text-[12px]" /> 다운로드 요청 목록
+            <UIcon name="i-lucide-list" class="text-[length:var(--fz-sm)]" /> 다운로드 요청 목록
           </button>
           <span class="toolbar-count">총 <strong>{{ filtered.length.toLocaleString() }}</strong>건</span>
         </div>
@@ -636,12 +633,12 @@ function onExportList() {
   margin-left: 4px;
 }
 .toolbar-label {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
 }
 .toolbar-count {
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
   padding-left: 12px;
@@ -655,7 +652,7 @@ function onExportList() {
   color: var(--ink-900);
 }
 .th-help {
-  font-size: 11px;
+  font-size: var(--fz-xs);
   color: var(--ink-400);
   margin-left: 1px;
 }
@@ -673,7 +670,7 @@ function onExportList() {
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--white);
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-700);
   cursor: pointer;
   transition: border-color 0.12s;
@@ -718,7 +715,7 @@ function onExportList() {
 .msg-id-link {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   font-weight: 600;
   color: var(--accent-ink);
   background: none;
@@ -750,7 +747,7 @@ function onExportList() {
   background: var(--white);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: var(--fz-sm);
   color: var(--ink-600);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
