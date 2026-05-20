@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 이어서 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21). 끝으로 주소록 관리 페이지를 강화 — 등록·일괄등록·그룹이동 모달, 선택 발송 채널 드롭다운, 이름 클릭 수정, 페이지네이션·토큰 컬럼을 추가하여 재배포 (#22).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 이어서 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21). 이어서 주소록 관리 페이지를 강화 — 등록·일괄등록·그룹이동 모달, 선택 발송 채널 드롭다운, 이름 클릭 수정, 페이지네이션·토큰 컬럼을 추가하여 재배포 (#22). 끝으로 발신 정보·발신 번호 관리 페이지를 신규 구성하고, 개인정보 동의 → 등록 방식 선택 → 서류 인증/휴대폰 본인인증 3단계 등록 마법사를 추가했으며, 누적 타입 에러 8건을 정리해 재배포 (#23).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -165,9 +165,19 @@
 - 빌드 → `wrangler pages deploy` (`--commit-message "address book: register/bulk dialogs, group move, channel send dropdown"`) — 배포 #22. 프로덕션 `https://malgn-noti.pages.dev/contacts/list`·`/home` 200, alias `https://57bab931.malgn-noti.pages.dev` 200.
 - 커밋: `547dd61 주소록 관리 페이지 강화 — 등록·일괄등록·그룹이동·채널 발송` (5 files, +839 −41) → `origin/main` 푸시.
 
+## 17. 발신 번호 관리 페이지 + 등록 마법사 (§17, 배포 #23)
+
+- **발신 정보 · 발신 번호 페이지(`sender/numbers.vue`)**: 시안 IA를 Relay-inspired 디자인에 맞춰 신규 구성 — 명의자 인증 안내 박스, `발신 번호 등록`(페이지 헤더 우측 배치)·삭제·등록 안내 툴바, 표(발신 번호 유형·번호·승인 상태 배지·요청/승인 일시), 페이지네이션.
+- **등록 안내 모달**: 발신 번호 유형별 필요 서류를 표로 안내(대표자·임직원·타사·타인 번호).
+- **AppSenderRegisterDialog**(신규): 3단계 등록 마법사. ① 개인정보 수집 이용 동의(체크 후 진행) → ② 등록 방식 선택(직접 등록·서류 인증 / 휴대폰 본인인증) → ③ 분기 — 서류 인증(유형 select·번호·필요 서류 파일 업로드 → `심사 중` 등록) 또는 휴대폰 본인인증(통신사·이름·주민번호·내외국인·휴대폰, 인증번호 3분 카운트다운 → `승인` 즉시 등록). 단계 인디케이터·검증별 버튼 활성화 포함.
+- **types/sender.ts**(신규): `SenderNumber`·`SenderRegisterResult` 공용 타입 분리.
+- **타입 에러 정리**: 누적 타입 에러 8건 해소 — 템플릿 다이얼로그 4종의 배열 인덱스 접근 가드(`?? null`·`?? ''`·`?? []`), `AppPushRecipientDialog`의 수신자 `vars` 타입 명시, `KakaoMessageBody`를 재작성된 `AppTemplateVariableTextarea`(`body`+`modelValue` API)에 정합. `pnpm typecheck` 클린.
+- 빌드 → `wrangler pages deploy` (`--commit-message "sender numbers page: 3-step register wizard ..."`) — 배포 #23. 프로덕션 `https://malgn-noti.pages.dev/sender/numbers`·`/send/sms` 200, alias `https://3c26af5f.malgn-noti.pages.dev` 200.
+- 커밋: `fe58e2d 발신 번호 관리 페이지 — 등록 마법사 3단계 + 타입 에러 정리` (9 files, +1182 −12) → `origin/main` 푸시.
+
 ## 산출물
 
-### 신규 (8)
+### 신규 (10)
 - [app/components/AppFlowCreateDialog.vue](../../app/components/AppFlowCreateDialog.vue)
 - [app/components/AppFlowTemplatePickerDialog.vue](../../app/components/AppFlowTemplatePickerDialog.vue)
 - [app/components/AppPushButtonDialog.vue](../../app/components/AppPushButtonDialog.vue)
@@ -176,11 +186,15 @@
 - [app/components/AppPushRecipientDialog.vue](../../app/components/AppPushRecipientDialog.vue)
 - [app/utils/scrollLock.ts](../../app/utils/scrollLock.ts)
 - [app/composables/useTemplateToggle.ts](../../app/composables/useTemplateToggle.ts) — §15
+- [app/components/AppSenderRegisterDialog.vue](../../app/components/AppSenderRegisterDialog.vue) — §17
+- [app/types/sender.ts](../../app/types/sender.ts) — §17
 
-### 수정 (18)
+### 수정 (20)
 - 6개 발송 페이지(`app/pages/send/{sms,kakao,rcs,email,push,flow}.vue`)
 - `app/components/AppAddressBookDialog.vue`, `AppEmailPreview.vue`, `AppEmailTemplateDialog.vue`, `AppFlowManageDialog.vue`, `AppModal.vue`, `AppPhonePreview.vue`, `AppPushPreview.vue`, `AppRcsTemplateDialog.vue`, `AppRecipientCard.vue`, `AppRecipientFormDialog.vue`, `AppSmsTemplateDialog.vue`
 - `app/types/template.ts`(EmailTpl·RcsTpl 추가)
+- `app/pages/sender/numbers.vue`(§17 발신 번호 관리 페이지 전면 구성)
+- §17 타입 에러 정리: `AppKakaoTemplateDialog.vue`, `AppPushRecipientDialog.vue`, `AppPushTemplateDialog.vue`, `KakaoMessageBody.vue`
 
 ### 배포
 - #15 — 프로덕션: https://malgn-noti.pages.dev / Alias: https://c4b53baf.malgn-noti.pages.dev
@@ -191,6 +205,7 @@
 - #20 — 통계 페이지 재구성 + 폰트 토큰화 + zoom 제거 / Alias: https://95f36a35.malgn-noti.pages.dev
 - #21 — 발송 페이지 템플릿 토글 동작 개선 / Alias: https://e1b4d7da.malgn-noti.pages.dev
 - #22 — 주소록 관리 페이지 강화 / Alias: https://57bab931.malgn-noti.pages.dev
+- #23 — 발신 번호 관리 페이지 + 등록 마법사 / Alias: https://3c26af5f.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
@@ -202,6 +217,7 @@
 - `6bc05c6` 통계 페이지 재구성 + 폰트 토큰화 + zoom 스케일 제거 (§14, 배포 #20)
 - `93411ae` 발송 페이지 템플릿 토글 동작 개선 — 수신자 유지 + 메시지 stash/복원 (§15, 배포 #21)
 - `547dd61` 주소록 관리 페이지 강화 — 등록·일괄등록·그룹이동·채널 발송 (§16, 배포 #22)
+- `fe58e2d` 발신 번호 관리 페이지 — 등록 마법사 3단계 + 타입 에러 정리 (§17, 배포 #23)
 
 ## 다음 단계 / 한계
 
