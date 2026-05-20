@@ -19,7 +19,7 @@ const sections = [
   { id: 'toast', label: '13 토스트' },
   { id: 'phones', label: '14 미리보기 폰' },
   { id: 'layout', label: '15 레이아웃' },
-  { id: 'patterns', label: '16 5-카드 골격' },
+  { id: 'patterns', label: '16 발송 카드 골격' },
   { id: 'tone', label: '17 톤 · 마이크로카피' }
 ]
 
@@ -106,21 +106,20 @@ const shadows = [
 ]
 
 const matrix = [
-  ['발신 식별자', '발신번호', '프로필 검색', '브랜드+번호', '이메일', '—', '플로우'],
-  ['템플릿', '선택', '필수', '선택', '선택', '선택', '—'],
+  ['발신 식별자', '발신번호', '프로필 검색', '브랜드+번호', '이메일', '토큰', '플로우'],
+  ['템플릿', '선택', '필수', '선택', '선택', '선택', '플로우'],
   ['AI 다듬기', '✓', '—', '✓', '✓', '—', '—'],
   ['치환자', '템플릿시', '✓', '✓', '템플릿시', '—', '✓'],
-  ['미리보기', 'iMessage', '카카오', 'RCS', '이메일', '잠금화면', '선택 노드'],
+  ['미리보기', 'iMessage', '카카오', 'RCS', '이메일', '잠금화면(AOS/iOS)', '선택 노드'],
   ['단가(C)', '9.9', '8.0', '12.0', '0.65', '0.0', '노드 합산']
 ]
 
-const fiveCards = [
-  { n: '①', name: 'AppSendInfoCard', role: 'Flow 전용 안내 박스', optional: true },
-  { n: '①', name: 'AppSendFormCard (발신)', role: '발신 식별자 · 플로우 selector' },
-  { n: '②', name: 'AppRecipientCard', role: '4-액션(직접/주소록/수정/삭제) + 치환자' },
-  { n: '③', name: 'AppSendFormCard (메시지)', role: '본문 입력 + 우측 채널 미리보기' },
-  { n: '④', name: 'AppSendOptionsCard', role: '즉시 / 예약 + datetime' },
-  { n: '—', name: 'AppSendActionsBar', role: '초기화(neutral) + 발송하기(primary)' }
+const sendCards = [
+  { n: '①', name: '템플릿 선택', role: '템플릿 사용유무 + 샘플 템플릿 선택 (AppSendFormCard)' },
+  { n: '②', name: '수신자 설정', role: '직접 입력 · 주소록 · 별칭 클릭 수정 · 삭제 + 치환자 (AppRecipientCard)' },
+  { n: '③', name: '메시지 설정', role: '발신 정보 · 발송 목적/유형 · 본문 + 우측 채널 미리보기 (AppSendFormCard)' },
+  { n: '④', name: '발송 설정', role: '즉시 / 예약 발송 + datetime (AppSendOptionsCard)' },
+  { n: '—', name: 'AppSendActionsBar', role: '초기화 + 발송하기(primary)' }
 ]
 
 const tone = [
@@ -844,22 +843,21 @@ const segDemo = ref('a')
             § 12 · 16
           </div>
           <h2 class="g-h2">
-            5-카드 발송 골격
+            발송 페이지 카드 골격
           </h2>
           <p class="g-desc">
-            모든 발송 페이지(SMS/알림톡/RCS/이메일/PUSH/Flow) 공통 구조.
+            모든 발송 페이지(SMS/알림톡/RCS/이메일/PUSH/Flow) 공통 구조 — 템플릿 선택 · 수신자 설정 · 메시지 설정 · 발송 설정의 3+1 카드.
           </p>
           <div class="g-grid g-grid-2">
             <div
-              v-for="(c, i) in fiveCards"
+              v-for="(c, i) in sendCards"
               :key="i"
               class="card"
-              :style="{ padding: '18px', opacity: c.optional ? 0.6 : 1 }"
+              style="padding: 18px"
             >
               <div class="row" style="margin-bottom: 8px; gap: 8px">
-                <span class="g-card-num" :class="{ opt: c.optional }">{{ c.n }}</span>
+                <span class="g-card-num">{{ c.n }}</span>
                 <code style="font-size: 13px; font-weight: 600; color: var(--ink-900)">{{ c.name }}</code>
-                <AppBadge v-if="c.optional" tone="neutral">선택</AppBadge>
               </div>
               <div style="font-size: 13px; color: var(--ink-600); line-height: 1.6">
                 {{ c.role }}

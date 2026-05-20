@@ -54,7 +54,7 @@
 - **에디터**: 템플릿 작성용 리치/슬롯 변수 에디터 (선정 미정)
 - **테스트**: Vitest + @nuxt/test-utils
 - **린트/포맷**: ESLint + Prettier
-- **패키지 매니저**: pnpm (확정 시 갱신)
+- **패키지 매니저**: pnpm (확정 — `pnpm-lock.yaml` 기준)
 
 ---
 
@@ -136,15 +136,16 @@
 
 거의 모든 화면이 다음 패턴 조합이므로, 일찍 표준화하면 263 페이지를 빠르게 흡수할 수 있다.
 
-- **PU(팝업) 풀세트**: 발송 화면마다 `수신자 정보 / 수신자 선택 / 광고 수신 알림 / 발송 컨펌 / 초기화 확인` 반복. → 상세/편집 류는 **`USlideover`**, 단순 컨펌은 **`UModal`** 로 표준화. 채널 무관 공용 컴포넌트로 추출.
-- **다운로드 요청 패턴**: `다운로드 요청 PU` + `다운로드 요청 목록 PU` 짝. → `useExportJob()` composable로 백엔드 ExportJob 호출 + **`UNotification`** 으로 완료 알림.
-- **AI 템플릿 PU**: 모든 채널 템플릿에서 동일. → `useAiTemplate(channel)` 단일 훅, **`UModal`** 안에 채널별 프롬프트 폼.
-- **샘플 템플릿 PU**: 시스템 제공 마스터 갤러리(읽기 전용). → API page-cached + 클라이언트 캐싱, **`UCard`** 그리드.
-- **카테고리(트리) 관리**: 모든 채널의 템플릿 화면이 카테고리 트리. → 공용 `AppCategoryTree` 컴포넌트.
-- **위험 액션 컨펌**: `삭제 / 취소 / 일괄 취소 / 중지` → 단일 `AppConfirmDialog`(내부 `UModal`)로 통일.
-- **목록/필터/정렬/페이징**: 거의 모든 이력·관리 화면 → **`UTable`** + **`UPagination`** + 공용 `AppFilterBar`.
-- **폼 + 검증**: → **`UForm` + `UFormField`** + Zod 스키마. 백엔드와 동일 스키마 사용 검토.
-- **사이드바/탑바 레이아웃**: 무료판엔 Dashboard 레이아웃이 없으므로 `AppShell`(좌측 `UNavigationMenu` 사이드바 + 상단 `UCommandPalette`/사용자 메뉴)을 직접 조립.
+> 적용 현황(2026-05): 발송 6채널 + 조회/통계/주소록/충전/인증까지 아래 패턴이 공용 컴포넌트로 구현됨. 모든 팝업은 자체 **`AppModal`**(Teleport + `utils/scrollLock`)로 통일 — `USlideover`는 사용하지 않음.
+
+- **PU(팝업) 풀세트**: 발송 화면의 `수신자 정보 / 수신자 선택 / 광고 수신 알림 / 발송 컨펌 / 초기화 확인` → 모두 **`AppModal`** 기반 공용 컴포넌트(`AppRecipientFormDialog`·`AppAddressBookDialog`·`AppAdNoticeSms080Dialog`·`AppSendConfirmDialog`·`AppConfirmDialog`).
+- **다운로드 요청 패턴**: `다운로드 요청 PU` + `목록 PU` 짝 → `useExportJob()` composable + `useToast()` 완료 알림.
+- **AI 템플릿/문장 PU**: → `useAiTemplate()` 훅 + `AppAIRewriteDialog`(AppModal 기반).
+- **샘플/채널 템플릿 PU**: 채널별 `App{Sms,Kakao,Rcs,Email,Push}TemplateDialog` — 카드 그리드/리스트 + 미리보기.
+- **위험 액션 컨펌**: `삭제 / 취소 / 일괄 취소 / 중지` → 단일 `AppConfirmDialog`(내부 `AppModal`)로 통일.
+- **목록/필터/정렬/페이징**: 이력·관리 화면 → `AppHistoryView` 등 공용 뷰 + 자체 `.table`/페이지네이션.
+- **폼 + 검증**: 발송 폼은 `AppSendFormCard`+`AppFormRow`+`AppRadioGroup` 조합. 검증은 인라인(토스트). Zod 도입은 백엔드 연동 시 검토.
+- **사이드바/탑바 레이아웃**: 상단 단일 행 GNB(`AppGnb`, 56px) + `AppFooter`. 좌측 사이드바 없음(시안 무료판 기준).
 
 ---
 
@@ -172,7 +173,7 @@ NUXT_SESSION_SECRET=...          # 세션 쿠키 서명
 
 ---
 
-## 7. 개발 명령어 (계획)
+## 7. 개발 명령어
 
 ```bash
 pnpm install
@@ -218,7 +219,7 @@ pnpm test
 
 - **Vue**: `<script setup lang="ts">`. Options API 금지.
 - **컴포넌트**: PascalCase 파일명, 한 파일에 한 컴포넌트.
-- **컴포넌트 네이밍 규칙**: Nuxt UI 컴포넌트는 `U*` 접두사(자동), **자체 컴포넌트는 `App*`** 접두사로 구분 (`AppShell`, `AppConfirmDialog`, `AppFilterBar`, `AppCategoryTree` 등).
+- **컴포넌트 네이밍 규칙**: Nuxt UI 컴포넌트는 `U*` 접두사(자동), **자체 컴포넌트는 `App*`** 접두사로 구분 (`AppGnb`, `AppModal`, `AppConfirmDialog`, `AppSendFormCard`, `AppRecipientCard` 등 — 전체 목록은 [`app/components/`](./app/components/)).
 - **Nuxt UI 우선 사용**: 새 UI는 먼저 Nuxt UI에 동등 컴포넌트가 있는지 확인. 없을 때만 자체 작성. 스타일은 Nuxt UI 테마 토큰(`primary`/`neutral`/`success` 등) 사용, 커스텀 색상 하드코딩 지양.
 - **Tailwind 사용**: 임의 클래스 OK. 단 `@nuxtjs/tailwindcss`는 절대 추가 설치 금지(중복 구성으로 충돌). 전역 토큰/플러그인은 `app.config.ts` 또는 `assets/css/main.css`의 `@theme`에서 관리.
 - **API 호출**: 직접 `$fetch` 호출 대신 `composables/useApi.ts` 래퍼 사용 (인증·에러 표준화).
@@ -243,7 +244,10 @@ UI 컴포넌트와 도메인 타입은 admin과 상당 부분 공유 가능 — 
 
 ## 10. 미정 / TODO
 
-- [ ] 패키지 매니저 확정 (pnpm 가정)
+- [x] ~~패키지 매니저 확정~~ → pnpm 확정
+- [x] ~~디자인 시스템~~ → Relay-inspired v1.0 채택([`doc/DESIGN.md`](./doc/DESIGN.md)), Phase 1·2 적용 완료
+- [ ] 발신정보·메시지 관리·캠페인·계정/문의·시스템 페이지 — 핸드오프 디자인 미반영(IA만 존재), 별도 협의 필요
+- [ ] 백엔드(`malgn-noti-api`) 연동 — 현재 모든 발송/관리 화면은 목업 데이터로 동작
 - [ ] 멀티 테넌트 라우팅 방식 (서브도메인 vs. 경로 prefix)
 - [ ] 다국어 지원 시점
 - [ ] 캠페인 변형 v3 (`#/campaign3`)와 본 캠페인 화면의 최종 결정

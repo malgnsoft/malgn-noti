@@ -54,7 +54,7 @@
 | 검증 | **Zod** | 3.25 | 폼/응답 |
 | 아이콘 | **Iconify** | `lucide`, `heroicons`, `bi` | 채널 카드는 `bi`, 일반은 `lucide` |
 | 차트 | **Chart.js** | 4.x (예정) | 통계 페이지 |
-| 폰트 | **Noto Sans KR** | Google Fonts | 한국어 기본 |
+| 폰트 | **Inter · JetBrains Mono · Pretendard** | Google Fonts / CDN | UI=Inter, 숫자/ID=JetBrains Mono, 한국어 fallback=Pretendard (2026-05-18 디자인 피벗) |
 | 린트 | **ESLint** | 9.x + `@nuxt/eslint` | Nuxt 권장 룰 |
 | 패키지 매니저 | **pnpm** | 10.25.0 | 빠른 설치 + 워크스페이스 가능 |
 
@@ -119,7 +119,7 @@ NHN/PG/AI를 직접 호출하는 유일한 컴포넌트.
 | **NHN Cloud Notification Hub** | SMS/RCS/알림톡/이메일/Push 실 발송 | api 서버의 채널 어댑터에서 HTTP 호출 | 통합 예정 |
 | **결제 PG** (토스/포트원/나이스 중 미정) | 크레딧 충전 결제 | api 서버 어댑터 + 웹훅 | 미정 |
 | **LLM 제공자** (Anthropic/OpenAI 중 미정) | AI 템플릿 생성 | api 서버 게이트웨이 (비용 통제) | 미정 |
-| **Google Fonts** | Noto Sans KR 로드 | 프론트 `<link>` | 적용 |
+| **Google Fonts / CDN** | Inter · JetBrains Mono · Pretendard · Instrument Serif 로드 | 프론트 `<link>` | 적용 |
 
 ---
 
