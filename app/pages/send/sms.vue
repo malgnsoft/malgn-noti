@@ -21,6 +21,14 @@ const substitutionMode = ref<'common' | 'individual'>('common')
 const commonVars = ref<Record<string, string>>({})
 
 const recipients = ref<Recipient[]>([])
+// 주소록 '선택 발송'으로 인계된 수신자 반영
+const pendingRecipients = useState<Recipient[]>('sendRecipients', () => [])
+onMounted(() => {
+  if (pendingRecipients.value.length) {
+    recipients.value = [...pendingRecipients.value]
+    pendingRecipients.value = []
+  }
+})
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '2026-05-19', hour: '10', minute: '00' })
 
@@ -70,8 +78,17 @@ function applyTemplate(t: Tpl) {
   toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
 
-// 발신 번호를 제외한 페이지 내용값 초기화(템플릿 사용유무 전환 / 전체 초기화 공용)
-function resetContent() {
+interface SmsMessageSnapshot {
+  purpose: 'info' | 'ad' | 'auth'
+  smsType: 'sms' | 'lms' | 'mms'
+  subject: string
+  body: string
+  files: { name: string, size: number }[]
+  adNumber: string | null
+}
+
+// 메시지 설정 + 템플릿만 초기화 (수신자·치환자·발송설정·발신번호는 유지)
+function resetMessage() {
   template.value = null
   purpose.value = 'info'
   smsType.value = 'sms'
@@ -79,26 +96,46 @@ function resetContent() {
   body.value = ''
   files.value = []
   adNumber.value = null
+}
+
+// 템플릿 사용유무 토글: 사용→메시지 초기화, 사용 안 함→이전 입력 복원. 수신자는 항상 유지.
+const { setSilently } = useTemplateToggle<SmsMessageSnapshot>({
+  state: useTemplate,
+  capture: () => ({
+    purpose: purpose.value,
+    smsType: smsType.value,
+    subject: subject.value,
+    body: body.value,
+    files: [...files.value],
+    adNumber: adNumber.value,
+  }),
+  restore: (s) => {
+    purpose.value = s.purpose
+    smsType.value = s.smsType
+    subject.value = s.subject
+    body.value = s.body
+    files.value = [...s.files]
+    adNumber.value = s.adNumber
+  },
+  reset: resetMessage,
+  onToggle: to => toast.add({
+    title: to === 'on'
+      ? '템플릿 사용 — 메시지 설정을 초기화했습니다.'
+      : '템플릿 사용 안 함 — 이전에 입력한 메시지 설정을 복원했습니다.',
+    color: 'info',
+    icon: 'i-lucide-info',
+  }),
+})
+
+// 전체 초기화 (초기화 버튼)
+function handleReset() {
+  setSilently('off')
+  resetMessage()
   recipients.value = []
   selectedRcpt.value = []
   substitutionMode.value = 'common'
   commonVars.value = {}
   sendOptions.value = { mode: 'now', date: '', hour: '09', minute: '00' }
-}
-
-// 템플릿 사용유무를 바꾸면 페이지 내용값 초기화(전체 초기화 중에는 억제)
-const suppressTplReset = ref(false)
-watch(useTemplate, () => {
-  if (suppressTplReset.value) return
-  resetContent()
-  toast.add({ title: '템플릿 사용 설정이 변경되어 입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
-}, { flush: 'sync' })
-
-function handleReset() {
-  suppressTplReset.value = true
-  useTemplate.value = 'off'
-  suppressTplReset.value = false
-  resetContent()
   senderNumber.value = ''
   openReset.value = false
   toast.add({ title: '입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })

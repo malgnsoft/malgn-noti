@@ -14,6 +14,14 @@ const body = ref('')
 const badge = ref('')
 const jsonPayload = ref(JSON.stringify({ title: '', body: '', data: {} }, null, 2))
 const recipients = ref<Recipient[]>([])
+// 주소록 '선택 발송'으로 인계된 수신자 반영
+const pendingRecipients = useState<Recipient[]>('sendRecipients', () => [])
+onMounted(() => {
+  if (pendingRecipients.value.length) {
+    recipients.value = [...pendingRecipients.value]
+    pendingRecipients.value = []
+  }
+})
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '', hour: '09', minute: '00' })
 
@@ -179,6 +187,94 @@ function onPickPushTpl(t: { name: string, title: string, body: string }) {
   body.value = t.body
   toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
+
+interface PushMessageSnapshot {
+  pushType: string
+  inputMode: string
+  htmlStyle: 'on' | 'off'
+  title: string
+  body: string
+  badge: string
+  jsonPayload: string
+  pushMedia: PushMedia[]
+  pushAndroidMedia: PushMedia[]
+  pushIosMedia: PushMedia[]
+  pushAndroidBigIcon: PushMedia[]
+  pushGroups: PushGroup[]
+  pushButtons: { id: number | string, type: string }[]
+}
+
+// 메시지 설정 + 템플릿만 초기화 (수신자·발송설정은 유지)
+function resetMessage() {
+  pushTemplateName.value = ''
+  pushType.value = 'info'
+  inputMode.value = 'basic'
+  htmlStyle.value = 'on'
+  title.value = ''
+  body.value = ''
+  badge.value = ''
+  jsonPayload.value = JSON.stringify({ title: '', body: '', data: {} }, null, 2)
+  pushMedia.value = []
+  pushAndroidMedia.value = []
+  pushIosMedia.value = []
+  pushAndroidBigIcon.value = []
+  pushGroups.value = []
+  pushButtons.value = []
+}
+
+// 템플릿 사용유무 토글: 사용→메시지 초기화, 사용 안 함→이전 입력 복원. 수신자는 항상 유지.
+const { setSilently } = useTemplateToggle<PushMessageSnapshot>({
+  state: useTemplate,
+  capture: () => ({
+    pushType: pushType.value,
+    inputMode: inputMode.value,
+    htmlStyle: htmlStyle.value,
+    title: title.value,
+    body: body.value,
+    badge: badge.value,
+    jsonPayload: jsonPayload.value,
+    pushMedia: pushMedia.value.map(m => ({ ...m })),
+    pushAndroidMedia: pushAndroidMedia.value.map(m => ({ ...m })),
+    pushIosMedia: pushIosMedia.value.map(m => ({ ...m })),
+    pushAndroidBigIcon: pushAndroidBigIcon.value.map(m => ({ ...m })),
+    pushGroups: pushGroups.value.map(g => ({ ...g })),
+    pushButtons: pushButtons.value.map(b => ({ ...b })),
+  }),
+  restore: (s) => {
+    pushType.value = s.pushType
+    inputMode.value = s.inputMode
+    htmlStyle.value = s.htmlStyle
+    title.value = s.title
+    body.value = s.body
+    badge.value = s.badge
+    jsonPayload.value = s.jsonPayload
+    pushMedia.value = s.pushMedia.map(m => ({ ...m }))
+    pushAndroidMedia.value = s.pushAndroidMedia.map(m => ({ ...m }))
+    pushIosMedia.value = s.pushIosMedia.map(m => ({ ...m }))
+    pushAndroidBigIcon.value = s.pushAndroidBigIcon.map(m => ({ ...m }))
+    pushGroups.value = s.pushGroups.map(g => ({ ...g }))
+    pushButtons.value = s.pushButtons.map(b => ({ ...b }))
+  },
+  reset: resetMessage,
+  onToggle: to => toast.add({
+    title: to === 'on'
+      ? '템플릿 사용 — 메시지 설정을 초기화했습니다.'
+      : '템플릿 사용 안 함 — 이전에 입력한 메시지 설정을 복원했습니다.',
+    color: 'info',
+    icon: 'i-lucide-info',
+  }),
+})
+
+function handleReset() {
+  setSilently('off')
+  resetMessage()
+  recipients.value = []
+  selectedRcpt.value = []
+  sendOptions.value = { mode: 'now', date: '', hour: '09', minute: '00' }
+  openReset.value = false
+  toast.add({ title: '입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
+}
+
 function onPushRecipientsConfirm(list: Recipient[]) {
   // 수정 모드면 기존 항목 제거 후 입력 목록 추가, 아니면 그대로 추가
   if (editTarget.value) {
@@ -483,7 +579,7 @@ function send() {
       confirm-label="초기화"
       danger
       @close="openReset = false"
-      @confirm="() => { recipients = []; openReset = false }"
+      @confirm="handleReset"
     />
     <AppSendConfirmDialog
       :open="openConfirm"

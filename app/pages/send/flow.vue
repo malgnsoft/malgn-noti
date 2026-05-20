@@ -35,24 +35,23 @@ const body = ref('')
 
 watch(flowName, () => {
   activeNode.value = 0
-  if (selectedFlow.value) {
-    subject.value = selectedFlow.value.nodes[0].subject
-    body.value = selectedFlow.value.nodes[0].body
+  const first = selectedFlow.value?.nodes[0]
+  if (first) {
+    subject.value = first.subject
+    body.value = first.body
   }
   else {
     subject.value = ''
     body.value = ''
   }
-  // 플로우가 바뀌면 수신자·치환자 상태도 공란으로 초기화 (다른 페이지와 동일)
-  recipients.value = []
-  selectedRcpt.value = []
-  commonVars.value = {}
-  substitutionMode.value = 'common'
+  // 플로우가 바뀌어도 수신자 목록·치환자 값은 유지한다.
+  // 치환자 입력 칸은 varKeys(선택된 플로우의 #{...})에 따라 표시/숨김만 전환된다.
 })
 watch(activeNode, (i) => {
-  if (!selectedFlow.value) return
-  subject.value = selectedFlow.value.nodes[i].subject
-  body.value = selectedFlow.value.nodes[i].body
+  const n = selectedFlow.value?.nodes[i]
+  if (!n) return
+  subject.value = n.subject
+  body.value = n.body
 })
 
 const substitutionMode = ref<'common' | 'individual'>('common')

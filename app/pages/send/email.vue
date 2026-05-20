@@ -15,6 +15,14 @@ const emailHeading = ref('')
 const emailButtonLabel = ref('')
 const files = ref<{ name: string }[]>([])
 const recipients = ref<Recipient[]>([])
+// 주소록 '선택 발송'으로 인계된 수신자 반영
+const pendingRecipients = useState<Recipient[]>('sendRecipients', () => [])
+onMounted(() => {
+  if (pendingRecipients.value.length) {
+    recipients.value = [...pendingRecipients.value]
+    pendingRecipients.value = []
+  }
+})
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '', hour: '09', minute: '00' })
 
@@ -50,6 +58,70 @@ function onPickEmailTpl(t: EmailTpl) {
   emailButtonLabel.value = t.buttonLabel ?? ''
   toast.add({ title: `"${t.name}" 템플릿을 적용했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
 }
+
+interface EmailMessageSnapshot {
+  from: string
+  purpose: string
+  subject: string
+  body: string
+  emailHeading: string
+  emailButtonLabel: string
+  files: { name: string }[]
+}
+
+// 메시지 설정 + 템플릿만 초기화 (수신자·발송설정은 유지)
+function resetMessage() {
+  emailTemplateName.value = ''
+  from.value = ''
+  purpose.value = 'info'
+  subject.value = ''
+  body.value = ''
+  emailHeading.value = ''
+  emailButtonLabel.value = ''
+  files.value = []
+}
+
+// 템플릿 사용유무 토글: 사용→메시지 초기화, 사용 안 함→이전 입력 복원. 수신자는 항상 유지.
+const { setSilently } = useTemplateToggle<EmailMessageSnapshot>({
+  state: useTemplate,
+  capture: () => ({
+    from: from.value,
+    purpose: purpose.value,
+    subject: subject.value,
+    body: body.value,
+    emailHeading: emailHeading.value,
+    emailButtonLabel: emailButtonLabel.value,
+    files: [...files.value],
+  }),
+  restore: (s) => {
+    from.value = s.from
+    purpose.value = s.purpose
+    subject.value = s.subject
+    body.value = s.body
+    emailHeading.value = s.emailHeading
+    emailButtonLabel.value = s.emailButtonLabel
+    files.value = [...s.files]
+  },
+  reset: resetMessage,
+  onToggle: to => toast.add({
+    title: to === 'on'
+      ? '템플릿 사용 — 메시지 설정을 초기화했습니다.'
+      : '템플릿 사용 안 함 — 이전에 입력한 메시지 설정을 복원했습니다.',
+    color: 'info',
+    icon: 'i-lucide-info',
+  }),
+})
+
+function handleReset() {
+  setSilently('off')
+  resetMessage()
+  recipients.value = []
+  selectedRcpt.value = []
+  sendOptions.value = { mode: 'now', date: '', hour: '09', minute: '00' }
+  openReset.value = false
+  toast.add({ title: '입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
+}
+
 function onManualConfirm(r: Recipient) {
   recipients.value = editTarget.value
     ? recipients.value.map(x => x.id === r.id ? r : x)
@@ -219,7 +291,7 @@ function send() {
       confirm-label="초기화"
       danger
       @close="openReset = false"
-      @confirm="() => { recipients = []; openReset = false }"
+      @confirm="handleReset"
     />
     <AppSendConfirmDialog
       :open="openConfirm"
