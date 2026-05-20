@@ -75,6 +75,13 @@ function onGroupMoveConfirm() {
   selected.value = []
 }
 
+function onRefresh() {
+  toast.add({ title: '새로고침', description: '연락처 목록을 새로고침했습니다.', icon: 'i-lucide-refresh-cw' })
+}
+
+/* ── 그룹 등록 ───────────────────────────────────────────────────── */
+const groupFormOpen = ref(false)
+
 /* ── 주소록 등록 / 수정 ──────────────────────────────────────────── */
 const contactFormOpen = ref(false)
 const bulkDialogOpen = ref(false)
@@ -162,7 +169,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
             <span class="muted num" style="font-size: var(--fz-sm)">{{ g.count }}</span>
           </div>
           <div class="h-divider" />
-          <button class="btn btn-ghost btn-sm" style="justify-content: flex-start">
+          <button class="btn btn-ghost btn-sm" style="justify-content: flex-start" @click="groupFormOpen = true">
             <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 새 그룹
           </button>
         </div>
@@ -180,7 +187,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
               <UIcon name="i-lucide-users" class="text-[length:var(--fz-sm)]" /> 그룹 이동
             </button>
             <button class="btn btn-error btn-sm">
-              <UIcon name="i-lucide-trash-2" class="text-[length:var(--fz-sm)]" /> 삭제
+              <UIcon name="i-lucide-trash-2" class="text-[length:var(--fz-sm)]" /> 선택 삭제
             </button>
           </template>
           <div ref="sendMenuEl" class="send-menu-wrap">
@@ -200,6 +207,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
               </button>
             </div>
           </div>
+          <button class="btn btn-ghost btn-sm" @click="onRefresh">
+            <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
+          </button>
+          <span class="ct-count">총 <strong>{{ filtered.length }}</strong>명</span>
         </div>
 
         <div class="table-wrap">
@@ -283,6 +294,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
 
     <AppContactBulkDialog :open="bulkDialogOpen" @close="bulkDialogOpen = false" />
 
+    <AppGroupFormDialog :open="groupFormOpen" @close="groupFormOpen = false" />
+
     <AppModal :open="groupMoveOpen" title="그룹 이동" :width="400" @close="groupMoveOpen = false">
       <p class="gm-note">
         선택한 {{ selected.length }}명을 이동할 그룹을 선택하세요.
@@ -359,6 +372,19 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
 }
 .ct-name-btn:hover {
   text-decoration: underline;
+}
+
+.ct-count {
+  font-size: var(--fz-sm);
+  color: var(--ink-500);
+  white-space: nowrap;
+  padding-left: 2px;
+}
+.ct-count strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-900);
 }
 
 .send-menu-wrap {
