@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 이어서 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21). 이어서 주소록 관리 페이지를 강화 — 등록·일괄등록·그룹이동 모달, 선택 발송 채널 드롭다운, 이름 클릭 수정, 페이지네이션·토큰 컬럼을 추가하여 재배포 (#22). 이어서 발신 정보·발신 번호 관리 페이지를 신규 구성하고, 개인정보 동의 → 등록 방식 선택 → 서류 인증/휴대폰 본인인증 3단계 등록 마법사를 추가했으며, 누적 타입 에러 8건을 정리해 재배포 (#23). 끝으로 그룹 관리 페이지를 신규 구성하고(그룹 등록·수정 모달, 행별 메시지 발송 채널 드롭다운, 검색·페이지네이션), 주소록·그룹 관리 툴바를 통일하여 재배포 (#24).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 이어서 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21). 이어서 주소록 관리 페이지를 강화 — 등록·일괄등록·그룹이동 모달, 선택 발송 채널 드롭다운, 이름 클릭 수정, 페이지네이션·토큰 컬럼을 추가하여 재배포 (#22). 이어서 발신 정보·발신 번호 관리 페이지를 신규 구성하고, 개인정보 동의 → 등록 방식 선택 → 서류 인증/휴대폰 본인인증 3단계 등록 마법사를 추가했으며, 누적 타입 에러 8건을 정리해 재배포 (#23). 이어서 그룹 관리 페이지를 신규 구성하고(그룹 등록·수정 모달, 행별 메시지 발송 채널 드롭다운, 검색·페이지네이션), 주소록·그룹 관리 툴바를 통일하여 재배포 (#24). 끝으로 RCS 브랜드 관리 페이지를 신규 구성하고(RCS Biz Center 연동 흐름, 브랜드 목록 표, 하단 번호형 페이지바·새로고침), 발신 정보 리스트 페이지 구조를 통일하여 재배포 (#25).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -185,6 +185,15 @@
 - 빌드 → `wrangler pages deploy` (`--commit-message "contacts: group management page, group register/edit dialog, toolbar polish"`) — 배포 #24. 프로덕션 `https://malgn-noti.pages.dev/contacts/groups`·`/contacts/list`·`/home` 200, alias `https://8a830019.malgn-noti.pages.dev` 200.
 - 커밋: `4e88e1f 주소록·그룹 관리 페이지 보강` (3 files, +525 −7) → `origin/main` 푸시.
 
+## 19. RCS 브랜드 관리 페이지 (§19, 배포 #25)
+
+- **발신 정보 · RCS 브랜드 페이지(`sender/brands.vue`)**: placeholder → 신규 구성. 발신 번호 관리 페이지와 동일한 구조(페이지 헤더 우측 액션 버튼 + 안내 박스 + 리스트 카드).
+- **안내 박스**: RCS Biz Center 가입·대행사 지정·사업자등록번호 기준 연동·정보 변경 시 재연동 4-bullet. "RCS Biz Center"는 외부 링크.
+- **브랜드 연동**: `브랜드 연동` 버튼(헤더 우측) → `AppConfirmDialog`(사업자등록번호 기준 연동 안내) → 확인 시 연동 일시 갱신 + 토스트. 직접 등록 폼이 아니라 RCS Biz Center sync 흐름.
+- **리스트 카드**: 툴바(`업체명` · `새로고침` · `총 N개`) + 표(브랜드 이름·아이디·승인 상태 배지·승인/연동 일시) + 하단 번호형 페이지바(`« ‹ 1 › »`) — 발신 번호 관리 페이지와 동일 포맷. 검색은 미포함.
+- 빌드 → `wrangler pages deploy` (`--commit-message "rcs brand management page: sync flow, brand list table, bottom pager, refresh"`) — 배포 #25. 프로덕션 `https://malgn-noti.pages.dev/sender/brands`·`/sender/numbers` 200, alias `https://6f271361.malgn-noti.pages.dev` 200.
+- 커밋: `e3e7a02 RCS 브랜드 관리 페이지 — 연동 흐름 + 브랜드 목록` (1 file, +277 −5) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (10)
@@ -205,6 +214,7 @@
 - `app/types/template.ts`(EmailTpl·RcsTpl 추가)
 - `app/pages/sender/numbers.vue`(§17 발신 번호 관리 페이지 전면 구성)
 - §17 타입 에러 정리: `AppKakaoTemplateDialog.vue`, `AppPushRecipientDialog.vue`, `AppPushTemplateDialog.vue`, `KakaoMessageBody.vue`
+- `app/pages/sender/brands.vue`(§19 RCS 브랜드 관리 페이지 전면 구성)
 
 ### 배포
 - #15 — 프로덕션: https://malgn-noti.pages.dev / Alias: https://c4b53baf.malgn-noti.pages.dev
@@ -217,6 +227,7 @@
 - #22 — 주소록 관리 페이지 강화 / Alias: https://57bab931.malgn-noti.pages.dev
 - #23 — 발신 번호 관리 페이지 + 등록 마법사 / Alias: https://3c26af5f.malgn-noti.pages.dev
 - #24 — 그룹 관리 페이지 + 주소록·그룹 툴바 통일 / Alias: https://8a830019.malgn-noti.pages.dev
+- #25 — RCS 브랜드 관리 페이지 / Alias: https://6f271361.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
@@ -230,6 +241,7 @@
 - `547dd61` 주소록 관리 페이지 강화 — 등록·일괄등록·그룹이동·채널 발송 (§16, 배포 #22)
 - `fe58e2d` 발신 번호 관리 페이지 — 등록 마법사 3단계 + 타입 에러 정리 (§17, 배포 #23)
 - `4e88e1f` 주소록·그룹 관리 페이지 보강 (§18, 배포 #24)
+- `e3e7a02` RCS 브랜드 관리 페이지 — 연동 흐름 + 브랜드 목록 (§19, 배포 #25)
 
 ## 다음 단계 / 한계
 
