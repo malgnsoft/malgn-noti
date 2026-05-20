@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -118,6 +118,20 @@
 - 커밋: `f81424b 문서 정정: USlideover 매핑·구 토큰 예시 현행화` (2 files, +11 −9) → `origin/main` 푸시.
 - 변경 파일: `doc/FRONTEND.md`, `doc/DESIGN.md`.
 
+## 13. 발송 조회 페이지 전면 재작업 + btn-sky 제거 (§13, 배포 #19)
+
+사용자 제공 캡처 기준으로 발송 조회(`AppHistoryView` — `/history/{sms,rcs,kakao,email,push}` 5채널 공용)의 목록 영역·검색 필터·다이얼로그를 단계적으로 재작업.
+
+- **목록 영역 재구성**: 컬럼을 `메시지 아이디 / 메시지 채널 / 요청 일시 / 발송 시점 / 발신 정보 / 발송 상태 / 발송 목적 / 수신자 정보 / 수신 상태`로 교체. 카드 상단 툴바(선택 취소·일괄 취소·조회 필드 추가 설정·검색 결과 다운로드 요청·다운로드 요청 목록·총 N건), 카드 하단 페이지네이션(`«‹ 1…N ›»`). 목업 데이터·생성기 신규.
+- **조회 필드 추가 설정**: 체크박스 다중선택 드롭다운(바깥클릭/Esc 닫힘). 체크 시 `예약/발송/수신 일시·템플릿 이름·플로우 이름` 컬럼이 발송 목적↔수신자 정보 사이에 동적 삽입.
+- **검색 필터**: 시안 카드형 → 처음의 가로 바(`.filter-bar`) 스타일로 회귀(사용자 피드백). 필드 라벨 제거 + 셀렉트 기본 옵션을 필드명으로 표시해 한 줄 배치. 발송 상태(9종)·발송 시점·수신 상태·발송 목적 셀렉트 + 요청 일시 날짜 범위 + 조회/초기화. `조회` 클릭 시 적용(draft→applied). 메시지 채널 필터는 페이지 고정이라 UI 제외.
+- **AppDateTimePicker**: 미사용 상태였던 컴포넌트를 정비해 요청 일시에 적용. **`html{zoom:1.15}`+`UPopover`(floating-ui JS 위치계산) 충돌로 팝오버가 어긋나던 문제**를 CSS `position:absolute` 앵커로 해결. 24시간제(시 00–23)·1분 단위(분 00–59), 시·분은 네이티브 `<select>`(텔레포트 회피), 트리거는 `.input` 클래스로 셀렉트와 높이(36px) 정렬.
+- **다이얼로그 4종**: 다운로드 요청 확인 / 다운로드 요청 목록(신규 `AppExportListDialog`) / 일괄 취소 / 선택 취소 — 모두 `AppConfirmDialog`·`AppModal` 기반. `AppConfirmDialog` 본문에 `white-space: pre-line` 추가(2단락 메시지). 선택 취소·일괄 취소는 발송 대기·예약 건의 발송 취소 기능(선택 취소=체크 행 / 일괄 취소=검색 결과 전체).
+- **btn-sky 전역 제거**: 레거시 `.btn-sky`(정의가 `.btn-primary`와 동일)를 컴포넌트·페이지 21개에서 `.btn-primary`로 교체, `main.css`의 `.btn-sky` 정의·`.modal-footer` 오버라이드 삭제, `guide.vue` 카탈로그 중복 예시 제거, `DESIGN.md` §6.4 갱신. 시각 변화 없음(클래스명 통일).
+- 빌드 → `wrangler pages deploy` (`--commit-message "history list area rebuild, search filter, dialogs, btn-sky cleanup"`) — 배포 #19.
+- 프로덕션 검증: `https://malgn-noti.pages.dev/history/sms`·`/home` 200, alias `https://77a6d8df.malgn-noti.pages.dev` 200, `fb-select` 마커 확인.
+- 커밋: `d0efe8c 발송 조회 페이지 목록·검색 필터·다이얼로그 전면 작업 + btn-sky 정리` (28 files, +867 −191) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (7)
@@ -139,6 +153,7 @@
 - #16 — 문구 정리 / Alias: https://e22f7472.malgn-noti.pages.dev
 - #17 — 문서·가이드 현행화 / Alias: https://c9760142.malgn-noti.pages.dev
 - #18 — 문서 stale 매핑 정정 / Alias: https://3f68045a.malgn-noti.pages.dev
+- #19 — 발송 조회 페이지 전면 재작업 + btn-sky 제거 / Alias: https://77a6d8df.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
@@ -146,6 +161,7 @@
 - `704a1b4` 문구 정리: 발송 설정 라벨 변경 + 띄어쓰기 + 푸터 이메일 오타 (§10, 배포 #16)
 - `75ab98c` 문서·디자인 가이드 현행화 (2026-05-18~20 반영) (§11, 배포 #17)
 - `f81424b` 문서 정정: USlideover 매핑·구 토큰 예시 현행화 (§12, 배포 #18)
+- `d0efe8c` 발송 조회 페이지 목록·검색 필터·다이얼로그 전면 작업 + btn-sky 정리 (§13, 배포 #19)
 
 ## 다음 단계 / 한계
 
