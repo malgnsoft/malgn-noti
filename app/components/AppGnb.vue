@@ -64,7 +64,7 @@ const menu: MenuItem[] = [
     label: '주소록',
     title: '주소록',
     children: [
-      { label: '연락처 관리', to: '/contacts/list' },
+      { label: '주소록 관리', to: '/contacts/list' },
       { label: '그룹 관리', to: '/contacts/groups' },
       { label: '수신 거부 관리', to: '/contacts/optout' }
     ]

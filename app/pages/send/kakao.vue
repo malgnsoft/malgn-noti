@@ -17,6 +17,14 @@ const template = ref<KakaoTpl | null>(null)
 const substitutionMode = ref<'common' | 'individual'>('common')
 const commonVars = ref<Record<string, string>>({})
 const recipients = ref<Recipient[]>([])
+// 주소록 '선택 발송'으로 인계된 수신자 반영
+const pendingRecipients = useState<Recipient[]>('sendRecipients', () => [])
+onMounted(() => {
+  if (pendingRecipients.value.length) {
+    recipients.value = [...pendingRecipients.value]
+    pendingRecipients.value = []
+  }
+})
 const selectedRcpt = ref<(number | string)[]>([])
 const sendOptions = ref({ mode: 'now' as 'now' | 'schedule', date: '', hour: '09', minute: '00' })
 
