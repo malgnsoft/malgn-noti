@@ -51,7 +51,7 @@ function confirm() {
               </AppBadge>
             </div>
             <div style="font-size: var(--fz-xs); color: var(--ink-500); margin-top: 6px; line-height: 1.4">
-              {{ t.body.split('\n')[0].slice(0, 36) }}…
+              {{ (t.body.split('\n')[0] ?? '').slice(0, 36) }}…
             </div>
           </div>
         </div>

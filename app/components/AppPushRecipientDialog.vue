@@ -61,7 +61,7 @@ function confirm() {
     toast.add({ title: '추가된 토큰이 없습니다.', color: 'warning', icon: 'i-lucide-triangle-alert' })
     return
   }
-  emit('confirm', list.value.map(e => ({
+  emit('confirm', list.value.map((e): Recipient => ({
     id: e.id,
     name: aliasName.value.trim(),
     token: e.token,

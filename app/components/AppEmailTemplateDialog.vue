@@ -18,7 +18,7 @@ const TEMPLATES: EmailTpl[] = [
 ]
 
 const search = ref('')
-const picked = ref<EmailTpl | null>(TEMPLATES[0])
+const picked = ref<EmailTpl | null>(TEMPLATES[0] ?? null)
 const filtered = computed(() => TEMPLATES.filter(t => !search.value || t.name.includes(search.value)))
 
 function confirm() {

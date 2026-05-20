@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { ChannelMeta } from '~/types/channel'
-import type { TemplateVariableValue } from '~/components/AppTemplateVariableTextarea.vue'
 import type { KakaoButton } from '~/components/AppPhonePreviewKakaoBubble.vue'
+
+/** 변수 슬롯이 포함된 알림톡 본문 — templateText는 원본, variables는 #{var} 입력값 */
+export interface TemplateVariableValue {
+  templateText: string
+  variables: Record<string, string>
+}
 
 /**
  * 알림톡 메시지 본문. 모든 필드는 readonly (템플릿 메타) 또는 variable-only.
@@ -58,7 +63,10 @@ const showExtra = computed(() => value.value.messageType === 'extra')
     <div class="form-row">
       <label class="form-label">내용 <span class="req">*</span></label>
       <div class="form-control">
-        <AppTemplateVariableTextarea v-model:value="value.body" :rows="10" />
+        <AppTemplateVariableTextarea
+          :body="value.body.templateText"
+          v-model="value.body.variables"
+        />
       </div>
     </div>
 

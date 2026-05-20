@@ -43,7 +43,7 @@ function selectTab(t: 'sms' | 'lms' | 'mms') {
   picked.value = null
 }
 const filtered = computed(() =>
-  templates[tab.value].filter(t => !search.value || t.name.includes(search.value)))
+  (templates[tab.value] ?? []).filter(t => !search.value || t.name.includes(search.value)))
 
 function confirm() {
   if (picked.value) {
