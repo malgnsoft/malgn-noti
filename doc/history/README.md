@@ -29,6 +29,7 @@ history.yyyyMMdd.md
 | [2026-05-14](./history.20260514.md) | GitHub 일괄 푸시 + `doc/history/` 폴더 정리 |
 | [2026-05-18](./history.20260518.md) | 디자인 시스템 전면 피벗 — Relay-inspired(핸드오프 정본), 셸+홈+발송 전 채널 적용, `design-system-pivot` 푸시 |
 | [2026-05-19](./history.20260519.md) | 디자인 가이드 페이지(`/guide`, 18섹션 라이브 카탈로그) + Cloudflare Pages 프로덕션 배포 |
+| [2026-05-20](./history.20260520.md) | 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성 (배포 #15) |
 
 ## 작성 시점
 
