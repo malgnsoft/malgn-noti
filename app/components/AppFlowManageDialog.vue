@@ -103,7 +103,7 @@ function placeholder(msg: string) {
     </div>
 
     <div class="fm-bar">
-      <button type="button" class="btn btn-sky btn-sm" @click="startCreate">
+      <button type="button" class="btn btn-primary btn-sm" @click="startCreate">
         <UIcon name="i-lucide-plus" class="text-[12px]" /> 플로우 등록
       </button>
       <button

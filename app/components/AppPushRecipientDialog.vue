@@ -117,7 +117,7 @@ function confirm() {
         <input v-model="formToken" class="input" placeholder="토큰">
       </AppFormRow>
       <div class="pr-form-actions">
-        <button type="button" class="btn btn-sky btn-sm" @click="saveEntry">
+        <button type="button" class="btn btn-primary btn-sm" @click="saveEntry">
           저장
         </button>
         <button type="button" class="btn btn-soft btn-sm" @click="cancelAddForm">
@@ -130,7 +130,7 @@ function confirm() {
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" @click="confirm">
+      <button type="button" class="btn btn-primary" @click="confirm">
         저장
       </button>
     </template>

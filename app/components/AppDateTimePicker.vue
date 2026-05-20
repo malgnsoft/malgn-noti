@@ -5,15 +5,18 @@ import type { DateValue } from '@internationalized/date'
 withDefaults(defineProps<{
   placeholder?: string
   disablePast?: boolean
+  width?: number
 }>(), {
   placeholder: '연도-월-일 시:분',
   disablePast: true,
+  width: 256,
 })
 
-// v-model: ISO local datetime string (e.g., '2026-05-13T09:30')
+// v-model: ISO local datetime string (e.g., '2026-05-13T09:30') — 24시간제
 const value = defineModel<string>({ default: '' })
 
 const open = ref(false)
+const rootEl = ref<HTMLElement | null>(null)
 
 function parseDate(iso: string): CalendarDate | undefined {
   if (!iso || iso.length < 10) return undefined
@@ -62,45 +65,96 @@ const displayValue = computed(() => {
   return `${date} ${time}`
 })
 
+// 24시간제: 00 ~ 23
 const hourItems = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const minuteItems = ['00', '10', '20', '30', '40', '50']
+const minuteItems = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 const minDate = computed(() => today(getLocalTimeZone()))
+
+function onDocClick(e: MouseEvent) {
+  if (rootEl.value && !rootEl.value.contains(e.target as Node)) open.value = false
+}
+onMounted(() => document.addEventListener('click', onDocClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <template>
-  <UPopover v-model:open="open">
-    <UInput
-      :model-value="displayValue"
-      :placeholder="placeholder"
-      readonly
-      icon="i-lucide-calendar"
-      class="w-64"
-    />
-    <template #content>
-      <div class="datetime-popover">
-        <UCalendar
-          v-model="date"
-          :min-value="disablePast ? minDate : undefined"
-          locale="ko-KR"
-        />
-        <div class="time-row">
-          <span class="time-label">시간</span>
-          <USelect v-model="hour" :items="hourItems" class="w-20" />
-          <span class="time-sep">:</span>
-          <USelect v-model="minute" :items="minuteItems" class="w-20" />
-          <UButton color="primary" size="sm" class="ml-auto" @click="open = false">
-            확인
-          </UButton>
-        </div>
+  <div ref="rootEl" class="dtp" @keydown.escape="open = false">
+    <button
+      type="button"
+      class="input dtp-trigger"
+      :style="{ width: width + 'px' }"
+      @click="open = !open"
+    >
+      <UIcon name="i-lucide-calendar" class="dtp-icon" />
+      <span class="dtp-value" :class="{ 'dtp-placeholder': !displayValue }">
+        {{ displayValue || placeholder }}
+      </span>
+    </button>
+    <div v-if="open" class="dtp-popover">
+      <UCalendar
+        v-model="date"
+        :min-value="disablePast ? minDate : undefined"
+        locale="ko-KR"
+      />
+      <div class="time-row">
+        <span class="time-label">시간</span>
+        <select v-model="hour" class="select dtp-time">
+          <option v-for="h in hourItems" :key="h" :value="h">
+            {{ h }}
+          </option>
+        </select>
+        <span class="time-sep">:</span>
+        <select v-model="minute" class="select dtp-time">
+          <option v-for="m in minuteItems" :key="m" :value="m">
+            {{ m }}
+          </option>
+        </select>
+        <button type="button" class="btn btn-primary btn-sm dtp-confirm" @click="open = false">
+          확인
+        </button>
       </div>
-    </template>
-  </UPopover>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.datetime-popover {
+.dtp {
+  position: relative;
+  display: inline-block;
+}
+.dtp-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+.dtp-icon {
+  flex: none;
+  font-size: 14px;
+  color: var(--ink-400);
+}
+.dtp-value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.dtp-placeholder {
+  color: var(--ink-400);
+}
+.dtp-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
   padding: 12px;
   min-width: 280px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-popover);
 }
 .time-row {
   display: flex;
@@ -108,15 +162,21 @@ const minDate = computed(() => today(getLocalTimeZone()))
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--gray-200);
+  border-top: 1px solid var(--line);
 }
 .time-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--gray-700);
+  color: var(--ink-700);
+}
+.dtp-time {
+  width: 72px;
 }
 .time-sep {
-  color: var(--gray-500);
+  color: var(--ink-500);
   font-weight: 600;
+}
+.dtp-confirm {
+  margin-left: auto;
 }
 </style>

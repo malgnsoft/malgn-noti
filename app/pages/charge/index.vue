@@ -47,7 +47,7 @@ const recent = [
               <button
                 v-for="p in presets"
                 :key="p"
-                :class="amount === p ? 'btn btn-sky' : 'btn btn-outline'"
+                :class="amount === p ? 'btn btn-primary' : 'btn btn-outline'"
                 style="height: 56px; font-size: 14px; font-weight: 600"
                 @click="amount = p"
               >
@@ -174,7 +174,7 @@ const recent = [
               </div>
             </div>
             <button
-              class="btn btn-sky btn-lg"
+              class="btn btn-primary btn-lg"
               style="width: 100%; margin-top: 14px"
               @click="toast.add({ title: '결제 페이지로 이동합니다.', color: 'success', icon: 'i-lucide-credit-card' })"
             >

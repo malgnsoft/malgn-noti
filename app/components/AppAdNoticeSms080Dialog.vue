@@ -33,7 +33,7 @@ const formatted = computed(() => num.value.replace(/(\d{3})(\d{3})(\d{4})/, '$1-
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" @click="emit('confirm', num)">
+      <button type="button" class="btn btn-primary" @click="emit('confirm', num)">
         적용
       </button>
     </template>

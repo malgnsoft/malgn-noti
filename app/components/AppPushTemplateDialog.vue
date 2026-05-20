@@ -106,7 +106,7 @@ function confirm() {
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" :disabled="!picked" @click="confirm">
+      <button type="button" class="btn btn-primary" :disabled="!picked" @click="confirm">
         확인
       </button>
     </template>

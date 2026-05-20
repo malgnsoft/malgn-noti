@@ -49,7 +49,7 @@ const cells = computed(() => [
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" @click="emit('confirm')">
+      <button type="button" class="btn btn-primary" @click="emit('confirm')">
         발송하기
       </button>
     </template>

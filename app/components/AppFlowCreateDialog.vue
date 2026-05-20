@@ -228,7 +228,7 @@ function confirm() {
                 >
               </td>
               <td>
-                <button type="button" class="btn btn-sky btn-sm" @click="pickTemplate(r)">
+                <button type="button" class="btn btn-primary btn-sm" @click="pickTemplate(r)">
                   선택
                 </button>
               </td>
@@ -260,7 +260,7 @@ function confirm() {
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" @click="confirm">
+      <button type="button" class="btn btn-primary" @click="confirm">
         {{ isEdit ? '수정하기' : '저장하기' }}
       </button>
     </template>

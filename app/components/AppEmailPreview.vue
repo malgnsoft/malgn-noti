@@ -31,7 +31,7 @@ const viewMode = ref<'text' | 'html'>('html')
         <div v-else class="ep-text" style="color: var(--ink-400)">
           본문이 여기에 표시됩니다
         </div>
-        <button v-if="buttonLabel" type="button" class="btn btn-sky btn-sm" style="margin-top: 14px">
+        <button v-if="buttonLabel" type="button" class="btn btn-primary btn-sm" style="margin-top: 14px">
           {{ buttonLabel }}
         </button>
       </div>

@@ -748,9 +748,6 @@ a { text-decoration: none; color: inherit; }
 }
 .btn-error-solid:hover:not(:disabled) { background: var(--danger-ink); border-color: var(--danger-ink); }
 
-.btn-sky { background: var(--ink-900); color: var(--white); border-color: var(--ink-900); font-weight: 500; }
-.btn-sky:hover:not(:disabled) { background: var(--ink-800); }
-
 .btn-ghost {
   background: transparent;
   color: var(--ink-600);
@@ -1514,8 +1511,6 @@ a { text-decoration: none; color: inherit; }
   background: var(--paper);
 }
 .modal-footer .btn { height: 32px; font-size: 13px; }
-.modal-footer .btn-sky { background: var(--ink-900); }
-.modal-footer .btn-sky:hover { background: var(--ink-800); }
 
 /* Channel tile (legacy) — now a tag-like square */
 .ch-tile {

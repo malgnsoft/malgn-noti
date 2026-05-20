@@ -326,7 +326,7 @@ function send() {
         <button type="button" class="btn btn-outline-dark" @click="openButton = false">
           취소
         </button>
-        <button type="button" class="btn btn-sky" @click="openButton = false">
+        <button type="button" class="btn btn-primary" @click="openButton = false">
           추가
         </button>
       </template>

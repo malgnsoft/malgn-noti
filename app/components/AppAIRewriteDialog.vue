@@ -103,7 +103,7 @@ function ask(prompt: string) {
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" @click="emit('apply', draft); emit('close')">
+      <button type="button" class="btn btn-primary" @click="emit('apply', draft); emit('close')">
         적용
       </button>
     </template>

@@ -432,9 +432,6 @@ const segDemo = ref('a')
               <button class="btn btn-error-solid">
                 영구 삭제
               </button>
-              <button class="btn btn-sky">
-                확인
-              </button>
               <button class="btn btn-ghost">
                 건너뛰기
               </button>

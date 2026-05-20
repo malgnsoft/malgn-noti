@@ -287,7 +287,7 @@ function send() {
             </AppFormRow>
             <AppFormRow label="버튼">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
-                <button type="button" class="btn btn-sky btn-sm" @click="openPushBtnAdd">
+                <button type="button" class="btn btn-primary btn-sm" @click="openPushBtnAdd">
                   <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
                 </button>
                 <div v-for="b in pushButtons" :key="b.id" class="push-btn-chip">
@@ -303,7 +303,7 @@ function send() {
             </AppFormRow>
             <AppFormRow label="미디어">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
-                <button type="button" class="btn btn-sky btn-sm" @click="openPushMediaAdd">
+                <button type="button" class="btn btn-primary btn-sm" @click="openPushMediaAdd">
                   <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
                 </button>
                 <div
@@ -322,7 +322,7 @@ function send() {
             </AppFormRow>
             <AppFormRow label="iOS 미디어">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
-                <button type="button" class="btn btn-sky btn-sm" @click="openPushIosMediaAdd">
+                <button type="button" class="btn btn-primary btn-sm" @click="openPushIosMediaAdd">
                   <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
                 </button>
                 <div
@@ -341,7 +341,7 @@ function send() {
             </AppFormRow>
             <AppFormRow label="Android 미디어">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
-                <button type="button" class="btn btn-sky btn-sm" @click="openPushAndroidMediaAdd">
+                <button type="button" class="btn btn-primary btn-sm" @click="openPushAndroidMediaAdd">
                   <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
                 </button>
                 <div
@@ -360,7 +360,7 @@ function send() {
             </AppFormRow>
             <AppFormRow label="Android 큰 아이콘">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
-                <button type="button" class="btn btn-sky btn-sm" @click="openPushBigIconAdd">
+                <button type="button" class="btn btn-primary btn-sm" @click="openPushBigIconAdd">
                   <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
                 </button>
                 <div
@@ -379,7 +379,7 @@ function send() {
             </AppFormRow>
             <AppFormRow label="그룹">
               <div class="row" style="gap: 6px; flex-wrap: wrap">
-                <button type="button" class="btn btn-sky btn-sm" @click="openPushGroupAdd">
+                <button type="button" class="btn btn-primary btn-sm" @click="openPushGroupAdd">
                   <UIcon name="i-lucide-plus" class="text-[12px]" /> 추가
                 </button>
                 <div v-for="g in pushGroups" :key="g.id" class="push-btn-chip">

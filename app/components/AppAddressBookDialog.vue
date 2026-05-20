@@ -184,7 +184,7 @@ function confirm() {
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-sky" :disabled="total === 0" @click="confirm">
+      <button type="button" class="btn btn-primary" :disabled="total === 0" @click="confirm">
         확인
       </button>
     </template>
