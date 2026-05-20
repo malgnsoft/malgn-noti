@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -106,6 +106,18 @@
 - 배포 #17: `wrangler pages deploy` (`--commit-message "docs sync: ..."`), 프로덕션 `https://malgn-noti.pages.dev/guide` 200 / alias `https://c9760142.malgn-noti.pages.dev` 200.
 - 커밋: `75ab98c 문서·디자인 가이드 현행화 (2026-05-18~20 반영)` (5 files, +114 −140) → `origin/main` 푸시.
 
+## 12. 문서 stale 매핑 정정 + 재배포 (§12, 배포 #18)
+
+`doc/` 문서 일독 검수에서 5/18 피벗 이후에도 갱신되지 않은 매핑 2건을 발견해 코드 현실에 맞춰 정정.
+
+- **USlideover 매핑 불일치**: FRONTEND.md §7과 DESIGN.md §6.4가 패널형 팝업·상세/편집을 `USlideover`로 매핑했으나, 실제로는 모든 팝업이 자체 `AppModal` 기반 `App*Dialog`이고 `USlideover`는 `AppGnb.vue`의 모바일 GNB 드로어 전용. CLAUDE.md §4("USlideover 사용하지 않음")와 어긋나 정정.
+- **구 `--gray-*` 토큰 예시**: FRONTEND.md §5.1·§5.2의 자체 CSS 예시가 폐기된 `--gray-*` 별칭·시안 base.css 1:1 차용을 권장. `--gray-*`는 main.css에 backward-compat용으로만 남아 있고 신규 코드는 `--ink-*`/`--line` 직접 사용이 정본 → §5.2를 "디자인 토큰 사용"으로 재작성, AppGnb 예시도 `var(--white)`/`var(--line)`로 교체.
+- 검증: `history.20260520.md`는 잘리지 않은 완전한 파일임을 확인(142줄 정상 종료) — Read 출력 끝 혼동이었음.
+- 빌드 → `wrangler pages deploy` (`--commit-message "docs sync: fix stale USlideover mapping and gray token examples"`) — 배포 #18.
+- 프로덕션 검증: `https://malgn-noti.pages.dev/home`·`/guide` 200, alias `https://3f68045a.malgn-noti.pages.dev/home` 200. (문서만 변경이라 라이브 산출물은 #17과 동일.)
+- 커밋: `f81424b 문서 정정: USlideover 매핑·구 토큰 예시 현행화` (2 files, +11 −9) → `origin/main` 푸시.
+- 변경 파일: `doc/FRONTEND.md`, `doc/DESIGN.md`.
+
 ## 산출물
 
 ### 신규 (7)
@@ -126,12 +138,14 @@
 - #15 — 프로덕션: https://malgn-noti.pages.dev / Alias: https://c4b53baf.malgn-noti.pages.dev
 - #16 — 문구 정리 / Alias: https://e22f7472.malgn-noti.pages.dev
 - #17 — 문서·가이드 현행화 / Alias: https://c9760142.malgn-noti.pages.dev
+- #18 — 문서 stale 매핑 정정 / Alias: https://3f68045a.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
 - `428eeca` history: 2026-05-20 작업 이력 추가 (배포 #15)
 - `704a1b4` 문구 정리: 발송 설정 라벨 변경 + 띄어쓰기 + 푸터 이메일 오타 (§10, 배포 #16)
 - `75ab98c` 문서·디자인 가이드 현행화 (2026-05-18~20 반영) (§11, 배포 #17)
+- `f81424b` 문서 정정: USlideover 매핑·구 토큰 예시 현행화 (§12, 배포 #18)
 
 ## 다음 단계 / 한계
 
