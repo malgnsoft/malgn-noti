@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 끝으로 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16), 5/18 피벗 이후 누적분을 DESIGN/FRONTEND/STACK/CLAUDE·가이드 페이지에 현행화하여 재배포 (#17). 끝으로 FRONTEND/DESIGN 문서에 남아 있던 stale 매핑(USlideover·구 `--gray-*` 토큰 예시)을 코드 현실에 맞춰 정정하여 재배포 (#18). 이어서 발송 조회 페이지(`AppHistoryView`)의 목록 영역·검색 필터·다이얼로그를 캡처 기준으로 전면 재작업하고, `.btn-sky` 레거시 클래스를 프로젝트 전역에서 제거(→`.btn-primary`)하여 재배포 (#19). 이후 통계 페이지를 Chart.js로 재구성하고, `zoom` 전역 스케일을 폐기한 뒤 폰트 타입 스케일을 토큰화(`--fz-scale`)하여 +15% 적용, 재배포 (#20). 마지막으로 발송 6채널의 '템플릿 사용유무' 토글 동작을 개선 — 토글 시 수신자 목록을 항상 유지하고 메시지 설정만 stash/복원하도록 `useTemplateToggle` composable로 통일, 재배포 (#21).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -142,9 +142,20 @@
 - 빌드 → `wrangler pages deploy` — 배포 #20. 프로덕션 `https://malgn-noti.pages.dev/history/stats`·`/history/sms`·`/home` 200, alias `https://95f36a35.malgn-noti.pages.dev` 200, `fz-scale` 마커 확인.
 - 커밋: `6bc05c6 통계 페이지 재구성 + 폰트 토큰화 + zoom 스케일 제거` (53 files, +664 −637) → `origin/main` 푸시.
 
+## 15. 발송 페이지 템플릿 토글 동작 개선 (§15, 배포 #21)
+
+- **`useTemplateToggle` composable 신규**: 발송 페이지의 "템플릿 사용유무" 토글 동작을 한 곳에 정의. off→on(사용)은 현재 off 모드 메시지 설정을 스냅샷으로 보관하고 메시지+템플릿만 초기화, on→off(사용 안 함)는 템플릿을 해제하고 보관해 둔 off 모드 설정을 복원. `setSilently`로 전체 초기화 시 watch 억제.
+- **수신자 목록 항상 유지**: 기존 sms·rcs는 토글 시 `resetContent()`로 수신자(`recipients`/`selectedRcpt`)까지 전부 날렸음 → `resetMessage()`(메시지+템플릿만)로 분리. 수신자는 어느 페이지·어느 전환에서도 초기화하지 않음.
+- **치환자 표시/숨김만**: `commonVars` 값은 보존하고 표시 여부만 computed(`showSubst` 등)가 제어. 템플릿으로 치환자가 추가되면 칸이 나타나고 빠지면 숨겨지되 값은 살아 있음.
+- **email·push**: 토글 watch가 아예 없던 상태 → `useTemplateToggle` 신설. `handleReset`도 정식 구현(기존엔 `recipients=[]`만 비웠음).
+- **flow**: `watch(flowName)`에서 수신자·치환자 초기화 라인 제거 — 플로우를 바꿔도 수신자 유지. 기존 타입 에러(`nodes[0]` undefined 접근) 4건도 함께 정리.
+- **kakao**: "템플릿 사용유무" 토글이 없는 구조(항상 사전 승인 템플릿 기반)라 변경 없음.
+- 빌드 → `wrangler pages deploy` (`--commit-message "send pages: keep recipients on template toggle, stash and restore message settings"`) — 배포 #21. 프로덕션 `/send/{sms,kakao,rcs,email,push,flow}` 전부 200, alias `https://e1b4d7da.malgn-noti.pages.dev` 200.
+- 커밋: `93411ae 발송 페이지 템플릿 토글 동작 개선 — 수신자 유지 + 메시지 stash/복원` (6 files, +345 −46) → `origin/main` 푸시.
+
 ## 산출물
 
-### 신규 (7)
+### 신규 (8)
 - [app/components/AppFlowCreateDialog.vue](../../app/components/AppFlowCreateDialog.vue)
 - [app/components/AppFlowTemplatePickerDialog.vue](../../app/components/AppFlowTemplatePickerDialog.vue)
 - [app/components/AppPushButtonDialog.vue](../../app/components/AppPushButtonDialog.vue)
@@ -152,6 +163,7 @@
 - [app/components/AppPushMediaDialog.vue](../../app/components/AppPushMediaDialog.vue)
 - [app/components/AppPushRecipientDialog.vue](../../app/components/AppPushRecipientDialog.vue)
 - [app/utils/scrollLock.ts](../../app/utils/scrollLock.ts)
+- [app/composables/useTemplateToggle.ts](../../app/composables/useTemplateToggle.ts) — §15
 
 ### 수정 (18)
 - 6개 발송 페이지(`app/pages/send/{sms,kakao,rcs,email,push,flow}.vue`)
@@ -165,6 +177,7 @@
 - #18 — 문서 stale 매핑 정정 / Alias: https://3f68045a.malgn-noti.pages.dev
 - #19 — 발송 조회 페이지 전면 재작업 + btn-sky 제거 / Alias: https://77a6d8df.malgn-noti.pages.dev
 - #20 — 통계 페이지 재구성 + 폰트 토큰화 + zoom 제거 / Alias: https://95f36a35.malgn-noti.pages.dev
+- #21 — 발송 페이지 템플릿 토글 동작 개선 / Alias: https://e1b4d7da.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
@@ -174,6 +187,7 @@
 - `f81424b` 문서 정정: USlideover 매핑·구 토큰 예시 현행화 (§12, 배포 #18)
 - `d0efe8c` 발송 조회 페이지 목록·검색 필터·다이얼로그 전면 작업 + btn-sky 정리 (§13, 배포 #19)
 - `6bc05c6` 통계 페이지 재구성 + 폰트 토큰화 + zoom 스케일 제거 (§14, 배포 #20)
+- `93411ae` 발송 페이지 템플릿 토글 동작 개선 — 수신자 유지 + 메시지 stash/복원 (§15, 배포 #21)
 
 ## 다음 단계 / 한계
 
