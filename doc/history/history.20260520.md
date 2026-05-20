@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15).
+§17(5/19) 이후 발송 6채널 전반의 UX를 다듬고, PUSH 메시지 설정의 부가 항목(버튼·미디어·Android 미디어·iOS 미디어·Android 큰 아이콘·그룹)을 모두 실 동작 다이얼로그로 구현하고, 복합 플로우의 등록·수정·삭제·이름 클릭 편집까지 한 다이얼로그로 통합. 공용 컴포넌트(이메일 미리보기·다중 키 컬럼 수신자 위젯·중첩 모달 스크롤 잠금)도 다듬어 Cloudflare Pages에 배포 (#15). 이후 문구 정리(발송 옵션→발송 설정, 띄어쓰기, 푸터 이메일 오타)로 재배포 (#16).
 
 ## 1. 수신자 입력 다이얼로그 일괄 강화
 
@@ -86,6 +86,15 @@
 - 커밋: `bd7e07e 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성` (25 files changed, 2355+/447-) → `origin/main` 푸시
 - Cloudflare Pages 자동 배포가 추가로 트리거되었을 수 있음(working tree 기준 wrangler 직접 배포본이 라이브)
 
+## 10. 문구 정리 + 재배포 (§10, 배포 #16)
+
+- **발송 옵션 → 발송 설정**: `AppSendOptionsCard` 카드 타이틀 변경 → 6채널 공용 컴포넌트라 한 곳 수정으로 전 발송 페이지 반영.
+- **띄어쓰기 교정**: `사용 안함` → `사용 안 함`(템플릿 사용유무·HTML 스타일 라디오, 5곳), `직접입력` → `직접 입력`(AppRecipientCard·AppRecipientActions·DESIGN.md).
+- **푸터 이메일 오타**: `massage@malgnsoft.com` → `message@malgnsoft.com` (AppFooter).
+- 배포: `pnpm build` → `wrangler pages deploy` (`--commit-message "wording fixes: send option label, spacing, footer email typo"`) — 배포 #16.
+- 프로덕션 검증: `https://malgn-noti.pages.dev/send/sms` 200, alias `https://e22f7472.malgn-noti.pages.dev/send/sms` 200.
+- 커밋: `704a1b4 문구 정리: 발송 설정 라벨 변경 + 띄어쓰기 + 푸터 이메일 오타` (10 files, +12 −12) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (7)
@@ -102,12 +111,14 @@
 - `app/components/AppAddressBookDialog.vue`, `AppEmailPreview.vue`, `AppEmailTemplateDialog.vue`, `AppFlowManageDialog.vue`, `AppModal.vue`, `AppPhonePreview.vue`, `AppPushPreview.vue`, `AppRcsTemplateDialog.vue`, `AppRecipientCard.vue`, `AppRecipientFormDialog.vue`, `AppSmsTemplateDialog.vue`
 - `app/types/template.ts`(EmailTpl·RcsTpl 추가)
 
-### 배포 (#15)
-- 프로덕션: https://malgn-noti.pages.dev
-- Alias: https://c4b53baf.malgn-noti.pages.dev
+### 배포
+- #15 — 프로덕션: https://malgn-noti.pages.dev / Alias: https://c4b53baf.malgn-noti.pages.dev
+- #16 — 문구 정리 / Alias: https://e22f7472.malgn-noti.pages.dev
 
 ### 커밋
 - `bd7e07e` 발송 페이지 UX 폴리시 2차 + PUSH 부가항목·플로우 관리 완성
+- `428eeca` history: 2026-05-20 작업 이력 추가 (배포 #15)
+- `704a1b4` 문구 정리: 발송 설정 라벨 변경 + 띄어쓰기 + 푸터 이메일 오타 (§10, 배포 #16)
 
 ## 다음 단계 / 한계
 
