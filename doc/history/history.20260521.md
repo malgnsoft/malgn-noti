@@ -68,6 +68,13 @@
 - 배포 #30: `wrangler pages deploy` (`--commit-message "Add opt-out management pages (phone/email/token)"`), 프로덕션 `/contacts/optout`·`/contacts/optout-email`·`/contacts/optout-token` 200, alias `https://81348384.malgn-noti.pages.dev`.
 - 커밋: `5f4cb47 수신 거부 관리 페이지 3종 신규 구성 (휴대폰·이메일·토큰)` (9 files, +931 −15) → `origin/main` 푸시.
 
+## 9. GNB 드롭다운 중복 메뉴명 삭제 (§9, 배포 #31)
+
+- [AppGnb.vue](../../app/components/AppGnb.vue) 하위 메뉴(드롭다운) 상단에 작은 글씨로 한 번 더 표시되던 GNB 메뉴명(`.gnb-dropdown-title` = `item.title`) 제거 → 드롭다운은 하위 항목만 노출.
+- 진행 중인 메시지 관리 작업분은 `git stash`로 격리하고 **AppGnb 변경만** 빌드·배포.
+- 배포 #31: `wrangler pages deploy` (`--commit-message "GNB dropdown: remove duplicated menu title"`), 프로덕션 `/home` 200, alias `https://b11d8703.malgn-noti.pages.dev` 200.
+- 커밋: `0f0d9cc GNB 드롭다운에서 중복 메뉴명 표시 삭제` (1 file, −3) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (3)
@@ -98,12 +105,14 @@
 - #28 — 테이블 스타일 A/B/C + 발송 조회 툴바 재배치 / Alias: https://ec51b8d0.malgn-noti.pages.dev
 - #29 — GNB 캠페인 메뉴 삭제 / Alias: https://e23f4a20.malgn-noti.pages.dev
 - #30 — 수신 거부 관리 페이지 3종 (휴대폰·이메일·토큰) / Alias: https://81348384.malgn-noti.pages.dev
+- #31 — GNB 드롭다운 중복 메뉴명 삭제 / Alias: https://b11d8703.malgn-noti.pages.dev
 
 ### 커밋
 - `e30da5c` 발신 정보 페이지 신규 구성 — 발신 프로필·PUSH 인증·080 수신 거부 (§5, 배포 #27)
 - `74943e8` 테이블 스타일 A/B/C 정의 + 발송 조회 툴바 재배치 (§6, 배포 #28)
 - `d0802e6` GNB에서 캠페인 메뉴 삭제 (§7, 배포 #29)
 - `5f4cb47` 수신 거부 관리 페이지 3종 신규 구성 (휴대폰·이메일·토큰) (§8, 배포 #30)
+- `0f0d9cc` GNB 드롭다운에서 중복 메뉴명 표시 삭제 (§9, 배포 #31)
 
 ## 다음 단계 / 한계
 
