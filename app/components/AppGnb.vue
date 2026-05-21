@@ -93,6 +93,7 @@ const menu: MenuItem[] = [
       { label: '이메일 템플릿', to: '/manage/email' },
       { label: 'PUSH 템플릿', to: '/manage/push' },
       { divider: true },
+      { label: '랜딩페이지 만들기', to: '/manage/landing' },
       { label: '상세 설정', to: '/manage/settings' }
     ]
   },
@@ -100,9 +101,9 @@ const menu: MenuItem[] = [
 ]
 
 const userMenu = [
-  { icon: 'i-lucide-user', label: '계정 관리', to: '/account/settings' },
+  { icon: 'i-lucide-user', label: '나의 페이지', to: '/account/settings' },
   { icon: 'i-lucide-circle-dollar-sign', label: '크레딧 관리', to: '/account/credit' },
-  { icon: 'i-lucide-file-text', label: '결제 내역', to: '/account/credit' },
+  { icon: 'i-lucide-file-text', label: '결제 내역', to: '/account/billing' },
   { icon: 'i-lucide-log-out', label: '로그아웃', to: '/login' }
 ]
 
