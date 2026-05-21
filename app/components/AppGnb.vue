@@ -154,9 +154,6 @@ function avatarChar(name: string) {
             </div>
 
             <div v-if="item.children" class="gnb-dropdown">
-              <div class="gnb-dropdown-title">
-                {{ item.title }}
-              </div>
               <template v-for="(child, ci) in item.children" :key="ci">
                 <div v-if="!isLink(child)" class="gnb-dropdown-divider" />
                 <NuxtLink v-else :to="child.to" class="gnb-dropdown-item">
