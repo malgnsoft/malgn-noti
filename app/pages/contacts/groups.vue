@@ -180,7 +180,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
               <label class="checkbox"><input type="checkbox" :checked="allChecked" @change="toggleAll"></label>
             </th>
             <th>그룹 이름</th>
-            <th>그룹 아이디</th>
             <th class="gp-num">
               주소록 수
             </th>
@@ -199,9 +198,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
               <button type="button" class="gp-name-btn" @click="onEditGroup(g)">
                 {{ g.name }}
               </button>
-            </td>
-            <td class="cell-mono gp-id">
-              {{ g.groupId }}
             </td>
             <td class="cell-mono gp-num">
               {{ g.count.toLocaleString() }}
@@ -230,7 +226,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
             </td>
           </tr>
           <tr v-if="!paged.length">
-            <td colspan="6" style="text-align: center; padding: 40px 12px; color: var(--ink-500)">
+            <td colspan="5" style="text-align: center; padding: 40px 12px; color: var(--ink-500)">
               조건에 맞는 그룹이 없습니다.
             </td>
           </tr>
@@ -322,9 +318,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
 }
 .gp-name-btn:hover {
   text-decoration: underline;
-}
-.gp-id {
-  color: var(--accent-ink);
 }
 .gp-num {
   text-align: center;
