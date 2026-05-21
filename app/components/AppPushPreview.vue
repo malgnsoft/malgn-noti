@@ -5,13 +5,15 @@ withDefaults(defineProps<{
   body?: string
   platform?: 'android' | 'ios'
 }>(), { appName: '맑은 메시징', title: '', body: '', platform: 'android' })
+
+const { time, dateLabel } = usePreviewClock()
 </script>
 
 <template>
   <!-- Android -->
   <div v-if="platform === 'android'" class="pp pp-android">
     <div class="pp-status">
-      <span>9:41</span>
+      <span>{{ time }}</span>
       <span class="pp-ic">
         <UIcon name="i-lucide-signal" />
         <UIcon name="i-lucide-wifi" />
@@ -19,10 +21,10 @@ withDefaults(defineProps<{
       </span>
     </div>
     <div class="and-clock">
-      9:41
+      {{ time }}
     </div>
     <div class="and-date">
-      6월 6일 월요일
+      {{ dateLabel }}
     </div>
     <div class="and-notif">
       <div class="pp-ttl">
@@ -53,7 +55,7 @@ withDefaults(defineProps<{
   <!-- iOS -->
   <div v-else class="pp pp-ios">
     <div class="pp-status">
-      <span>9:41</span>
+      <span>{{ time }}</span>
       <span class="pp-ic">
         <UIcon name="i-lucide-signal" />
         <UIcon name="i-lucide-wifi" />
@@ -61,10 +63,10 @@ withDefaults(defineProps<{
       </span>
     </div>
     <div class="ios-date">
-      6월 6일 월요일
+      {{ dateLabel }}
     </div>
     <div class="ios-clock">
-      9:41
+      {{ time }}
     </div>
     <div class="ios-spacer" />
     <div class="ios-card">

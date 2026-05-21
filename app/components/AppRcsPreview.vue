@@ -7,6 +7,8 @@ withDefaults(defineProps<{
   buttons?: { type: string, label: string }[]
 }>(), { brandName: '맑은소프트', verified: true, body: '', image: false, buttons: () => [] })
 
+const { time } = usePreviewClock()
+
 function btnIcon(type: string) {
   return type === 'web' ? 'i-lucide-external-link' : type === 'phone' ? 'i-lucide-phone' : 'i-lucide-message-square'
 }
@@ -15,7 +17,7 @@ function btnIcon(type: string) {
 <template>
   <div class="phone">
     <div class="phone-status">
-      <span>9:41</span>
+      <span>{{ time }}</span>
       <span class="right"><span>•••</span><span>5G</span><span>100%</span></span>
     </div>
     <div class="rcs">

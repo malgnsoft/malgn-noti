@@ -6,6 +6,8 @@ withDefaults(defineProps<{
   buttons?: { type: string, label: string }[]
 }>(), { profileName: '(주)맑은소프트', body: '', extra: '', buttons: () => [] })
 
+const { time } = usePreviewClock()
+
 function parts(text: string) {
   return (text || '').split(/(#\{[^}]+\}|\{\{%[^%]+%\}\})/g).map((p, i) => ({
     i, p, isVar: /^(#\{|\{\{%)/.test(p)
@@ -16,7 +18,7 @@ function parts(text: string) {
 <template>
   <div class="phone phone--auto" style="background: #abc1d1">
     <div class="phone-status">
-      <span>9:41</span>
+      <span>{{ time }}</span>
       <span class="right"><span>•••</span><span>5G</span><span>100%</span></span>
     </div>
     <div class="kakao">
