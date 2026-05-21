@@ -1,9 +1,9 @@
 <script setup lang="ts">
-useHead({ title: '나의 페이지 — 회원 정보 변경' })
+useHead({ title: '나의 페이지 — 결제 카드 관리' })
 </script>
 
 <template>
   <AppMyPageShell>
-    <AppMemberInfoPanel />
+    <AppCardListPanel />
   </AppMyPageShell>
 </template>
