@@ -14,7 +14,7 @@ function parts(text: string) {
 </script>
 
 <template>
-  <div class="phone" style="background: #abc1d1">
+  <div class="phone phone--auto" style="background: #abc1d1">
     <div class="phone-status">
       <span>9:41</span>
       <span class="right"><span>•••</span><span>5G</span><span>100%</span></span>
@@ -62,3 +62,15 @@ function parts(text: string) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 미리보기는 메시지 전체(본문·부가정보·버튼)가 잘리지 않도록 내용에 맞춰 늘어난다 */
+.phone--auto {
+  height: auto;
+  min-height: 520px;
+}
+.phone--auto :deep(.kakao),
+.phone--auto :deep(.kakao-body) {
+  overflow: visible;
+}
+</style>

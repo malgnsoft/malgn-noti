@@ -9,7 +9,7 @@ interface Tpl {
   images?: { name: string, size: number }[]
 }
 
-defineProps<{ open: boolean }>()
+withDefaults(defineProps<{ open: boolean, title?: string }>(), { title: '샘플 템플릿 선택' })
 const emit = defineEmits<{ close: [], pick: [Tpl] }>()
 
 const tab = ref<'sms' | 'lms' | 'mms'>('sms')
@@ -54,7 +54,7 @@ function confirm() {
 </script>
 
 <template>
-  <AppModal :open="open" title="샘플 템플릿 선택" :width="860" @close="emit('close')">
+  <AppModal :open="open" :title="title" :width="860" @close="emit('close')">
     <div class="tabs" style="margin-bottom: 16px">
       <div
         v-for="t in (['sms', 'lms', 'mms'] as const)"
@@ -122,7 +122,7 @@ function confirm() {
         취소
       </button>
       <button type="button" class="btn btn-primary" :disabled="!picked" @click="confirm">
-        확인
+        선택
       </button>
     </template>
   </AppModal>

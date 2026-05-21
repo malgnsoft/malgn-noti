@@ -1,16 +1,29 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   senderName?: string
   message?: string
   time?: string
   images?: { name: string, size: number }[]
-}>(), { senderName: '1588-1234', message: '', time: '9:41', images: () => [] })
+}>(), { senderName: '1588-1234', message: '', time: '', images: () => [] })
+
+// 현재 시각 — 서버/클라이언트 hydration 불일치를 피하려 onMounted에서 설정
+const liveTime = ref('9:41')
+const liveStamp = ref('오늘 오후 2:30')
+onMounted(() => {
+  const d = new Date()
+  const h = d.getHours()
+  const m = String(d.getMinutes()).padStart(2, '0')
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  liveTime.value = `${h12}:${m}`
+  liveStamp.value = `오늘 ${h < 12 ? '오전' : '오후'} ${h12}:${m}`
+})
+const statusTime = computed(() => props.time || liveTime.value)
 </script>
 
 <template>
   <div class="phone">
     <div class="phone-status">
-      <span>{{ time }}</span>
+      <span>{{ statusTime }}</span>
       <span class="right">
         <span>•••</span>
         <span>5G</span>
@@ -29,7 +42,7 @@ withDefaults(defineProps<{
       </div>
       <div class="imsg-body">
         <div class="imsg-time">
-          오늘 오후 2:30
+          {{ liveStamp }}
         </div>
         <div
           v-for="(img, i) in images"
