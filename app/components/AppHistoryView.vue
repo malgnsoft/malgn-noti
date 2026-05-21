@@ -198,6 +198,10 @@ function onSearch() {
   }
   page.value = 1
 }
+function onRefresh() {
+  page.value = 1
+  toast.add({ title: '목록을 새로고침했습니다.', color: 'info', icon: 'i-lucide-refresh-cw' })
+}
 function onResetFilter() {
   dSendSt.value = 'all'
   dTiming.value = 'all'
@@ -273,7 +277,7 @@ function onBulkCancelConfirm() {
   bulkCancelOpen.value = false
   toast.add({ title: '일괄 취소', description: '발송 예약·대기 건의 일괄 취소를 요청했습니다.', icon: 'i-lucide-circle-x' })
 }
-const EXPORT_CONFIRM_MSG = '검색 결과 다운로드 요청 시 조회한 결과 목록이 다운로드됩니다.\n다운로드를 진행하시겠습니까?\n\n다운로드 요청 후 진행 상태는 [다운로드 요청 목록]에서 확인 가능합니다.'
+const EXPORT_CONFIRM_MSG = '목록 다운로드 요청 시 조회한 결과 목록이 다운로드됩니다.\n다운로드를 진행하시겠습니까?\n\n다운로드 요청 후 진행 상태는 [다운로드 요청 목록]에서 확인 가능합니다.'
 const exportConfirmOpen = ref(false)
 function onExportRequest() {
   exportConfirmOpen.value = true
@@ -409,31 +413,38 @@ function onExportList() {
         </option>
       </select>
       <div class="fb-daterange">
-        <AppDateTimePicker v-model="dFrom" :disable-past="false" :width="158" placeholder="요청 일시 시작" />
+        <AppDateTimePicker v-model="dFrom" :disable-past="false" :width="190" placeholder="요청 일시 시작" />
         <span class="fb-tilde">~</span>
-        <AppDateTimePicker v-model="dTo" :disable-past="false" :width="158" placeholder="요청 일시 종료" />
+        <AppDateTimePicker v-model="dTo" :disable-past="false" :width="190" placeholder="요청 일시 종료" />
       </div>
       <div class="fb-actions">
         <button type="button" class="btn btn-neutral btn-sm" @click="onResetFilter">
           초기화
         </button>
         <button type="button" class="btn btn-primary btn-sm" @click="onSearch">
-          <UIcon name="i-lucide-search" class="text-[length:var(--fz-sm)]" /> 조회
+          <UIcon name="i-lucide-search" class="text-[length:var(--fz-sm)]" /> 검색하기
         </button>
       </div>
     </div>
 
     <div class="list-card">
       <div class="list-toolbar">
-        <div class="row" style="gap: 6px; flex-wrap: wrap">
-          <button class="btn btn-outline btn-sm" :disabled="!selectedCancelableCount" @click="onSelectedCancel">
-            선택 취소 <UIcon name="i-lucide-circle-help" class="th-help" />
+        <div class="row" style="gap: 10px; flex-wrap: wrap">
+          <span class="toolbar-count">총 <strong>{{ filtered.length.toLocaleString() }}</strong>건</span>
+          <span class="toolbar-sep">|</span>
+          <button type="button" class="toolbar-refresh" @click="onRefresh">
+            <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
           </button>
-          <button class="btn btn-outline btn-sm" @click="onBulkCancel">
-            일괄 취소 <UIcon name="i-lucide-circle-help" class="th-help" />
+        </div>
+        <div class="row" style="gap: 6px; flex-wrap: wrap">
+          <button class="btn btn-outline btn-sm" @click="onExportRequest">
+            <UIcon name="i-lucide-download" class="text-[length:var(--fz-sm)]" /> 목록 다운로드 요청
+          </button>
+          <button class="btn btn-outline btn-sm" @click="onExportList">
+            <UIcon name="i-lucide-list" class="text-[length:var(--fz-sm)]" /> 다운로드 요청 목록
           </button>
           <div class="toolbar-field">
-            <span class="toolbar-label">조회 필드 추가 설정 :</span>
+            <span class="toolbar-label">조회 필드 추가 :</span>
             <div ref="fieldSelectEl" class="field-select" @keydown.escape="fieldMenuOpen = false">
               <button
                 type="button"
@@ -446,7 +457,7 @@ function onExportList() {
                 <span :class="{ 'field-select-placeholder': !activeFields.length }">{{ fieldLabel }}</span>
                 <UIcon :name="fieldMenuOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="text-[length:var(--fz-md)]" />
               </button>
-              <div v-if="fieldMenuOpen" class="field-menu" role="group" aria-label="조회 필드 추가 설정">
+              <div v-if="fieldMenuOpen" class="field-menu" role="group" aria-label="조회 필드 추가">
                 <label v-for="opt in FIELD_OPTIONS" :key="opt.value" class="checkbox field-option">
                   <input v-model="extraFields" type="checkbox" :value="opt.value">
                   <span>{{ opt.label }}</span>
@@ -454,20 +465,18 @@ function onExportList() {
               </div>
             </div>
           </div>
-        </div>
-        <div class="row" style="gap: 6px; flex-wrap: wrap">
-          <button class="btn btn-outline btn-sm" @click="onExportRequest">
-            <UIcon name="i-lucide-download" class="text-[length:var(--fz-sm)]" /> 검색 결과 다운로드 요청
+          <button class="btn btn-outline btn-sm" @click="onBulkCancel">
+            일괄 취소 <UIcon name="i-lucide-circle-help" class="th-help" />
           </button>
-          <button class="btn btn-outline btn-sm" @click="onExportList">
-            <UIcon name="i-lucide-list" class="text-[length:var(--fz-sm)]" /> 다운로드 요청 목록
+          <button class="btn btn-outline btn-sm" :disabled="!selectedCancelableCount" @click="onSelectedCancel">
+            선택 취소 <UIcon name="i-lucide-circle-help" class="th-help" />
           </button>
-          <span class="toolbar-count">총 <strong>{{ filtered.length.toLocaleString() }}</strong>건</span>
         </div>
       </div>
 
       <div class="list-table-scroll">
-        <table class="table list-table">
+        <!-- A 테이블 스타일 — 조회·관리 목록 표준 (doc/DESIGN.md §6.5) -->
+        <table class="table list-table" data-table-style="a">
           <thead>
             <tr>
               <th style="width: 36px">
@@ -641,9 +650,25 @@ function onExportList() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-  padding-left: 12px;
-  margin-left: 4px;
-  border-left: 1px solid var(--line);
+}
+.toolbar-sep {
+  color: var(--line);
+  user-select: none;
+}
+.toolbar-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  cursor: pointer;
+}
+.toolbar-refresh:hover {
+  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

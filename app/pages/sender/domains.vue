@@ -96,33 +96,42 @@ function onRefresh() {
     </ul>
 
     <div class="list-card">
+      <!-- C 테이블 스타일 — 액션 영역에 검색란 포함 (doc/DESIGN.md §6.5) -->
       <div class="list-toolbar">
-        <button
-          type="button"
-          class="btn btn-outline-dark btn-sm"
-          :disabled="selected.length !== 1"
-          @click="onDkim"
-        >
-          DKIM 설정
-        </button>
-        <div class="dm-search">
-          <UIcon name="i-lucide-search" class="text-sm dm-search-icon" />
-          <input v-model="search" class="input" placeholder="도메인을 입력하세요." style="padding-left: 32px">
+        <div class="row" style="gap: 10px; flex-wrap: wrap">
+          <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>
+          <span class="toolbar-sep">|</span>
+          <button type="button" class="toolbar-refresh" @click="onRefresh">
+            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
+          </button>
+          <div class="dm-search">
+            <input v-model="search" class="input" placeholder="도메인을 입력하세요.">
+            <UIcon name="i-lucide-search" class="text-sm dm-search-icon" />
+          </div>
         </div>
-        <template v-if="selected.length > 0">
-          <span class="muted" style="font-size: var(--fz-sm)">{{ selected.length }}개 선택됨</span>
-          <button type="button" class="btn btn-error btn-sm" @click="openDelete = true">
+        <div class="row" style="gap: 6px; flex-wrap: wrap">
+          <button
+            type="button"
+            class="btn btn-outline-dark btn-sm"
+            :disabled="selected.length !== 1"
+            @click="onDkim"
+          >
+            DKIM 설정
+          </button>
+          <span v-if="selected.length > 0" class="muted" style="font-size: var(--fz-sm)">{{ selected.length }}개 선택됨</span>
+          <button
+            type="button"
+            class="btn btn-error btn-sm"
+            :disabled="selected.length === 0"
+            @click="openDelete = true"
+          >
             선택 삭제
           </button>
-        </template>
-        <button type="button" class="btn btn-ghost btn-sm" @click="onRefresh">
-          <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-        </button>
-        <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>
+        </div>
       </div>
 
       <div class="list-table-scroll">
-        <table class="table">
+        <table class="table" data-table-style="c">
           <thead>
             <tr>
               <th style="width: 36px">
@@ -241,21 +250,45 @@ function onRefresh() {
 }
 .dm-search {
   position: relative;
-  flex: 1;
+  width: 260px;
+  max-width: 100%;
+}
+.dm-search .input {
+  height: 28px;
+  padding-right: 32px;
+  font-size: var(--fz-sm);
 }
 .dm-search-icon {
   position: absolute;
-  left: 10px;
-  top: 11px;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--ink-400);
+  pointer-events: none;
 }
 .toolbar-count {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-  padding-left: 12px;
-  margin-left: 4px;
-  border-left: 1px solid var(--line);
+}
+.toolbar-sep {
+  color: var(--line);
+  user-select: none;
+}
+.toolbar-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  cursor: pointer;
+}
+.toolbar-refresh:hover {
+  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

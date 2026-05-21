@@ -115,8 +115,19 @@ function onSelectSend(to: string) {
   sendMenuOpen.value = false
   router.push(to)
 }
+/* 행별 메시지 발송 — 채널 선택 → 해당 연락처를 수신자로 인계 (그룹 관리와 동일) */
+const rowSendMenuFor = ref<number | string | null>(null)
+function toggleRowSendMenu(id: number | string) {
+  rowSendMenuFor.value = rowSendMenuFor.value === id ? null : id
+}
+function onRowSend(c: { id: number | string, name: string, phone: string, email: string }, to: string) {
+  rowSendMenuFor.value = null
+  pendingRecipients.value = [{ id: c.id, name: c.name, phone: c.phone, email: c.email }]
+  router.push(to)
+}
 function onSendDocClick(e: MouseEvent) {
   if (sendMenuEl.value && !sendMenuEl.value.contains(e.target as Node)) sendMenuOpen.value = false
+  rowSendMenuFor.value = null
 }
 onMounted(() => document.addEventListener('click', onSendDocClick))
 onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
@@ -176,45 +187,50 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
       </aside>
 
       <div style="min-width: 0">
-        <div class="filter-bar">
-          <div style="position: relative; flex: 1">
-            <UIcon name="i-lucide-search" class="text-sm" style="position: absolute; left: 10px; top: 11px; color: var(--ink-400)" />
-            <input v-model="search" class="input" placeholder="이름 / 휴대폰 / 이메일 검색" style="padding-left: 32px">
-          </div>
-          <template v-if="selected.length > 0">
-            <span class="muted" style="font-size: var(--fz-sm)">{{ selected.length }}명 선택됨</span>
-            <button class="btn btn-outline btn-sm" @click="onGroupMove">
-              <UIcon name="i-lucide-users" class="text-[length:var(--fz-sm)]" /> 그룹 이동
-            </button>
-            <button class="btn btn-error btn-sm">
-              <UIcon name="i-lucide-trash-2" class="text-[length:var(--fz-sm)]" /> 선택 삭제
-            </button>
-          </template>
-          <div ref="sendMenuEl" class="send-menu-wrap">
-            <button class="btn btn-soft btn-sm" @click="sendMenuOpen = !sendMenuOpen">
-              <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 선택 발송
-              <UIcon :name="sendMenuOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="text-[length:var(--fz-sm)]" />
-            </button>
-            <div v-if="sendMenuOpen" class="send-menu">
-              <button
-                v-for="ch in SEND_CHANNELS"
-                :key="ch.to"
-                type="button"
-                class="send-menu-item"
-                @click="onSelectSend(ch.to)"
-              >
-                {{ ch.label }}
+        <!-- C 테이블 스타일 — 액션 영역에 검색란 포함 (doc/DESIGN.md §6.5) -->
+        <div class="list-card">
+          <div class="list-toolbar">
+            <div class="row" style="gap: 10px; flex-wrap: wrap">
+              <span class="ct-count">총 <strong>{{ filtered.length }}</strong>명</span>
+              <span class="toolbar-sep">|</span>
+              <button type="button" class="toolbar-refresh" @click="onRefresh">
+                <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
               </button>
+              <div class="ct-search">
+                <input v-model="search" class="input" placeholder="이름 / 휴대폰 / 이메일 검색">
+                <UIcon name="i-lucide-search" class="text-sm ct-search-icon" />
+              </div>
+            </div>
+            <div class="row" style="gap: 6px; flex-wrap: wrap">
+              <span v-if="selected.length > 0" class="muted" style="font-size: var(--fz-sm)">{{ selected.length }}명 선택됨</span>
+              <button class="btn btn-outline btn-sm" :disabled="selected.length === 0" @click="onGroupMove">
+                <UIcon name="i-lucide-users" class="text-[length:var(--fz-sm)]" /> 그룹 이동
+              </button>
+              <button class="btn btn-error btn-sm" :disabled="selected.length === 0">
+                <UIcon name="i-lucide-trash-2" class="text-[length:var(--fz-sm)]" /> 선택 삭제
+              </button>
+              <div ref="sendMenuEl" class="send-menu-wrap">
+                <button class="btn btn-soft btn-sm" @click="sendMenuOpen = !sendMenuOpen">
+                  <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 선택 발송
+                  <UIcon :name="sendMenuOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="text-[length:var(--fz-sm)]" />
+                </button>
+                <div v-if="sendMenuOpen" class="send-menu">
+                  <button
+                    v-for="ch in SEND_CHANNELS"
+                    :key="ch.to"
+                    type="button"
+                    class="send-menu-item"
+                    @click="onSelectSend(ch.to)"
+                  >
+                    {{ ch.label }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" @click="onRefresh">
-            <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
-          <span class="ct-count">총 <strong>{{ filtered.length }}</strong>명</span>
-        </div>
 
-        <div class="table-wrap">
-          <table class="table">
+          <div class="list-table-scroll">
+            <table class="table" data-table-style="c">
             <thead>
               <tr>
                 <th style="width: 36px">
@@ -223,7 +239,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
                   </label>
                 </th>
                 <th>이름</th><th>휴대폰</th><th>이메일</th><th>토큰</th><th>그룹</th><th>가입일</th>
-                <th style="width: 48px" />
+                <th style="width: 150px">
+                  메시지 발송
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -250,9 +268,23 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
                   {{ c.joined }}
                 </td>
                 <td>
-                  <button class="btn btn-ghost btn-sm btn-icon" aria-label="더보기">
-                    <UIcon name="i-lucide-ellipsis-vertical" class="text-sm" />
-                  </button>
+                  <div class="send-menu-wrap">
+                    <button type="button" class="btn btn-soft btn-sm" @click.stop="toggleRowSendMenu(c.id)">
+                      <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 메시지 발송
+                      <UIcon :name="rowSendMenuFor === c.id ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="text-[length:var(--fz-sm)]" />
+                    </button>
+                    <div v-if="rowSendMenuFor === c.id" class="send-menu" @click.stop>
+                      <button
+                        v-for="ch in SEND_CHANNELS"
+                        :key="ch.to"
+                        type="button"
+                        class="send-menu-item"
+                        @click="onRowSend(c, ch.to)"
+                      >
+                        {{ ch.label }}
+                      </button>
+                    </div>
+                  </div>
                 </td>
               </tr>
               <tr v-if="!paged.length">
@@ -262,6 +294,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <div class="ct-pager">
@@ -374,11 +407,65 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
   text-decoration: underline;
 }
 
+.list-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  overflow: hidden;
+}
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.list-table-scroll {
+  overflow-x: auto;
+}
+.toolbar-sep {
+  color: var(--line);
+  user-select: none;
+}
+.toolbar-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  cursor: pointer;
+}
+.toolbar-refresh:hover {
+  color: var(--ink-900);
+}
+.ct-search {
+  position: relative;
+  width: 260px;
+  max-width: 100%;
+}
+.ct-search .input {
+  height: 28px;
+  padding-right: 32px;
+  font-size: var(--fz-sm);
+}
+.ct-search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-400);
+  pointer-events: none;
+}
 .ct-count {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-  padding-left: 2px;
 }
 .ct-count strong {
   font-family: var(--font-mono);

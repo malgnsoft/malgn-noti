@@ -94,19 +94,21 @@ function onSyncConfirm() {
     <!-- 목록 -->
     <div class="list-card">
       <div class="list-toolbar">
-        <div class="company">
-          업체명: <strong>{{ company }}</strong>
-        </div>
-        <div class="row" style="gap: 6px">
-          <button type="button" class="btn btn-ghost btn-sm" @click="onRefresh">
+        <div class="row" style="gap: 10px; flex-wrap: wrap">
+          <span class="toolbar-count">총 <strong>{{ rows.length }}</strong>개</span>
+          <span class="toolbar-sep">|</span>
+          <button type="button" class="toolbar-refresh" @click="onRefresh">
             <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
           </button>
-          <span class="toolbar-count">총 <strong>{{ rows.length }}</strong>개</span>
+        </div>
+        <div class="company">
+          업체명: <strong>{{ company }}</strong>
         </div>
       </div>
 
       <div class="list-table-scroll">
-        <table class="table">
+        <!-- B 테이블 스타일 — 검색 영역 없는 단순 목록 (doc/DESIGN.md §6.5) -->
+        <table class="table" data-table-style="b">
           <thead>
             <tr>
               <th>브랜드 이름</th>
@@ -231,9 +233,25 @@ function onSyncConfirm() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-  padding-left: 12px;
-  margin-left: 4px;
-  border-left: 1px solid var(--line);
+}
+.toolbar-sep {
+  color: var(--line);
+  user-select: none;
+}
+.toolbar-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  cursor: pointer;
+}
+.toolbar-refresh:hover {
+  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

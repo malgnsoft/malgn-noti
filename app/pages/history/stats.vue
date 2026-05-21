@@ -184,7 +184,7 @@ onBeforeUnmount(() => chart?.destroy())
           초기화
         </button>
         <button type="button" class="btn btn-primary btn-sm" @click="onSearch">
-          검색하기
+          <UIcon name="i-lucide-search" class="text-[length:var(--fz-sm)]" /> 검색하기
         </button>
       </div>
     </div>

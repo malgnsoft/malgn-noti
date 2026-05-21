@@ -133,18 +133,13 @@ function onDeleteConfirm() {
 
     <!-- 목록 -->
     <div class="list-card">
+      <!-- C 테이블 스타일 — 액션 영역에 검색란 포함 (doc/DESIGN.md §6.5) -->
       <div class="list-toolbar">
-        <div class="row" style="gap: 6px; flex-wrap: wrap">
-          <button
-            type="button"
-            class="btn btn-error btn-sm"
-            :disabled="selected.length === 0"
-            @click="openDelete = true"
-          >
-            발신 프로필 삭제
-          </button>
-          <button type="button" class="btn btn-outline-dark btn-sm" @click="openGroup = true">
-            발신 프로필 그룹 관리
+        <div class="row" style="gap: 10px; flex-wrap: wrap">
+          <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>
+          <span class="toolbar-sep">|</span>
+          <button type="button" class="toolbar-refresh" @click="onRefresh">
+            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
           </button>
           <div class="search-box">
             <input
@@ -158,16 +153,23 @@ function onDeleteConfirm() {
             </button>
           </div>
         </div>
-        <div class="row" style="gap: 6px">
-          <button type="button" class="btn btn-ghost btn-sm" @click="onRefresh">
-            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
+        <div class="row" style="gap: 6px; flex-wrap: wrap">
+          <button type="button" class="btn btn-outline-dark btn-sm" @click="openGroup = true">
+            발신 프로필 그룹 관리
           </button>
-          <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>
+          <button
+            type="button"
+            class="btn btn-error btn-sm"
+            :disabled="selected.length === 0"
+            @click="openDelete = true"
+          >
+            발신 프로필 삭제
+          </button>
         </div>
       </div>
 
       <div class="list-table-scroll">
-        <table class="table">
+        <table class="table" data-table-style="c">
           <thead>
             <tr>
               <th style="width: 36px">
@@ -341,9 +343,25 @@ function onDeleteConfirm() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-  padding-left: 12px;
-  margin-left: 4px;
-  border-left: 1px solid var(--line);
+}
+.toolbar-sep {
+  color: var(--line);
+  user-select: none;
+}
+.toolbar-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  cursor: pointer;
+}
+.toolbar-refresh:hover {
+  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

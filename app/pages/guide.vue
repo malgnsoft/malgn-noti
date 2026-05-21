@@ -687,6 +687,104 @@ const segDemo = ref('a')
               </tbody>
             </table>
           </div>
+
+          <div class="g-block-t">
+            A · B · C 테이블 스타일
+          </div>
+          <p class="g-desc">
+            목록 화면은 검색 방식에 따라 3가지로 구분 — 액션 영역(<code>.list-toolbar</code>)은 공통, 검색 위치만 다르다. 상세 = <code>doc/DESIGN.md §6.5</code>.
+          </p>
+
+          <!-- A -->
+          <div class="gt-ex">
+            <div class="gt-ex-head">
+              <span class="gt-tag">A</span>
+              <strong>별도 필터 영역 + 액션 영역</strong>
+              <span class="gt-ex-sub">다중 조건 검색(조회·이력) · <code>data-table-style="a"</code> · ref <code>AppHistoryView</code></span>
+            </div>
+            <div class="gt-filterbar">
+              <span class="gt-sel">발송 상태 <UIcon name="i-lucide-chevron-down" class="gt-ico" /></span>
+              <span class="gt-sel">발송 목적 <UIcon name="i-lucide-chevron-down" class="gt-ico" /></span>
+              <span class="gt-date">2026-05-13 00:00</span>
+              <span class="gt-tilde">~</span>
+              <span class="gt-date">2026-05-20 23:59</span>
+              <span class="gt-fb-actions">
+                <span class="btn btn-neutral btn-sm">초기화</span>
+                <span class="btn btn-primary btn-sm"><UIcon name="i-lucide-search" class="gt-ico" /> 검색하기</span>
+              </span>
+            </div>
+            <div class="gt-card">
+              <div class="gt-toolbar">
+                <div class="gt-grp">
+                  <span class="gt-count">총 <strong>24</strong>건</span>
+                  <span class="gt-sep">|</span>
+                  <span class="gt-refresh"><UIcon name="i-lucide-refresh-cw" class="gt-ico" /> 새로고침</span>
+                </div>
+                <div class="gt-grp">
+                  <span class="btn btn-outline btn-sm">목록 다운로드 요청</span>
+                  <span class="btn btn-outline btn-sm">조회 필드 추가</span>
+                  <span class="btn btn-outline btn-sm">선택 취소</span>
+                </div>
+              </div>
+              <div class="gt-thead">
+                메시지 아이디 · 메시지 채널 · 요청 일시 · 발송 상태 · 수신 상태
+              </div>
+            </div>
+          </div>
+
+          <!-- B -->
+          <div class="gt-ex">
+            <div class="gt-ex-head">
+              <span class="gt-tag">B</span>
+              <strong>액션 영역만 (검색 없음)</strong>
+              <span class="gt-ex-sub">소규모·검색 불필요 목록 · <code>data-table-style="b"</code> · ref <code>sender/numbers</code></span>
+            </div>
+            <div class="gt-card">
+              <div class="gt-toolbar">
+                <div class="gt-grp">
+                  <span class="gt-count">총 <strong>1</strong>개</span>
+                  <span class="gt-sep">|</span>
+                  <span class="gt-refresh"><UIcon name="i-lucide-refresh-cw" class="gt-ico" /> 새로고침</span>
+                </div>
+                <div class="gt-grp">
+                  <span class="btn btn-outline-dark btn-sm">발신 번호 등록 안내</span>
+                  <span class="btn btn-error btn-sm">선택 삭제</span>
+                </div>
+              </div>
+              <div class="gt-thead">
+                발신 번호 유형 · 발신 번호 · 승인 상태 · 요청 일시 · 승인 일시
+              </div>
+            </div>
+          </div>
+
+          <!-- C -->
+          <div class="gt-ex">
+            <div class="gt-ex-head">
+              <span class="gt-tag">C</span>
+              <strong>액션 영역 + 인라인 검색란</strong>
+              <span class="gt-ex-sub">단일 검색어 목록 · <code>data-table-style="c"</code> · ref <code>sender/domains</code></span>
+            </div>
+            <div class="gt-card">
+              <div class="gt-toolbar">
+                <div class="gt-grp">
+                  <span class="gt-count">총 <strong>2</strong>개</span>
+                  <span class="gt-sep">|</span>
+                  <span class="gt-refresh"><UIcon name="i-lucide-refresh-cw" class="gt-ico" /> 새로고침</span>
+                  <span class="gt-search">
+                    도메인을 입력하세요.
+                    <UIcon name="i-lucide-search" class="gt-ico gt-search-ico" />
+                  </span>
+                </div>
+                <div class="gt-grp">
+                  <span class="btn btn-outline-dark btn-sm">DKIM 설정</span>
+                  <span class="btn btn-error btn-sm">선택 삭제</span>
+                </div>
+              </div>
+              <div class="gt-thead">
+                도메인 · 도메인 소유 인증 상태 · 인증 일시
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- 12 empty -->
@@ -1090,4 +1188,124 @@ const segDemo = ref('a')
   flex-shrink: 0;
 }
 .g-card-num.opt { background: var(--ink-100); color: var(--ink-500); }
+
+/* 테이블 스타일 A·B·C 예시 */
+.gt-ex { margin-top: 18px; }
+.gt-ex-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.gt-ex-head strong { font-size: 13px; color: var(--ink-900); }
+.gt-ex-sub { font-size: var(--fz-sm); color: var(--ink-500); }
+.gt-tag {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  background: var(--ink-900);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+}
+.gt-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  margin-bottom: 10px;
+}
+.gt-sel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+}
+.gt-date {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--ink-700);
+}
+.gt-tilde { color: var(--ink-400); }
+.gt-fb-actions { display: flex; gap: 6px; margin-left: auto; }
+.gt-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  overflow: hidden;
+}
+.gt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.gt-grp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gt-count { font-size: var(--fz-sm); color: var(--ink-500); }
+.gt-count strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+.gt-sep { color: var(--line); }
+.gt-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+}
+.gt-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 260px;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 32px 0 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: var(--fz-sm);
+  color: var(--ink-400);
+}
+.gt-search-ico {
+  position: absolute;
+  right: 10px;
+  color: var(--ink-400);
+}
+.gt-thead {
+  padding: 10px 16px;
+  background: var(--paper);
+  font-size: var(--fz-2xs);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-400);
+}
+.gt-ico { font-size: var(--fz-sm); }
 </style>
