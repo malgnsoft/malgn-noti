@@ -93,14 +93,6 @@ const groups: SmGroup[] = [
     ],
   },
   {
-    title: '캠페인',
-    desc: '캠페인 관리',
-    items: [
-      { label: '캠페인 관리', desc: '캠페인 목록·생성·수정', type: 'page', to: '/campaign' },
-      { label: '캠페인 관리 (변형 v3)', desc: '검토용 변형 디자인', type: 'page', to: '/campaign3' },
-    ],
-  },
-  {
     title: '크레딧 / 결제',
     desc: '충전과 크레딧 내역',
     items: [
