@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-발신 정보 카테고리의 남은 페이지 3종을 신규 구성 — 카카오 발신 프로필 관리(등록 마법사·그룹 관리 모달), PUSH 인증 관리(FCM·APNs 인증 설정 섹션), 080 수신 거부 번호 관리(번호 신청·이용 해지) — 하고, 그룹 관리 페이지의 그룹 아이디 컬럼을 정리하여 Cloudflare Pages에 배포 (#27). 이후 **목록 테이블 스타일을 A/B/C로 정의**하고(별도 필터영역/검색없음/인라인검색), 발송 조회 툴바 재배치 + 발신정보·주소록·그룹 관리 목록을 해당 스타일로 일괄 정리하여 재배포 (#28). GNB 캠페인 메뉴 삭제 (#29). **수신 거부 관리 페이지 3종**(휴대폰·이메일·토큰)을 신규 구성 — C 테이블 스타일, 등록/일괄 등록 모달 — 하여 배포 (#30). GNB 드롭다운 중복 메뉴명 삭제 (#31). **메시지 관리 — 문자메시지·알림톡 템플릿 페이지**를 신규 구성 — 카테고리 트리·등록/수정 폼·샘플/AI 모달 — 하여 배포 (#32).
+발신 정보 카테고리의 남은 페이지 3종을 신규 구성 — 카카오 발신 프로필 관리(등록 마법사·그룹 관리 모달), PUSH 인증 관리(FCM·APNs 인증 설정 섹션), 080 수신 거부 번호 관리(번호 신청·이용 해지) — 하고, 그룹 관리 페이지의 그룹 아이디 컬럼을 정리하여 Cloudflare Pages에 배포 (#27). 이후 **목록 테이블 스타일을 A/B/C로 정의**하고(별도 필터영역/검색없음/인라인검색), 발송 조회 툴바 재배치 + 발신정보·주소록·그룹 관리 목록을 해당 스타일로 일괄 정리하여 재배포 (#28). GNB 캠페인 메뉴 삭제 (#29). **수신 거부 관리 페이지 3종**(휴대폰·이메일·토큰)을 신규 구성 — C 테이블 스타일, 등록/일괄 등록 모달 — 하여 배포 (#30). GNB 드롭다운 중복 메뉴명 삭제 (#31). **메시지 관리 — 문자메시지·알림톡 템플릿 페이지**를 신규 구성 — 카테고리 트리·등록/수정 폼·샘플/AI 모달 — 하여 배포 (#32). 알림톡·RCS·PUSH 미리보기 시각을 현재 시각으로 변경 (#33).
 
 ## 1. 발신 프로필 관리 페이지
 
@@ -84,6 +84,13 @@
 - 배포 #32: `wrangler pages deploy` (`--commit-message "Add SMS/Kakao message template pages"`), 프로덕션 `/manage/sms`·`/manage/kakao` 200, alias `https://84b6df73.malgn-noti.pages.dev`.
 - 커밋: `b52b9fa 문자메시지·알림톡 템플릿 관리 페이지 신규 구성` (10 files, +3630 −19) → `origin/main` 푸시.
 
+## 11. 미리보기 시각 현재화 — 알림톡·RCS·PUSH (§11, 배포 #33)
+
+- `usePreviewClock` 컴포저블 신규([app/composables/usePreviewClock.ts](../../app/composables/usePreviewClock.ts)) — `onMounted`(클라이언트)에서 현재 시각 `H:MM`·날짜 `M월 D일 요일` 계산(SSR hydration 불일치 방지).
+- `AppKakaoPreview`·`AppRcsPreview` 상태바 시간, `AppPushPreview` 상태바 + 잠금화면 시계(Android·iOS) + 날짜를 현재 값으로 표시. (문자 `AppPhonePreview`는 §10에서 이미 적용)
+- 배포 #33: `wrangler pages deploy` (`--commit-message "Preview clock: live time for kakao/RCS/PUSH"`), 프로덕션 `/manage/kakao`·`/send/rcs`·`/send/push` 200, alias `https://34a5b3b0.malgn-noti.pages.dev`.
+- 커밋: `985905f 미리보기 시각을 현재 시각으로 — 알림톡·RCS·PUSH` (4 files, +31 −8) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (3)
@@ -116,6 +123,7 @@
 - #30 — 수신 거부 관리 페이지 3종 (휴대폰·이메일·토큰) / Alias: https://81348384.malgn-noti.pages.dev
 - #31 — GNB 드롭다운 중복 메뉴명 삭제 / Alias: https://b11d8703.malgn-noti.pages.dev
 - #32 — 문자메시지·알림톡 템플릿 관리 페이지 / Alias: https://84b6df73.malgn-noti.pages.dev
+- #33 — 알림톡·RCS·PUSH 미리보기 시각 현재화 / Alias: https://34a5b3b0.malgn-noti.pages.dev
 
 ### 커밋
 - `e30da5c` 발신 정보 페이지 신규 구성 — 발신 프로필·PUSH 인증·080 수신 거부 (§5, 배포 #27)
@@ -124,6 +132,7 @@
 - `5f4cb47` 수신 거부 관리 페이지 3종 신규 구성 (휴대폰·이메일·토큰) (§8, 배포 #30)
 - `0f0d9cc` GNB 드롭다운에서 중복 메뉴명 표시 삭제 (§9, 배포 #31)
 - `b52b9fa` 문자메시지·알림톡 템플릿 관리 페이지 신규 구성 (§10, 배포 #32)
+- `985905f` 미리보기 시각을 현재 시각으로 — 알림톡·RCS·PUSH (§11, 배포 #33)
 
 ## 다음 단계 / 한계
 
