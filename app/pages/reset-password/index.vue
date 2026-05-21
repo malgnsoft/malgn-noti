@@ -14,7 +14,7 @@ const email = ref('')
 
     <form class="space-y-4" @submit.prevent>
       <UFormField label="이메일" required>
-        <UInput v-model="email" type="email" placeholder="name@malgn.example" />
+        <UInput v-model="email" type="email" placeholder="name@malgn.example" class="w-full" />
       </UFormField>
       <UButton type="submit" block class="!mt-6">
         재설정 메일 발송
