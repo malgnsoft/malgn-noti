@@ -167,7 +167,7 @@ function avatarChar(name: string) {
 
         <!-- 우측 액션 -->
         <div class="gnb-actions">
-          <NuxtLink to="/inquiry" class="pill pill-inquire">
+          <NuxtLink to="/account/inquiry" class="pill pill-inquire">
             문의
           </NuxtLink>
 
@@ -241,7 +241,7 @@ function avatarChar(name: string) {
           <NuxtLink to="/charge" class="drawer-item" @click="mobileOpen = false">
             <UIcon name="i-lucide-circle-dollar-sign" class="text-base" /> 크레딧 충전
           </NuxtLink>
-          <NuxtLink to="/inquiry" class="drawer-item" @click="mobileOpen = false">
+          <NuxtLink to="/account/inquiry" class="drawer-item" @click="mobileOpen = false">
             <UIcon name="i-lucide-message-square" class="text-base" /> 문의하기
           </NuxtLink>
           <template v-for="item in menu" :key="item.label">

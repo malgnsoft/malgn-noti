@@ -5,7 +5,7 @@ const links = [
   { label: '스팸메시지 이용약관', to: '#' },
   { label: '광고성 정보 수신 동의', to: '#' },
   { label: '요금신고내역', to: '#' },
-  { label: '고객센터', to: '/inquiry' }
+  { label: '고객센터', to: '/account/inquiry' }
 ]
 
 const info = [

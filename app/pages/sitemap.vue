@@ -105,11 +105,11 @@ const groups: SmGroup[] = [
     title: '계정 / 문의',
     desc: '계정 설정과 1:1 문의',
     items: [
-      { label: '계정 관리', desc: '계정·결제 이메일·전자서명', type: 'page', to: '/account/settings' },
+      { label: '나의 페이지', desc: '회원 정보·결제 카드·비밀번호·보안·멀티 계정·계약', type: 'page', to: '/account/settings' },
       { label: '내 문의 내역', desc: '1:1 문의 목록', type: 'page', to: '/account/inquiries' },
       { label: '문의 상세', desc: '문의 내용·답변 상세', type: 'page', to: '/account/inquiries/detail' },
-      { label: '1:1 문의 작성', desc: '문의 작성 폼', type: 'page', to: '/inquiry' },
-      { label: '문의 작성 완료', desc: '문의 접수 완료', type: 'page', to: '/inquiry/complete' },
+      { label: '1:1 문의 작성', desc: '문의 작성 폼', type: 'page', to: '/account/inquiry' },
+      { label: '문의 작성 완료', desc: '문의 접수 완료', type: 'page', to: '/account/inquiry/complete' },
     ],
   },
   {
