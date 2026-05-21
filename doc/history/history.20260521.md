@@ -178,6 +178,16 @@
 - 배포 #43: `wrangler pages deploy` (`--commit-message "reset-password/new: full-width inputs, validation messages"`), 프로덕션 `/reset-password/new` 200, alias `https://1fe8363d.malgn-noti.pages.dev` 200.
 - 커밋: `54b53c5 새 비밀번호 설정 — 입력란 전체 너비 + 검증 메시지` (1 file, +34 −4) → `origin/main` 푸시.
 
+## 22. 메시지 관리 — 랜딩페이지 만들기 (§22, 배포 #44)
+
+- **GNB**: 메시지 관리 메뉴 `상세 설정` 위에 `랜딩페이지 만들기`(`/manage/landing`) 추가.
+- **목록**([/manage/landing](../../app/pages/manage/landing.vue)): C 테이블 스타일 — 공개여부 필터·이름 검색·선택 복사/삭제, 행별 `미리보기`(공개·비공개 모두)·`URL 복사`(공개만). `페이지 등록` 버튼은 기본형/확장형 드롭다운.
+- **AppLandingForm**(신규): 랜딩페이지 등록/수정 폼(폼 뷰 전환). 공개 여부 토글·랜딩페이지명·설명·URL / 메인 타이틀(헤드 이미지·헤드라인·서브·확장형 텍스트 정렬) / (확장형)비주얼 이미지 / 콘텐츠 영역(리치 에디터 목업) / (확장형)CTA 버튼(텍스트·이동 링크·색상). 하단 액션은 발송 페이지 공용 `.send-actions` 스타일. 이름 클릭 시 수정 모드 진입.
+- **AppLandingPreviewDialog**(신규): 미리보기 모달 — "LIVELY SHOP 빅세일" 샘플 랜딩 렌더(헤로·콘텐츠·CTA), width 960·min-height 74vh.
+- **AppLandingUrlDialog**(신규): 랜딩페이지 URL 복사 완료 모달(그린 체크 + 숏 URL + 복사 버튼).
+- 배포 #44: `wrangler pages deploy` (`--commit-message "Add landing page builder (list, basic/extended form, preview)"`), 프로덕션 `/manage/landing` 200, alias `https://184b0fe1.malgn-noti.pages.dev` 200. 동시 진행 중인 '나의 페이지'·충전 작업분은 `git stash`로 격리하고 랜딩페이지 변경만 배포.
+- 커밋: `265395a 랜딩페이지 만들기 — 목록·등록/수정 폼·미리보기 신규 구성` (5 files, +1444 −2) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (3)
@@ -221,6 +231,7 @@
 - #41 — 회원가입 페이지 5단계 마법사 / Alias: https://28324dbc.malgn-noti.pages.dev
 - #42 — 메시지 관리 상세 설정 페이지 / Alias: https://448a1130.malgn-noti.pages.dev
 - #43 — 새 비밀번호 설정 페이지 입력란·검증 보정 / Alias: https://1fe8363d.malgn-noti.pages.dev
+- #44 — 메시지 관리 랜딩페이지 만들기 / Alias: https://184b0fe1.malgn-noti.pages.dev
 
 ### 커밋
 - `e30da5c` 발신 정보 페이지 신규 구성 — 발신 프로필·PUSH 인증·080 수신 거부 (§5, 배포 #27)
@@ -240,6 +251,7 @@
 - `a836fdf` 회원가입 페이지 5단계 마법사 신규 구성 (§19, 배포 #41)
 - `07e78b3` 메시지 상세 설정 페이지 신규 구성 (§20, 배포 #42)
 - `54b53c5` 새 비밀번호 설정 — 입력란 전체 너비 + 검증 메시지 (§21, 배포 #43)
+- `265395a` 랜딩페이지 만들기 — 목록·등록/수정 폼·미리보기 신규 구성 (§22, 배포 #44)
 
 ## 다음 단계 / 한계
 
