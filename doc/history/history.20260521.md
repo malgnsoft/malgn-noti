@@ -48,6 +48,12 @@
 - 배포 #28: `wrangler pages deploy` (`--commit-message "table styles A/B/C + history toolbar restructure"`), 프로덕션 `/guide`·`/history/sms`·`/contacts/groups` 200, alias `https://ec51b8d0.malgn-noti.pages.dev` 200.
 - 커밋: `74943e8 테이블 스타일 A/B/C 정의 + 발송 조회 툴바 재배치` (11 files, +746 −172) → `origin/main` 푸시.
 
+## 7. GNB 캠페인 메뉴 삭제 (§7, 배포 #29)
+
+- [AppGnb.vue](../../app/components/AppGnb.vue) 상단 메뉴에서 `캠페인`(`/campaign`) 항목 제거 → 메뉴: 서비스·메시지 발송·발송 조회/통계·주소록·발신 정보·메시지 관리·운영가이드.
+- 배포 #29: `wrangler pages deploy` (`--commit-message "remove campaign menu from GNB"`), 프로덕션 `/home` 200, alias `https://e23f4a20.malgn-noti.pages.dev` 200.
+- 커밋: `d0802e6 GNB에서 캠페인 메뉴 삭제` → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (3)
@@ -70,10 +76,12 @@
 ### 배포
 - #27 — 발신 정보 페이지 (발신 프로필·PUSH 인증·080 수신 거부) / Alias: https://d1c4e2eb.malgn-noti.pages.dev
 - #28 — 테이블 스타일 A/B/C + 발송 조회 툴바 재배치 / Alias: https://ec51b8d0.malgn-noti.pages.dev
+- #29 — GNB 캠페인 메뉴 삭제 / Alias: https://e23f4a20.malgn-noti.pages.dev
 
 ### 커밋
 - `e30da5c` 발신 정보 페이지 신규 구성 — 발신 프로필·PUSH 인증·080 수신 거부 (§5, 배포 #27)
 - `74943e8` 테이블 스타일 A/B/C 정의 + 발송 조회 툴바 재배치 (§6, 배포 #28)
+- `d0802e6` GNB에서 캠페인 메뉴 삭제 (§7, 배포 #29)
 
 ## 다음 단계 / 한계
 
