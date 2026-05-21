@@ -7,8 +7,6 @@ withDefaults(defineProps<{
   body?: string
   buttonLabel?: string
 }>(), { subject: '', from: '', attachments: () => [], heading: '', body: '', buttonLabel: '' })
-
-const viewMode = ref<'text' | 'html'>('html')
 </script>
 
 <template>
@@ -35,12 +33,6 @@ const viewMode = ref<'text' | 'html'>('html')
           {{ buttonLabel }}
         </button>
       </div>
-    </div>
-    <div class="ep-foot">
-      <AppSegmented
-        v-model="viewMode"
-        :options="[{ value: 'text', label: '텍스트' }, { value: 'html', label: 'HTML' }]"
-      />
     </div>
   </div>
 </template>
@@ -96,11 +88,5 @@ const viewMode = ref<'text' | 'html'>('html')
   color: var(--ink-600);
   line-height: 1.7;
   white-space: pre-wrap;
-}
-.ep-foot {
-  padding: 10px 16px;
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: flex-end;
 }
 </style>
