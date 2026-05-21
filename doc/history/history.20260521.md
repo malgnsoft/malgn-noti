@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-발신 정보 카테고리의 남은 페이지 3종을 신규 구성 — 카카오 발신 프로필 관리(등록 마법사·그룹 관리 모달), PUSH 인증 관리(FCM·APNs 인증 설정 섹션), 080 수신 거부 번호 관리(번호 신청·이용 해지) — 하고, 그룹 관리 페이지의 그룹 아이디 컬럼을 정리하여 Cloudflare Pages에 배포 (#27). 이후 **목록 테이블 스타일을 A/B/C로 정의**하고(별도 필터영역/검색없음/인라인검색), 발송 조회 툴바 재배치 + 발신정보·주소록·그룹 관리 목록을 해당 스타일로 일괄 정리하여 재배포 (#28).
+발신 정보 카테고리의 남은 페이지 3종을 신규 구성 — 카카오 발신 프로필 관리(등록 마법사·그룹 관리 모달), PUSH 인증 관리(FCM·APNs 인증 설정 섹션), 080 수신 거부 번호 관리(번호 신청·이용 해지) — 하고, 그룹 관리 페이지의 그룹 아이디 컬럼을 정리하여 Cloudflare Pages에 배포 (#27). 이후 **목록 테이블 스타일을 A/B/C로 정의**하고(별도 필터영역/검색없음/인라인검색), 발송 조회 툴바 재배치 + 발신정보·주소록·그룹 관리 목록을 해당 스타일로 일괄 정리하여 재배포 (#28). GNB 캠페인 메뉴 삭제 (#29). **수신 거부 관리 페이지 3종**(휴대폰·이메일·토큰)을 신규 구성 — C 테이블 스타일, 등록/일괄 등록 모달 — 하여 배포 (#30).
 
 ## 1. 발신 프로필 관리 페이지
 
@@ -54,12 +54,32 @@
 - 배포 #29: `wrangler pages deploy` (`--commit-message "remove campaign menu from GNB"`), 프로덕션 `/home` 200, alias `https://e23f4a20.malgn-noti.pages.dev` 200.
 - 커밋: `d0802e6 GNB에서 캠페인 메뉴 삭제` → `origin/main` 푸시.
 
+## 8. 수신 거부 관리 페이지 3종 (§8, 배포 #30)
+
+- **페이지 분리**: 수신 거부 관리를 탭 없이 채널별 독립 페이지 3종으로 구성 — [/contacts/optout](../../app/pages/contacts/optout.vue)(휴대폰) · [/contacts/optout-email](../../app/pages/contacts/optout-email.vue) · [/contacts/optout-token](../../app/pages/contacts/optout-token.vue). [AppGnb](../../app/components/AppGnb.vue) 주소록 메뉴에 3개 항목 추가.
+- **AppOptoutManager**(신규): `kind`(phone/email/token) prop으로 단일 화면을 렌더링하는 공용 컴포넌트. C 테이블 스타일(`.list-card` + `.list-toolbar` border-bottom + `.list-pager` border-top).
+  - 안내(`.notice`) + 페이지 헤더 우측 `일괄 등록`·`등록` 버튼(토큰은 없음).
+  - 툴바 좌: `총 N개 · | · 080 번호/도메인 선택 · 인라인 검색(260px)` / 우: `목록 다운로드 요청 · 다운로드 요청 목록 · 해지`(맨 오른쪽).
+  - 표: 휴대폰·이메일 = 체크박스·수신 거부 번호/이메일·등록 일시 / 토큰 = 수신 거부 토큰·수신 거부 항목·등록 일시(체크박스 없음).
+- **AppOptoutAddDialog**(신규): 수신 거부 번호/이메일 등록 모달 — 080 번호·도메인 select + 직접 입력(최대 10건, 추가/삭제 서브 테이블).
+- **AppOptoutBulkDialog**(신규): 일괄 등록 모달 — 080 번호·도메인 select + `양식 다운로드`(흰 버튼) + .xlsx 업로드(최대 1MB).
+- **AppExportListDialog**: `jobs` prop 추가(기본값은 기존 목업, 수신 거부 페이지는 빈 목록 전달).
+- **AppContactBulkDialog**: `템플릿 다운로드` → `양식 다운로드` 문구 변경.
+- 배포 #30: `wrangler pages deploy` (`--commit-message "Add opt-out management pages (phone/email/token)"`), 프로덕션 `/contacts/optout`·`/contacts/optout-email`·`/contacts/optout-token` 200, alias `https://81348384.malgn-noti.pages.dev`.
+- 커밋: `5f4cb47 수신 거부 관리 페이지 3종 신규 구성 (휴대폰·이메일·토큰)` (9 files, +931 −15) → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (3)
 - [app/components/AppProfileRegisterDialog.vue](../../app/components/AppProfileRegisterDialog.vue)
 - [app/components/AppProfileGroupDialog.vue](../../app/components/AppProfileGroupDialog.vue)
 - [app/components/AppPushCertSection.vue](../../app/components/AppPushCertSection.vue)
+
+### 신규 (6 — §8 수신 거부 관리)
+- [app/components/AppOptoutManager.vue](../../app/components/AppOptoutManager.vue)
+- [app/components/AppOptoutAddDialog.vue](../../app/components/AppOptoutAddDialog.vue)
+- [app/components/AppOptoutBulkDialog.vue](../../app/components/AppOptoutBulkDialog.vue)
+- [app/pages/contacts/optout.vue](../../app/pages/contacts/optout.vue), `optout-email.vue`, `optout-token.vue`
 
 ### 수정 (4 — §1~5)
 - `app/pages/sender/profiles.vue`(발신 프로필 관리 페이지 전면 구성)
@@ -77,11 +97,13 @@
 - #27 — 발신 정보 페이지 (발신 프로필·PUSH 인증·080 수신 거부) / Alias: https://d1c4e2eb.malgn-noti.pages.dev
 - #28 — 테이블 스타일 A/B/C + 발송 조회 툴바 재배치 / Alias: https://ec51b8d0.malgn-noti.pages.dev
 - #29 — GNB 캠페인 메뉴 삭제 / Alias: https://e23f4a20.malgn-noti.pages.dev
+- #30 — 수신 거부 관리 페이지 3종 (휴대폰·이메일·토큰) / Alias: https://81348384.malgn-noti.pages.dev
 
 ### 커밋
 - `e30da5c` 발신 정보 페이지 신규 구성 — 발신 프로필·PUSH 인증·080 수신 거부 (§5, 배포 #27)
 - `74943e8` 테이블 스타일 A/B/C 정의 + 발송 조회 툴바 재배치 (§6, 배포 #28)
 - `d0802e6` GNB에서 캠페인 메뉴 삭제 (§7, 배포 #29)
+- `5f4cb47` 수신 거부 관리 페이지 3종 신규 구성 (휴대폰·이메일·토큰) (§8, 배포 #30)
 
 ## 다음 단계 / 한계
 
