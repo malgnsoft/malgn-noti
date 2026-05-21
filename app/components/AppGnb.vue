@@ -94,7 +94,6 @@ const menu: MenuItem[] = [
       { label: '상세 설정', to: '/manage/settings' }
     ]
   },
-  { label: '캠페인', to: '/campaign' },
   { label: '운영가이드', to: '#' }
 ]
 
