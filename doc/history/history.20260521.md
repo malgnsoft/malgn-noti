@@ -133,6 +133,13 @@
 - 배포 #38: `wrangler pages deploy` (`--commit-message "Add RCS message template page and sitemap page"`), 프로덕션 `/manage/rcs`·`/sitemap` 200(실 콘텐츠 확인), alias `https://efb7e52a.malgn-noti.pages.dev`.
 - 커밋: `30921e0 RCS 메시지 템플릿 관리 페이지 신규 구성` (4 files, +1845 −5) → `origin/main` 푸시.
 
+## 17. 사이트맵 보강 + 캠페인 페이지 삭제 (§17, 배포 #39)
+
+- **사이트맵 보강**([/sitemap](../../app/pages/sitemap.vue)): 항목별 전체 순번·한 줄 설명·`페이지`/`팝업` 구분 배지 추가, 새 창 링크·한 행 1항목. 라우트 페이지 + 주요 팝업(모달)을 카테고리별로 수록.
+- **캠페인 페이지 삭제**: `app/pages/campaign/index.vue`·`campaign3/index.vue` 제거(라우트 `/campaign`·`/campaign3` 삭제), 사이트맵 캠페인 카테고리 그룹 제거. (GNB 캠페인 메뉴는 §7에서 이미 삭제)
+- 배포 #39: `wrangler pages deploy` (`--commit-message "sitemap page + remove campaign pages"`), 프로덕션 `/sitemap` 200·`/campaign` 404 확인, alias `https://6f1f15f2.malgn-noti.pages.dev`.
+- 커밋: `d56b338 사이트맵 페이지 신규 구성` · `a1f0969 사이트맵에서 캠페인 제거 + 캠페인 페이지 파일 삭제` → `origin/main` 푸시.
+
 ## 산출물
 
 ### 신규 (3)
@@ -171,6 +178,7 @@
 - #36 — 이메일 메시지 템플릿 페이지 / Alias: https://f184634e.malgn-noti.pages.dev
 - #37 — 보안 인증 페이지 문구·입력란 보정 / Alias: https://3eccd509.malgn-noti.pages.dev
 - #38 — RCS 메시지 템플릿 페이지 + 사이트맵 페이지 / Alias: https://efb7e52a.malgn-noti.pages.dev
+- #39 — 사이트맵 보강 + 캠페인 페이지 삭제 / Alias: https://6f1f15f2.malgn-noti.pages.dev
 
 ### 커밋
 - `e30da5c` 발신 정보 페이지 신규 구성 — 발신 프로필·PUSH 인증·080 수신 거부 (§5, 배포 #27)
@@ -185,6 +193,7 @@
 - `3ca0531` 이메일 메시지 템플릿 관리 페이지 신규 구성 (§14, 배포 #36)
 - `30921e0` RCS 메시지 템플릿 관리 페이지 신규 구성 (§16, 배포 #38)
 - `d59cb13` 보안 인증 페이지 — 문구 수정 + 인증코드 입력란 전체 너비 (§15, 배포 #37)
+- `d56b338` 사이트맵 페이지 신규 구성 · `a1f0969` 사이트맵에서 캠페인 제거 + 캠페인 페이지 파일 삭제 (§17, 배포 #39)
 
 ## 다음 단계 / 한계
 
