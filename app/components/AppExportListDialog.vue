@@ -1,7 +1,4 @@
 <script setup lang="ts">
-defineProps<{ open: boolean }>()
-const emit = defineEmits<{ close: [] }>()
-
 interface ExportJob {
   id: string
   requestedAt: string
@@ -9,12 +6,16 @@ interface ExportJob {
   status: '처리 중' | '완료' | '만료'
 }
 
+const props = defineProps<{ open: boolean, jobs?: ExportJob[] }>()
+const emit = defineEmits<{ close: [] }>()
+
 /* 목업 — 백엔드 연동 시 useExportJob() 응답으로 교체 */
-const JOBS: ExportJob[] = [
+const DEFAULT_JOBS: ExportJob[] = [
   { id: '20260520122133uo9erdf', requestedAt: '2026-05-20 12:21', expiresAt: '2026-05-27 12:21', status: '처리 중' },
   { id: '20260219161504G4e5JF8ii40', requestedAt: '2026-02-19 16:15', expiresAt: '2026-02-26 16:15', status: '만료' },
   { id: '20260219160936vOJs19LFyy0', requestedAt: '2026-02-19 16:09', expiresAt: '2026-02-26 16:09', status: '만료' },
 ]
+const list = computed(() => props.jobs ?? DEFAULT_JOBS)
 </script>
 
 <template>
@@ -39,7 +40,7 @@ const JOBS: ExportJob[] = [
           </tr>
         </thead>
         <tbody>
-          <tr v-for="j in JOBS" :key="j.id">
+          <tr v-for="j in list" :key="j.id">
             <td class="cell-mono">
               {{ j.id }}
             </td>
@@ -55,7 +56,7 @@ const JOBS: ExportJob[] = [
               </span>
             </td>
           </tr>
-          <tr v-if="!JOBS.length">
+          <tr v-if="!list.length">
             <td colspan="4" style="text-align: center; padding: 40px 12px; color: var(--ink-500)">
               다운로드 요청 내역이 없습니다.
             </td>

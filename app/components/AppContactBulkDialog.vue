@@ -25,7 +25,7 @@ function onPick(e: Event) {
   file.value = f
 }
 function onDownloadTemplate() {
-  toast.add({ title: '템플릿 다운로드', description: '주소록 등록 양식(.xlsx) 다운로드는 준비 중입니다.', icon: 'i-lucide-download' })
+  toast.add({ title: '양식 다운로드', description: '주소록 등록 양식(.xlsx) 다운로드는 준비 중입니다.', icon: 'i-lucide-download' })
 }
 function onConfirm() {
   if (!file.value) {
@@ -50,7 +50,7 @@ watch(() => props.open, (v) => {
     <div class="bd-divider" />
 
     <button type="button" class="btn btn-outline bd-tpl" @click="onDownloadTemplate">
-      <UIcon name="i-lucide-download" class="text-[length:var(--fz-sm)]" /> 템플릿 다운로드
+      <UIcon name="i-lucide-download" class="text-[length:var(--fz-sm)]" /> 양식 다운로드
     </button>
 
     <div class="bd-filerow">

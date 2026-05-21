@@ -66,7 +66,9 @@ const menu: MenuItem[] = [
     children: [
       { label: '주소록 관리', to: '/contacts/list' },
       { label: '그룹 관리', to: '/contacts/groups' },
-      { label: '수신 거부 관리', to: '/contacts/optout' }
+      { label: '수신 거부 관리 (휴대폰)', to: '/contacts/optout' },
+      { label: '수신 거부 관리 (이메일)', to: '/contacts/optout-email' },
+      { label: '수신 거부 관리 (토큰)', to: '/contacts/optout-token' }
     ]
   },
   {
