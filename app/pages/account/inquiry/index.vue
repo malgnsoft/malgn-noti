@@ -54,7 +54,15 @@ function onSubmit() {
     toast.add({ title: '문의 내용을 입력해 주세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
     return
   }
-  router.push('/account/inquiry/complete')
+  const typeLabel = TYPE_OPTIONS.find(t => t.value === inquiryType.value)?.label ?? ''
+  const prodLabel = PRODUCTS.find(p => p.value === productType.value)?.label ?? ''
+  const fullType = inquiryType.value === 'product' && prodLabel
+    ? `${typeLabel} - ${prodLabel}`
+    : typeLabel
+  router.push({
+    path: '/account/inquiry/complete',
+    query: { type: fullType, title: title.value.trim(), content: content.value.trim() },
+  })
 }
 </script>
 

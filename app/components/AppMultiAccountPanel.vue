@@ -25,7 +25,7 @@ interface VerifyRecord {
   memberType: string
   name: string
   docs: string
-  status: '승인' | '승인 대기' | '반려'
+  status: '승인' | '승인 대기' | '반려' | '초대 발송'
   requestedAt: string
   verifiedAt: string
 }
@@ -46,11 +46,12 @@ const statusClass: Record<VerifyRecord['status'], string> = {
   '승인': 'badge-success',
   '승인 대기': 'badge-neutral',
   '반려': 'badge-error',
+  '초대 발송': 'badge-neutral',
 }
 
-/* 휴대폰 본인 인증 모달 */
-const verifyOpen = ref(false)
-function onVerified() {
+/* 서비스 담당자 초대 모달 */
+const inviteOpen = ref(false)
+function onInvited(p: { name: string, email: string }) {
   const now = new Date()
   const fmt = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} `
@@ -58,15 +59,15 @@ function onVerified() {
   records.value = [
     {
       memberType: '사업자 멀티계정',
-      name: '신규 인증 요청',
-      docs: '사업자등록증, 재직증명서',
-      status: '승인 대기',
+      name: `${p.name} (${p.email})`,
+      docs: '-',
+      status: '초대 발송',
       requestedAt: fmt(now),
       verifiedAt: '-',
     },
     ...records.value,
   ]
-  verifyOpen.value = false
+  inviteOpen.value = false
 }
 </script>
 
@@ -76,9 +77,9 @@ function onVerified() {
     <section class="ms-sec">
       <div class="ms-head">
         <h3>본인 인증 안내</h3>
-        <button type="button" class="btn btn-primary btn-sm" @click="verifyOpen = true">
-          <UIcon name="i-lucide-smartphone" class="text-[length:var(--fz-sm)]" />
-          휴대폰 본인 인증(필요 서류 첨부)
+        <button type="button" class="btn btn-primary btn-sm" @click="inviteOpen = true">
+          <UIcon name="i-lucide-user-plus" class="text-[length:var(--fz-sm)]" />
+          서비스 담당자 초대하기
         </button>
       </div>
 
@@ -147,10 +148,10 @@ function onVerified() {
       </table>
     </section>
 
-    <AppPhoneVerifyDialog
-      :open="verifyOpen"
-      @close="verifyOpen = false"
-      @verified="onVerified"
+    <AppManagerInviteDialog
+      :open="inviteOpen"
+      @close="inviteOpen = false"
+      @invited="onInvited"
     />
   </div>
 </template>
