@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-나의 페이지 좌측 메뉴 중 placeholder 상태였던 4개 라우트를 신규 구성 — **비밀번호 변경**(8자+특수문자 검증·표시 토글), **보안로그인 설정**(사용 토글 + 이메일/휴대전화 인증 방식), **멀티 계정 추가**(본인 인증 안내 표·인증 내역·휴대폰 본인 인증 모달 연동), **계약 관리**(상태별 계약 카드 4종·가입서류 첨부 3종) — 하고, 계약 관리에는 **계약서 확인 모달**·**3스텝 계약 체결 위저드**(약관 열람 + 캔버스 전자서명)·**업로드 안내 모달**·**첨부 서류 미리보기 모달**(업로드 PDF iframe 렌더링)을 추가, 갱신 계약 체결 시 기존 계약 만료 처리까지 구현하여 Cloudflare Pages에 배포 (#47). 이어서 **크레딧 관리**(보유 크레딧 카드·A형 검색 필터·내역 테이블·기간 프리셋 자동 날짜·페이지바·영수증 모달)와 **나의 문의**(상태 집계·목록·더보기·⋮ 삭제 메뉴·문의 상세 댓글 스레드)를 신규 구성하고, 문의하기 페이지에 나의 페이지 LNB를 추가하여 재배포 (#48). 또한 멀티 계정 추가의 휴대폰 본인 인증을 **서비스 담당자 초대 플로우**(초대 모달 + `/invite` 담당자 등록 페이지)로 전환하고, **문의 등록 완료 페이지**를 구현하여 재배포 (#49). 이어 **사이트맵을 현행화**(나의 페이지 라우트 분리·랜딩페이지·서비스 담당자 등록 반영)하여 재배포 (#50). 마지막으로 화면별 사용법을 담은 **운영 가이드 페이지**(`/help`)를 신규 구성하고 GNB에 연결하여 재배포 (#51).
+나의 페이지 좌측 메뉴 중 placeholder 상태였던 4개 라우트를 신규 구성 — **비밀번호 변경**(8자+특수문자 검증·표시 토글), **보안로그인 설정**(사용 토글 + 이메일/휴대전화 인증 방식), **멀티 계정 추가**(본인 인증 안내 표·인증 내역·휴대폰 본인 인증 모달 연동), **계약 관리**(상태별 계약 카드 4종·가입서류 첨부 3종) — 하고, 계약 관리에는 **계약서 확인 모달**·**3스텝 계약 체결 위저드**(약관 열람 + 캔버스 전자서명)·**업로드 안내 모달**·**첨부 서류 미리보기 모달**(업로드 PDF iframe 렌더링)을 추가, 갱신 계약 체결 시 기존 계약 만료 처리까지 구현하여 Cloudflare Pages에 배포 (#47). 이어서 **크레딧 관리**(보유 크레딧 카드·A형 검색 필터·내역 테이블·기간 프리셋 자동 날짜·페이지바·영수증 모달)와 **나의 문의**(상태 집계·목록·더보기·⋮ 삭제 메뉴·문의 상세 댓글 스레드)를 신규 구성하고, 문의하기 페이지에 나의 페이지 LNB를 추가하여 재배포 (#48). 또한 멀티 계정 추가의 휴대폰 본인 인증을 **서비스 담당자 초대 플로우**(초대 모달 + `/invite` 담당자 등록 페이지)로 전환하고, **문의 등록 완료 페이지**를 구현하여 재배포 (#49). 이어 **사이트맵을 현행화**(나의 페이지 라우트 분리·랜딩페이지·서비스 담당자 등록 반영)하여 재배포 (#50). 이어서 화면별 사용법을 담은 **운영 가이드 페이지**(`/help`)를 신규 구성하고 GNB에 연결하여 재배포 (#51). 마지막으로 `/` 경로를 **비로그인 공개 랜딩 페이지**(히어로·5채널·장점·채널 단가 비교·CTA)로 교체하여 재배포 (#52).
 
 ## 1. 비밀번호 변경 페이지
 
@@ -98,12 +98,21 @@
 - 배포 #51: `wrangler pages deploy` (`--commit-message "Add operations guide page and link from GNB"`), 프로덕션 `/help` 200, alias `https://9379d4c0.malgn-noti.pages.dev`.
 - 커밋: `8d6cc76 운영 가이드 페이지 신규 + GNB 연결` (3 files, +446 −3).
 
+## 14. 비로그인 메인 랜딩 페이지 (§14, 배포 #52)
+
+- **index.vue**(`/`): 기존 `/home` 리다이렉트 → 공개 마케팅 랜딩 페이지로 교체(`layout: blank`, `auth: false`). 마케팅 헤더(로고 + 로그인/무료 시작) · 히어로 · 5채널 소개 · **맑은 메시징의 장점**(4종) · **채널별 단가 비교**(타사 vs 맑은 메시징, 경쟁사 콘셉트를 ink/accent 토큰으로 재구성) · 마무리 CTA · 푸터. 로그인 시 `/home` 이동은 실제 인증 연동 시 활성화(주석).
+- **help.vue**: 운영 가이드를 `layout: blank`로 — 앱 GNB 제거, 로고만 있는 sticky 상단 바 + 간단 푸터. "운영 가이드" 제목을 헤더 바로 이동, 단일 루트 래핑으로 sticky 헤더·목차 고정 보정.
+- **AppGnb**: `운영가이드` 메뉴를 새 창(`target="_blank"`)으로 열도록 `newWindow` 옵션 추가.
+- 배포 #52: `wrangler pages deploy` (`--commit-message "Public landing page with benefits and price comparison"`), 프로덕션 `/`·`/help` 200, alias `https://a36c7026.malgn-noti.pages.dev`.
+- 커밋: `8120ad0 비로그인 메인 랜딩 페이지 신규 + 운영 가이드 페이지 정리` (3 files, +793 −50).
+
 ## 산출물
 
 - 신규 컴포넌트: `AppPasswordChangePanel`·`AppSecurityLoginPanel`·`AppMultiAccountPanel`·`AppContractPanel`·`AppContractViewDialog`·`AppContractSignDialog`·`AppUploadGuideDialog`·`AppFilePreviewDialog`·`AppCreditPanel`·`AppReceiptDialog`·`AppInquiryListPanel`·`AppInquiryDetailPanel`·`AppManagerInviteDialog` (13종).
 - 신규 페이지: `invite.vue`(`/invite` 서비스 담당자 등록), `help.vue`(`/help` 운영 가이드).
 - 수정: `account/{password,security,multi,contract,credit}.vue`·`account/inquiries/{index,detail}.vue`·`account/inquiry/{index,complete}.vue`(placeholder → 화면 구현), `AppCardListPanel`, `AppMyPageShell`(activePath), `sitemap.vue`(현행화), `AppGnb`(운영가이드 연결).
-- 배포 #47~#51, 최종 alias `https://9379d4c0.malgn-noti.pages.dev`.
+- 신규 페이지(추가): `index.vue`(`/` 공개 랜딩) — 기존 `/home` 리다이렉트 대체.
+- 배포 #47~#52, 최종 alias `https://a36c7026.malgn-noti.pages.dev`.
 
 ## 다음 단계 / 알려진 한계
 
