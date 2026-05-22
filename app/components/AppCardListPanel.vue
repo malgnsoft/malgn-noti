@@ -52,6 +52,9 @@ function saveDefault() {
 
 <template>
   <div class="card-panel">
+    <div class="ms-head">
+      <h3>결제 카드 관리</h3>
+    </div>
     <p class="cp-desc">크레딧 충전에 사용할 결제 카드를 등록하고 기본 카드를 선택하세요.</p>
 
     <div class="card-rows">
@@ -107,6 +110,20 @@ function saveDefault() {
 </template>
 
 <style scoped>
+.ms-head {
+  display: flex;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.ms-head h3 {
+  font-size: var(--fz-lg);
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0;
+}
+
 .cp-desc {
   font-size: var(--fz-sm);
   color: var(--ink-500);
