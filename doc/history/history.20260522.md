@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-나의 페이지 좌측 메뉴 중 placeholder 상태였던 4개 라우트를 신규 구성 — **비밀번호 변경**(8자+특수문자 검증·표시 토글), **보안로그인 설정**(사용 토글 + 이메일/휴대전화 인증 방식), **멀티 계정 추가**(본인 인증 안내 표·인증 내역·휴대폰 본인 인증 모달 연동), **계약 관리**(상태별 계약 카드 4종·가입서류 첨부 3종) — 하고, 계약 관리에는 **계약서 확인 모달**·**3스텝 계약 체결 위저드**(약관 열람 + 캔버스 전자서명)·**업로드 안내 모달**·**첨부 서류 미리보기 모달**(업로드 PDF iframe 렌더링)을 추가, 갱신 계약 체결 시 기존 계약 만료 처리까지 구현하여 Cloudflare Pages에 배포 (#47). 이어서 **크레딧 관리**(보유 크레딧 카드·A형 검색 필터·내역 테이블·기간 프리셋 자동 날짜·페이지바·영수증 모달)와 **나의 문의**(상태 집계·목록·더보기·⋮ 삭제 메뉴·문의 상세 댓글 스레드)를 신규 구성하고, 문의하기 페이지에 나의 페이지 LNB를 추가하여 재배포 (#48). 또한 멀티 계정 추가의 휴대폰 본인 인증을 **서비스 담당자 초대 플로우**(초대 모달 + `/invite` 담당자 등록 페이지)로 전환하고, **문의 등록 완료 페이지**를 구현하여 재배포 (#49).
+나의 페이지 좌측 메뉴 중 placeholder 상태였던 4개 라우트를 신규 구성 — **비밀번호 변경**(8자+특수문자 검증·표시 토글), **보안로그인 설정**(사용 토글 + 이메일/휴대전화 인증 방식), **멀티 계정 추가**(본인 인증 안내 표·인증 내역·휴대폰 본인 인증 모달 연동), **계약 관리**(상태별 계약 카드 4종·가입서류 첨부 3종) — 하고, 계약 관리에는 **계약서 확인 모달**·**3스텝 계약 체결 위저드**(약관 열람 + 캔버스 전자서명)·**업로드 안내 모달**·**첨부 서류 미리보기 모달**(업로드 PDF iframe 렌더링)을 추가, 갱신 계약 체결 시 기존 계약 만료 처리까지 구현하여 Cloudflare Pages에 배포 (#47). 이어서 **크레딧 관리**(보유 크레딧 카드·A형 검색 필터·내역 테이블·기간 프리셋 자동 날짜·페이지바·영수증 모달)와 **나의 문의**(상태 집계·목록·더보기·⋮ 삭제 메뉴·문의 상세 댓글 스레드)를 신규 구성하고, 문의하기 페이지에 나의 페이지 LNB를 추가하여 재배포 (#48). 또한 멀티 계정 추가의 휴대폰 본인 인증을 **서비스 담당자 초대 플로우**(초대 모달 + `/invite` 담당자 등록 페이지)로 전환하고, **문의 등록 완료 페이지**를 구현하여 재배포 (#49). 마지막으로 **사이트맵을 현행화**(나의 페이지 라우트 분리·랜딩페이지·서비스 담당자 등록 반영)하여 재배포 (#50).
 
 ## 1. 비밀번호 변경 페이지
 
@@ -82,12 +82,20 @@
 - 프로덕션 검증: `/account/multi`·`/invite`·`/account/inquiry/complete` 모두 200, alias `https://63417583.malgn-noti.pages.dev`.
 - 커밋: `22bb51f 서비스 담당자 초대 플로우 + 문의 등록 완료 페이지 구현` (5 files, +693 −21).
 
+## 12. 사이트맵 현행화 (§12, 배포 #50)
+
+- **sitemap.vue**: 실제 `app/pages/` 라우트와 대조하여 누락분 반영.
+  - "계정 / 문의" → "나의 페이지 / 문의" 그룹 개편 — 나의 페이지 좌측 메뉴 9종(회원 정보·결제 카드·비밀번호·보안로그인·멀티 계정·계약·크레딧·결제 내역·나의 문의)을 개별 라우트로 분리.
+  - 메시지 관리에 `랜딩페이지 만들기`(`/manage/landing`), 인증에 `서비스 담당자 등록`(`/invite`) 추가.
+- 배포 #50: `wrangler pages deploy` (`--commit-message "Update sitemap with My Page routes and invite page"`), 프로덕션 `/sitemap` 200, alias `https://60070560.malgn-noti.pages.dev`.
+- 커밋: `7eac09c 사이트맵 현행화 — 나의 페이지 라우트·랜딩페이지·서비스 담당자 등록 반영` (1 file, +20 −7).
+
 ## 산출물
 
 - 신규 컴포넌트: `AppPasswordChangePanel`·`AppSecurityLoginPanel`·`AppMultiAccountPanel`·`AppContractPanel`·`AppContractViewDialog`·`AppContractSignDialog`·`AppUploadGuideDialog`·`AppFilePreviewDialog`·`AppCreditPanel`·`AppReceiptDialog`·`AppInquiryListPanel`·`AppInquiryDetailPanel`·`AppManagerInviteDialog` (13종).
 - 신규 페이지: `invite.vue`(`/invite` 서비스 담당자 등록).
-- 수정: `account/{password,security,multi,contract,credit}.vue`·`account/inquiries/{index,detail}.vue`·`account/inquiry/{index,complete}.vue`(placeholder → 화면 구현), `AppCardListPanel`, `AppMyPageShell`(activePath).
-- 배포 #47~#49, 최종 alias `https://63417583.malgn-noti.pages.dev`.
+- 수정: `account/{password,security,multi,contract,credit}.vue`·`account/inquiries/{index,detail}.vue`·`account/inquiry/{index,complete}.vue`(placeholder → 화면 구현), `AppCardListPanel`, `AppMyPageShell`(activePath), `sitemap.vue`(현행화).
+- 배포 #47~#50, 최종 alias `https://60070560.malgn-noti.pages.dev`.
 
 ## 다음 단계 / 알려진 한계
 
