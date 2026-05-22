@@ -152,9 +152,10 @@ const groups: SmGroup[] = [
     ],
   },
   {
-    title: '디자인',
-    desc: '디자인 시스템 레퍼런스',
+    title: '가이드 / 레퍼런스',
+    desc: '사용법과 디자인 시스템',
     items: [
+      { label: '운영 가이드', desc: '화면별 사용법 안내', type: 'page', to: '/help' },
       { label: '디자인 가이드', desc: '토큰·컴포넌트 라이브 카탈로그', type: 'page', to: '/guide' },
       { label: '사이트맵', desc: '전체 페이지·팝업 목록', type: 'page', to: '/sitemap' },
     ],

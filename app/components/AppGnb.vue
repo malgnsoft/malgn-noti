@@ -97,7 +97,7 @@ const menu: MenuItem[] = [
       { label: '상세 설정', to: '/manage/settings' }
     ]
   },
-  { label: '운영가이드', to: '#' }
+  { label: '운영가이드', to: '/help' }
 ]
 
 const userMenu = [
