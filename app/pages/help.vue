@@ -1,4 +1,5 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'blank' })
 useHead({ title: '운영 가이드' })
 
 interface GuideRoute { label: string, to: string }
@@ -176,64 +177,159 @@ const SECTIONS: GuideSection[] = [
 </script>
 
 <template>
-  <div class="app-container page-body">
-    <div class="page-header">
-      <div class="crumb">GUIDE</div>
-      <h1>운영 가이드</h1>
-      <p>맑은 메시징 콘솔의 주요 화면별 사용법을 안내합니다. 각 단계의 화면 이름을 클릭하면 해당 화면으로 이동합니다.</p>
-    </div>
+  <div class="help-page">
+    <header class="help-header">
+      <div class="app-container help-header-inner">
+        <NuxtLink to="/home" class="help-logo">
+          <span class="help-logo-mark"><AppLogoMark /></span>
+          <span class="help-logo-text">맑은</span>
+          <span class="help-logo-sub">message</span>
+        </NuxtLink>
+        <span class="help-header-divider" />
+        <span class="help-header-crumb">GUIDE</span>
+        <span class="help-header-title">운영 가이드</span>
+      </div>
+    </header>
 
-    <div class="guide-layout">
-      <!-- 목차 -->
-      <aside class="guide-toc">
-        <div class="toc-label">목차</div>
-        <a v-for="(s, i) in SECTIONS" :key="s.id" :href="`#${s.id}`" class="toc-item">
-          <span class="toc-no">{{ String(i + 1).padStart(2, '0') }}</span>
-          <UIcon :name="s.icon" class="toc-icon" />
-          <span>{{ s.title }}</span>
-        </a>
-      </aside>
+    <div class="app-container page-body">
+      <div class="guide-layout">
+        <!-- 목차 -->
+        <aside class="guide-toc">
+          <div class="toc-label">목차</div>
+          <a v-for="(s, i) in SECTIONS" :key="s.id" :href="`#${s.id}`" class="toc-item">
+            <span class="toc-no">{{ String(i + 1).padStart(2, '0') }}</span>
+            <UIcon :name="s.icon" class="toc-icon" />
+            <span>{{ s.title }}</span>
+          </a>
+        </aside>
 
-      <!-- 본문 -->
-      <div class="guide-body">
-        <section v-for="(s, i) in SECTIONS" :id="s.id" :key="s.id" class="card guide-sec">
-          <div class="gs-head">
-            <span class="gs-icon"><UIcon :name="s.icon" /></span>
-            <div class="gs-head-text">
-              <div class="gs-title-row">
-                <span class="gs-no">STEP {{ i + 1 }}</span>
-                <h2>{{ s.title }}</h2>
+        <!-- 본문 -->
+        <div class="guide-body">
+          <section v-for="(s, i) in SECTIONS" :id="s.id" :key="s.id" class="card guide-sec">
+            <div class="gs-head">
+              <span class="gs-icon"><UIcon :name="s.icon" /></span>
+              <div class="gs-head-text">
+                <div class="gs-title-row">
+                  <span class="gs-no">STEP {{ i + 1 }}</span>
+                  <h2>{{ s.title }}</h2>
+                </div>
+                <p class="gs-intro">{{ s.intro }}</p>
               </div>
-              <p class="gs-intro">{{ s.intro }}</p>
             </div>
-          </div>
 
-          <div class="gs-routes">
-            <span class="gs-routes-label">관련 화면</span>
-            <NuxtLink v-for="r in s.routes" :key="r.to" :to="r.to" class="gs-route">
-              {{ r.label }}
-              <UIcon name="i-lucide-arrow-up-right" class="gs-route-icon" />
-            </NuxtLink>
-          </div>
+            <div class="gs-routes">
+              <span class="gs-routes-label">관련 화면</span>
+              <NuxtLink v-for="r in s.routes" :key="r.to" :to="r.to" class="gs-route">
+                {{ r.label }}
+                <UIcon name="i-lucide-arrow-up-right" class="gs-route-icon" />
+              </NuxtLink>
+            </div>
 
-          <ol class="gs-steps">
-            <li v-for="(step, j) in s.steps" :key="j">
-              <span class="gs-step-no">{{ j + 1 }}</span>
-              <span class="gs-step-text">{{ step }}</span>
-            </li>
-          </ol>
+            <ol class="gs-steps">
+              <li v-for="(step, j) in s.steps" :key="j">
+                <span class="gs-step-no">{{ j + 1 }}</span>
+                <span class="gs-step-text">{{ step }}</span>
+              </li>
+            </ol>
 
-          <div v-if="s.tip" class="gs-tip">
-            <UIcon name="i-lucide-lightbulb" class="gs-tip-icon" />
-            <span><b>TIP</b> {{ s.tip }}</span>
-          </div>
-        </section>
+            <div v-if="s.tip" class="gs-tip">
+              <UIcon name="i-lucide-lightbulb" class="gs-tip-icon" />
+              <span><b>TIP</b> {{ s.tip }}</span>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
+
+    <footer class="help-footer">
+      <div class="app-container help-footer-inner">
+        <span class="help-footer-brand">맑은 메시징</span>
+        <span class="help-footer-copy">© 2026 맑은소프트. All rights reserved.</span>
+      </div>
+    </footer>
   </div>
 </template>
 
 <style scoped>
+/* 로고만 있는 간단 상단 */
+.help-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+}
+.help-header-inner {
+  display: flex;
+  align-items: center;
+  height: 56px;
+}
+.help-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.help-logo-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: var(--ink-900);
+  color: var(--white);
+  border-radius: var(--r-md);
+}
+.help-logo-text {
+  font-size: var(--fz-lg);
+  font-weight: 800;
+  color: var(--ink-900);
+}
+.help-logo-sub {
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  color: var(--ink-400);
+}
+.help-header-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+  margin: 0 14px;
+}
+.help-header-crumb {
+  font-family: var(--font-mono);
+  font-size: var(--fz-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-400);
+  margin-right: 8px;
+}
+.help-header-title {
+  font-size: var(--fz-md);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+/* 간단 푸터 */
+.help-footer {
+  border-top: 1px solid var(--line);
+  margin-top: 48px;
+  padding: 22px 0;
+}
+.help-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.help-footer-brand {
+  font-size: var(--fz-sm);
+  font-weight: 700;
+  color: var(--ink-700);
+}
+.help-footer-copy {
+  font-size: var(--fz-xs);
+  color: var(--ink-400);
+}
+
 .guide-layout {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -244,7 +340,8 @@ const SECTIONS: GuideSection[] = [
 /* 목차 */
 .guide-toc {
   position: sticky;
-  top: calc(var(--topbar-height) + 24px);
+  /* 헤더(56px + 보더 1px) + .page-body 상단 패딩(32px) = 목차의 실제 시작 위치와 일치 → 스크롤 시 이동 없음 */
+  top: calc(var(--topbar-height) + 33px);
   display: flex;
   flex-direction: column;
   gap: 2px;

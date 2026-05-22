@@ -13,6 +13,7 @@ interface MenuItem {
   label: string
   to?: string
   title?: string
+  newWindow?: boolean
   children?: MenuChildItem[]
 }
 
@@ -97,7 +98,7 @@ const menu: MenuItem[] = [
       { label: '상세 설정', to: '/manage/settings' }
     ]
   },
-  { label: '운영가이드', to: '/help' }
+  { label: '운영가이드', to: '/help', newWindow: true }
 ]
 
 const userMenu = [
@@ -145,6 +146,8 @@ function avatarChar(name: string) {
             <NuxtLink
               v-if="item.to"
               :to="item.to"
+              :target="item.newWindow ? '_blank' : undefined"
+              :rel="item.newWindow ? 'noopener noreferrer' : undefined"
               class="gnb-menu-item"
             >
               {{ item.label }}
@@ -249,6 +252,8 @@ function avatarChar(name: string) {
             <NuxtLink
               v-if="item.to"
               :to="item.to"
+              :target="item.newWindow ? '_blank' : undefined"
+              :rel="item.newWindow ? 'noopener noreferrer' : undefined"
               class="drawer-item"
               @click="mobileOpen = false"
             >
