@@ -3,5 +3,7 @@ useHead({ title: '나의 페이지 — 크레딧 관리' })
 </script>
 
 <template>
-  <AppMyPageShell />
+  <AppMyPageShell>
+    <AppCreditPanel />
+  </AppMyPageShell>
 </template>

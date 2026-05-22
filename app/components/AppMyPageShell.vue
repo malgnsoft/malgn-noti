@@ -21,10 +21,14 @@ const NAV: NavItem[] = [
 /* 계정 설정 그룹과 크레딧·문의 그룹 사이 구분선 위치 */
 const SEP_BEFORE = '/account/credit'
 
+/* activePath — 라우트와 메뉴 경로가 다른 페이지(예: 문의하기)에서 활성 메뉴 지정 */
+const props = defineProps<{ activePath?: string }>()
+
 const route = useRoute()
-const current = computed(() =>
-  NAV.find(n => route.path === n.to || route.path.startsWith(`${n.to}/`)) ?? NAV[0]!,
-)
+const current = computed(() => {
+  const path = props.activePath ?? route.path
+  return NAV.find(n => path === n.to || path.startsWith(`${n.to}/`)) ?? NAV[0]!
+})
 </script>
 
 <template>

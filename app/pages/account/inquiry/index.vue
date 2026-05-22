@@ -59,16 +59,15 @@ function onSubmit() {
 </script>
 
 <template>
-  <div class="app-container page-body">
-    <div class="page-header">
-      <div class="crumb">
-        문의
+  <AppMyPageShell active-path="/account/inquiries">
+    <div class="iq-panel">
+      <div class="ms-head">
+        <h3>문의하기</h3>
       </div>
-      <h1>문의하기</h1>
-      <p>궁금하신 사항이나 도움이 필요하신 경우 문의해 주세요. 빠르고 정확하게 답변 드리겠습니다.</p>
-    </div>
+      <p class="iq-desc">
+        궁금하신 사항이나 도움이 필요하신 경우 문의해 주세요. 빠르고 정확하게 답변 드리겠습니다.
+      </p>
 
-    <div class="card iq-card">
       <!-- 문의 유형 -->
       <section class="iq-sec">
         <div class="iq-label">
@@ -158,26 +157,50 @@ function onSubmit() {
           </div>
         </div>
       </section>
-    </div>
 
-    <div class="send-actions">
-      <button type="button" class="btn btn-neutral" @click="router.push('/account/inquiries')">
-        취소
-      </button>
-      <button type="button" class="btn btn-primary btn-lg" @click="onSubmit">
-        <UIcon name="i-lucide-message-circle" class="text-[length:var(--fz-lg)]" />
-        문의하기
-      </button>
+      <div class="ms-actions">
+        <button type="button" class="btn btn-neutral" @click="router.push('/account/inquiries')">
+          취소
+        </button>
+        <button type="button" class="btn btn-primary btn-lg" @click="onSubmit">
+          <UIcon name="i-lucide-message-circle" class="text-[length:var(--fz-lg)]" />
+          문의하기
+        </button>
+      </div>
     </div>
-  </div>
+  </AppMyPageShell>
 </template>
 
 <style scoped>
-.iq-card {
-  padding: 28px 28px 8px;
+.ms-head {
+  display: flex;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.ms-head h3 {
+  font-size: var(--fz-lg);
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0;
+}
+.iq-desc {
+  font-size: var(--fz-sm);
+  color: var(--ink-500);
+  line-height: 1.6;
+  margin: 0 0 4px;
 }
 .iq-sec {
   padding: 16px 0;
+}
+.ms-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 .iq-label {
   font-size: var(--fz-md);
