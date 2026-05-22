@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-나의 페이지 좌측 메뉴 중 placeholder 상태였던 4개 라우트를 신규 구성 — **비밀번호 변경**(8자+특수문자 검증·표시 토글), **보안로그인 설정**(사용 토글 + 이메일/휴대전화 인증 방식), **멀티 계정 추가**(본인 인증 안내 표·인증 내역·휴대폰 본인 인증 모달 연동), **계약 관리**(상태별 계약 카드 4종·가입서류 첨부 3종) — 하고, 계약 관리에는 **계약서 확인 모달**·**3스텝 계약 체결 위저드**(약관 열람 + 캔버스 전자서명)·**업로드 안내 모달**·**첨부 서류 미리보기 모달**(업로드 PDF iframe 렌더링)을 추가, 갱신 계약 체결 시 기존 계약 만료 처리까지 구현하여 Cloudflare Pages에 배포 (#47). 이어서 **크레딧 관리**(보유 크레딧 카드·A형 검색 필터·내역 테이블·기간 프리셋 자동 날짜·페이지바·영수증 모달)와 **나의 문의**(상태 집계·목록·더보기·⋮ 삭제 메뉴·문의 상세 댓글 스레드)를 신규 구성하고, 문의하기 페이지에 나의 페이지 LNB를 추가하여 재배포 (#48).
+나의 페이지 좌측 메뉴 중 placeholder 상태였던 4개 라우트를 신규 구성 — **비밀번호 변경**(8자+특수문자 검증·표시 토글), **보안로그인 설정**(사용 토글 + 이메일/휴대전화 인증 방식), **멀티 계정 추가**(본인 인증 안내 표·인증 내역·휴대폰 본인 인증 모달 연동), **계약 관리**(상태별 계약 카드 4종·가입서류 첨부 3종) — 하고, 계약 관리에는 **계약서 확인 모달**·**3스텝 계약 체결 위저드**(약관 열람 + 캔버스 전자서명)·**업로드 안내 모달**·**첨부 서류 미리보기 모달**(업로드 PDF iframe 렌더링)을 추가, 갱신 계약 체결 시 기존 계약 만료 처리까지 구현하여 Cloudflare Pages에 배포 (#47). 이어서 **크레딧 관리**(보유 크레딧 카드·A형 검색 필터·내역 테이블·기간 프리셋 자동 날짜·페이지바·영수증 모달)와 **나의 문의**(상태 집계·목록·더보기·⋮ 삭제 메뉴·문의 상세 댓글 스레드)를 신규 구성하고, 문의하기 페이지에 나의 페이지 LNB를 추가하여 재배포 (#48). 또한 멀티 계정 추가의 휴대폰 본인 인증을 **서비스 담당자 초대 플로우**(초대 모달 + `/invite` 담당자 등록 페이지)로 전환하고, **문의 등록 완료 페이지**를 구현하여 재배포 (#49).
 
 ## 1. 비밀번호 변경 페이지
 
@@ -69,14 +69,28 @@
 - 프로덕션 검증: `/account/credit`·`/account/inquiries`·`/account/inquiries/detail`·`/account/inquiry` 모두 200, alias `https://ca4dd0f4.malgn-noti.pages.dev`.
 - 커밋: `867e1a3 나의 페이지 — 크레딧 관리·나의 문의 화면 신규 구성` (9 files, +1704 −31).
 
+## 10. 서비스 담당자 초대 플로우 + 문의 등록 완료 (§10, 배포 #49)
+
+- **AppMultiAccountPanel**: `휴대폰 본인 인증(필요 서류 첨부)` 버튼 → **`서비스 담당자 초대하기`**. 초대 발송 시 내역에 "초대 발송" 상태 행 추가.
+- **AppManagerInviteDialog**(신규): 담당자 이름·이메일 입력(이메일 형식 검증) → 입력 이메일로 등록 안내 메일 발송. "이 이메일이 로그인 아이디로 사용" 안내.
+- **invite.vue**(신규, `/invite`): 초대받은 담당자의 **서비스 담당자 등록 페이지** — 초대 메일 링크 진입(`?email=`·`?inviter=`). 아이디(이메일) 고정, 비밀번호+확인 검증, 휴대폰 본인 인증(`AppPhoneVerifyDialog`), 약관 동의 → 가입 완료 화면. `layout: blank`.
+- **account/inquiry/complete.vue**: placeholder → 문의 등록 완료 화면. 접수 결과(그린 체크) + 문의 내용 요약(유형·제목·내용) + 홈 바로가기. 작성 폼(`onSubmit`)에서 query로 데이터 전달.
+
+## 11. 배포·커밋 (#49)
+
+- `pnpm build` → `wrangler pages deploy dist ... --commit-message "Service manager invite flow + inquiry complete page"` — 배포 #49.
+- 프로덕션 검증: `/account/multi`·`/invite`·`/account/inquiry/complete` 모두 200, alias `https://63417583.malgn-noti.pages.dev`.
+- 커밋: `22bb51f 서비스 담당자 초대 플로우 + 문의 등록 완료 페이지 구현` (5 files, +693 −21).
+
 ## 산출물
 
-- 신규 컴포넌트: `AppPasswordChangePanel`·`AppSecurityLoginPanel`·`AppMultiAccountPanel`·`AppContractPanel`·`AppContractViewDialog`·`AppContractSignDialog`·`AppUploadGuideDialog`·`AppFilePreviewDialog`·`AppCreditPanel`·`AppReceiptDialog`·`AppInquiryListPanel`·`AppInquiryDetailPanel` (12종).
-- 수정: `account/{password,security,multi,contract,credit}.vue`·`account/inquiries/{index,detail}.vue`·`account/inquiry/index.vue`(placeholder → 패널 연결 / LNB 추가), `AppCardListPanel`, `AppMyPageShell`(activePath).
-- 배포 #47 alias `https://688484ab.malgn-noti.pages.dev`, 배포 #48 alias `https://ca4dd0f4.malgn-noti.pages.dev`.
+- 신규 컴포넌트: `AppPasswordChangePanel`·`AppSecurityLoginPanel`·`AppMultiAccountPanel`·`AppContractPanel`·`AppContractViewDialog`·`AppContractSignDialog`·`AppUploadGuideDialog`·`AppFilePreviewDialog`·`AppCreditPanel`·`AppReceiptDialog`·`AppInquiryListPanel`·`AppInquiryDetailPanel`·`AppManagerInviteDialog` (13종).
+- 신규 페이지: `invite.vue`(`/invite` 서비스 담당자 등록).
+- 수정: `account/{password,security,multi,contract,credit}.vue`·`account/inquiries/{index,detail}.vue`·`account/inquiry/{index,complete}.vue`(placeholder → 화면 구현), `AppCardListPanel`, `AppMyPageShell`(activePath).
+- 배포 #47~#49, 최종 alias `https://63417583.malgn-noti.pages.dev`.
 
 ## 다음 단계 / 알려진 한계
 
 - 나의 페이지 남은 placeholder: `/account/billing`(결제 내역) — 화면 미구성.
-- 계약서 본문·인증 안내 문구·크레딧 내역·문의 데이터 등은 목업 — 백엔드(`malgn-noti-api`) 연동 시 교체.
+- 계약서 본문·인증 안내 문구·크레딧 내역·문의 데이터·초대 메일 발송 등은 목업 — 백엔드(`malgn-noti-api`) 연동 시 교체.
 - 전자서명 캔버스는 클라이언트 드로잉만 — 서명 이미지 저장/전송 미구현.
