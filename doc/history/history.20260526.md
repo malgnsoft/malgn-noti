@@ -545,7 +545,58 @@ openapi.ts: `SendSmsRequest`·`SendResponse` + `POST /send/sms`. 최종 paths 44
 - **Webhook handler** — `POST /webhooks/nhn` → `TB_DISPATCH_EVENT` 적재
 - **다른 채널** — `/send/rcs`, `/send/kakao`, `/send/email`, `/send/push`, `/send/flow`
 
-## 20. 다음 단계 / 알려진 한계
+## 20. malgn-noti-api 프로덕션 배포 #4 — /send/sms 발송 producer 라이브
+
+§19 발송 producer(`fb99b66`)를 라이브 반영.
+
+### 20.1 배포
+
+- Version: `4d9e1fbe-c8c5-4b70-933d-a48196fc2599`
+- 번들: 2450 KiB / gzip 571 KiB (#3 2439 → 2450, send 라우트 + openapi 추가분 +11 KB)
+- Worker Startup 70 ms
+
+### 20.2 검증 (https://malgn-noti-api.malgnsoft.workers.dev)
+
+| 엔드포인트 | 결과 |
+| --- | --- |
+| `GET /health` | 200 `env: production` |
+| `GET /health/db` | 200 `mysql_version: 8.0.42` |
+| `GET /doc/openapi.json` | 200, 65 KB, **paths 44 · ops 78 · schemas 53** (`/send/sms` 포함) |
+| `GET /admin/tables` (유효 토큰) | 404 ← env 가드 |
+| `GET /me` (no auth) | 401 |
+| `POST /auth/login` (`prod-1@test.com`) | 200 + JWT |
+| `GET /sender-phones` with JWT | 200 빈 결과 (tenant 격리 정상) |
+| `POST /send/sms` (잘못된 senderPhoneId) | **404** `sender_phone not found` ← 검증 흐름 동작 |
+| `POST /send/sms` (Idempotency-Key 누락) | **400** `Idempotency-Key 헤더 필수` ← 헤더 가드 동작 |
+
+### 20.3 의미
+
+- /send/sms 라우트가 프로덕션 Aurora에 도달하여 검증·격리·에러 응답 모두 정상.
+- 발신번호·옵트아웃·크레딧 hold·트랜잭션 등 코드 경로는 로컬에서 검증 완료, 프로덕션은 발신번호 시드가 없어 실 발송까지는 미테스트 (시드 적용 후 가능).
+- 프로덕션 admin/migrate가 404 차단이라 시드는 로컬 dev 경유로만 — 향후 신청·승인 흐름 도입 시 자연스레 해결.
+
+### 20.4 라이브 ↔ main 일치
+
+배포 시점 working tree와 `main`(`fb99b66`) 일치. 추가 동기화 커밋 불필요.
+
+### 20.5 다음 단계 (변경 없음)
+
+1. 🐛 멱등 버그 수정 — `TB_IDEMPOTENCY` + INSERT-then-conflict
+2. NHN SMS 어댑터 + Queues + consumer worker (실 발송)
+3. 다른 채널 send (RCS/Kakao/Email/Push/Flow)
+4. Export 잡 — 90일 초과 이력 우회
+
+## 21. 재배포 #5 — 코드 변경 없는 새 Version 발급
+
+§20 배포 직후 `git push` 단계에서 도구 권한 오류로 history 커밋이 중단됨. 다음 세션에서 사용자가 "배포"를 재실행하여 finalize. API 코드는 `fb99b66` 그대로 (linter가 `src/lib/jwt.ts`에 `as unknown as JwtPayload` 캐스트 명시화 — HEAD에 이미 반영).
+
+- Version: `afaa4c89-999e-4c0d-832e-3aef96acc326`
+- 같은 번들(2450 KiB / gzip 571), Worker Startup 60 ms
+- 검증: `/health` · `/health/db` (mysql 8.0.42) · `/doc` (paths 44 · ops 78 · schemas 53) · `/send/sms` 미인증 401 — 4건 모두 정상.
+
+라이브 ↔ main: `fb99b66`로 일치.
+
+## 22. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
