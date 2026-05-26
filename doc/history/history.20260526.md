@@ -271,7 +271,38 @@ TOKEN=$(grep ^MIGRATE_TOKEN= .dev.vars | cut -d= -f2)
 - `withDb` 미들웨어 (finally + waitUntil 패턴) — 현재는 conn auto-close 안 함.
 - Zod 검증 실패 응답 — 현재 `@hono/zod-validator` 기본 형식. `AppError` 형식과 통일하려면 hook 등록 검토.
 
-## 14. 다음 단계 / 알려진 한계
+## 14. API 문서 페이지 — `/doc` Scalar UI (`beef401`)
+
+### 14.1 엔드포인트
+
+- `GET /doc/openapi.json` — OpenAPI 3.1 스펙 (raw JSON, ~17 KB)
+- `GET /doc` — Scalar API Reference UI (현대적 OpenAPI 뷰어, Swagger UI 대안)
+
+### 14.2 내용 (`src/openapi.ts`)
+
+- **10 paths / 16 operations** — `/health`·`/health/db`·`/me`·`/contacts(/{id})`·`/contact-groups(/{id}, /{id}/members)`·`/sender-phones(/{id})`
+- **11 schemas** — `Contact`/`ContactCreate`/`ContactPatch`/`ContactGroup`/`ContactGroupCreate`/`ContactGroupPatch`/`MembersBody`/`SenderPhone`/`SenderPhoneCreate`/`Me`/`Error`
+- **security schemes** — `DevCompanyId`/`DevUserId`/`DevRole`(로컬 dev API 키 방식) + `BearerAuth`(프로덕션 JWT, 구현 시 활성)
+- **공통 parameters** — `Cursor`/`Limit`/`IdPath`. **공통 responses** — `Unauthorized`/`NotFound`/`Validation`
+- **사용 가이드** — 인증 방식·응답 형식·커서 페이징·멀티 테넌트 격리·관련 문서 링크 — `info.description`에 명문화
+
+### 14.3 설계 결정
+
+- **손으로 작성** (zod-openapi 자동 생성 미사용). Zod v4 호환 우려 + 단순성 우선. 라우트가 안정화되면 자동 생성 마이그레이션 검토.
+- **드리프트 위험**: 라우트 추가/변경 시 `src/openapi.ts`도 함께 갱신 필요. PR 리뷰 체크리스트에 명시.
+- **Scalar UI 선택** — Swagger UI 대비 모던 디자인·다크모드·코드 샘플 자동 생성.
+
+### 14.4 검증
+
+```
+GET /doc/openapi.json → 200, 17 KB, openapi 3.1.0
+  paths: 10, schemas: 11
+GET /doc              → 200, text/html, scalar 마커 포함
+```
+
+브라우저로 http://localhost:8787/doc 접속 → 좌측 사이드바 네비게이션 + 우측 인터랙티브 콜 패널.
+
+## 15. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
