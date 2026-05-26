@@ -167,9 +167,33 @@ curl -X POST http://localhost:8787/admin/migrate \
 - `.dev.vars`는 gitignored — `MIGRATE_TOKEN`만 로컬 보관. 프로덕션 배포 시에는 별도로 `wrangler secret put` 필요(현 시점 미배포 — 라이브 Worker에는 admin 라우트 없음).
 - 푸시 `e09f70e..a390f32 → origin/main`.
 
-### 12.5 다음 단계 (마이그레이션 운영)
+### 12.5 결정 — admin 라우트는 **로컬 전용** (선택 A 유지)
 
-- `wrangler secret put MIGRATE_TOKEN`으로 프로덕션 토큰 설정 후 admin 라우트 배포 여부 결정 (배포하면 향후 0001~ 마이그레이션도 동일 경로로 적용 가능).
+향후 0001+ 마이그레이션도 동일 방식(`pnpm dev --remote` + curl localhost)으로 적용. 프로덕션에는 배포하지 않음. 이유: 라우트가 공개 URL에 노출되면 토큰 유출 = DB 전체 권한 탈취 위험. 마이그레이션 빈도가 낮아 로컬 적용 부담이 작음. 잦아지면 그때 별도 admin-worker 분리 또는 GitHub Actions OIDC 등 더 안전한 방식으로 전환.
+
+### 12.6 환경 가드 추가 — 실수로도 프로덕션에 안 뚫리도록 (`63ba424`)
+
+토큰 게이트만으로도 보호되지만, 누군가 `wrangler secret put MIGRATE_TOKEN`을 실수로 프로덕션에 등록하면 라우트가 살아남. 이걸 막는 **이중 안전망**:
+
+```ts
+admin.use('*', async (c, next) => {
+  if (c.env.APP_ENV !== 'local') {
+    return c.json({ code: 'not_found', message: 'Route not found' }, 404)
+  }
+  // ... 토큰 검사 ...
+})
+```
+
+- 로컬 `.dev.vars`에 `APP_ENV=local` 추가하여 오버라이드 (gitignored).
+- 프로덕션 `wrangler.toml [vars] APP_ENV="production"` 유지 → 라우트가 무조건 404.
+- 외부에서 보면 "라우트가 존재하지 않는 것"처럼 위장 (`{"code":"not_found"}`).
+- 검증:
+  - `localhost:8787/admin/tables` + 토큰 → **200**, 49 tables.
+  - `localhost:8787/admin/tables` 토큰 누락 → **403**.
+  - `malgn-noti-api.malgnsoft.workers.dev/admin/tables` + 유효 토큰 → **404**.
+
+### 12.7 다음 단계 (마이그레이션 운영)
+
 - 파티션 자동 운영 Cron Worker(`src/workers/partition-maintenance.ts`) — 매월 25일 다음 달 파티션 `REORGANIZE`, 매월 1일 13개월 전 파티션 R2 덤프 + `DROP PARTITION` (SCALABILITY §1·§2).
 - 시드 데이터 `0001_seed.sql` (system terms, 샘플 템플릿 카탈로그).
 - `pnpm db:introspect`로 `src/db/schema.ts` 자동 생성.
