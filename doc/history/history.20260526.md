@@ -502,7 +502,50 @@ openapi.ts에 4 paths + 3 스키마(DispatchRequest/Item/Stat) 추가. 최종 pa
 추천 2번 — **POST /send (발송 큐 producer)** + NHN 어댑터. 발송 이력은 readonly 갖췄으니 쓰기 경로 차례.
 추천 3번 — Export 잡 (`/export-jobs`): 90일 초과 이력 조회 우회.
 
-## 19. 다음 단계 / 알려진 한계
+## 19. POST /send/sms — 발송 producer (DB 적재까지) (`fb99b66`)
+
+### 19.1 흐름
+
+1. `Idempotency-Key` 헤더 필수 (멱등성 — 현재 버그 있음, 19.4 참조)
+2. 발신번호 검증 — 본인 고객사 + `approval_state=승인`
+3. smsType 자동 추론(90B 초과→LMS, 첨부→MMS) 또는 명시
+4. 옵트아웃 필터 — `TB_OPTOUT_ENTRY` IN 절 lookup
+5. 단가 계산 (임시 단가표: SMS 9.9, LMS 30, MMS 100)
+6. 트랜잭션 — 크레딧 조건부 차감 + 원장 hold + `TB_DISPATCH_REQUEST` + bulk `TB_DISPATCH_ITEMs`
+
+### 19.2 신규 파일
+
+- `src/lib/pricing.ts` — `SMS_PRICING` + `detectSmsType(body, hasAttachment)`
+- `src/routes/send.ts` — `POST /send/sms`, 최대 1000 수신자/요청
+
+### 19.3 검증
+
+- 정상 발송 → 201, `recipientCount` · `totalCredit` · 잔액 갱신 OK
+- 옵트아웃 필터: 2명 중 1명만 발송 동작 확인
+- 미승인 발신번호 → 403
+- 잘못된 senderPhoneId → 404
+- 크레딧 부족 (조건부 UPDATE affectedRows=0) → 409 conflict
+
+openapi.ts: `SendSmsRequest`·`SendResponse` + `POST /send/sms`. 최종 paths 44, ops 78, schemas 53.
+
+### 19.4 알려진 한계 — IDEMPOTENCY BUG
+
+같은 `Idempotency-Key` 연달아 호출 시 멱등 SELECT가 직전 INSERT를 못 보고 중복 적재됨. 두 번 호출에 `dispatchRequestId` 2개 생성, 크레딧 2번 차감 발생.
+
+- Drizzle 일반 select / `db.execute(sql\`...\`)` raw / cache-bust 주석 모두 같은 동작
+- Hyperdrive read-cache 후보가 가장 유력했으나 raw + 주석에도 실패 → 다른 원인 가능
+- **TODO(idempotency v2)** — 별 `TB_IDEMPOTENCY` (비파티션, `UNIQUE(company_id, key)`) 테이블로 INSERT-then-conflict 패턴 정식 구현. race-free + 캐시 무관. 코드에 상세 주석 남김.
+
+### 19.5 다음 단계
+
+본 라우트는 DB 적재까지만. 실제 NHN 발송까지:
+- **Cloudflare Queues 설정** — `wrangler.toml [[queues.producers]]` + 큐 생성
+- **Queue consumer worker** — `src/workers/dispatch.ts` (NHN 어댑터 호출)
+- **NHN SMS 어댑터** — `src/adapters/nhn/sms.ts` (AppKey/SecretKey 사용)
+- **Webhook handler** — `POST /webhooks/nhn` → `TB_DISPATCH_EVENT` 적재
+- **다른 채널** — `/send/rcs`, `/send/kakao`, `/send/email`, `/send/push`, `/send/flow`
+
+## 20. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
