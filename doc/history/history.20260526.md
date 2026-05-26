@@ -192,6 +192,15 @@ admin.use('*', async (c, next) => {
   - `localhost:8787/admin/tables` 토큰 누락 → **403**.
   - `malgn-noti-api.malgnsoft.workers.dev/admin/tables` + 유효 토큰 → **404**.
 
+### 12.7-pdf ERD를 인쇄용 PDF로 (`malgn-noti-api/doc/ERD.pdf`, `470b55a`)
+
+DDL과 동기화된 시각 ERD를 외부 공유·인쇄용 PDF로 생성:
+
+- `@mermaid-js/mermaid-cli` (mmdc)가 ERD.md의 9개 mermaid 코드블록을 페이지별 PDF로 렌더 (Chromium 1회 다운로드).
+- `python3 -m pip install --user pypdf` 후 `PdfWriter.append`로 9 페이지를 1 파일(925 KB)로 병합.
+- 각 페이지에서 한국어 텍스트 추출 검증 (테이블·컬럼·관계 라벨 모두 정상).
+- `ERD.md §10`에 재생성 절차 명문화 — 다음 누군가 갱신할 때 막힘 없음.
+
 ### 12.7 마이그레이션 절차 정본 — `malgn-noti-api/doc/MIGRATION.md` (`47afe1a`)
 
 위 12.1~12.6의 결정·절차를 운영 문서 1개로 정리해서 정본화. 9개 섹션 — 왜 이런 절차인가(Aurora SG 제약), 사전 준비, SQL 작성 규칙, 적용 절차 step-by-step, 실패 처리 3안, FAQ 8건, 적용 이력 책임(git + history/), 파티션 운영 분리, 관련 문서. `CLAUDE.md §8`에 링크 추가, `pnpm db:migrate`는 직접 연결 불가라 비현실적임을 표기.
