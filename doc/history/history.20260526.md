@@ -192,7 +192,11 @@ admin.use('*', async (c, next) => {
   - `localhost:8787/admin/tables` 토큰 누락 → **403**.
   - `malgn-noti-api.malgnsoft.workers.dev/admin/tables` + 유효 토큰 → **404**.
 
-### 12.7 다음 단계 (마이그레이션 운영)
+### 12.7 마이그레이션 절차 정본 — `malgn-noti-api/doc/MIGRATION.md` (`47afe1a`)
+
+위 12.1~12.6의 결정·절차를 운영 문서 1개로 정리해서 정본화. 9개 섹션 — 왜 이런 절차인가(Aurora SG 제약), 사전 준비, SQL 작성 규칙, 적용 절차 step-by-step, 실패 처리 3안, FAQ 8건, 적용 이력 책임(git + history/), 파티션 운영 분리, 관련 문서. `CLAUDE.md §8`에 링크 추가, `pnpm db:migrate`는 직접 연결 불가라 비현실적임을 표기.
+
+### 12.8 다음 단계 (마이그레이션 운영)
 
 - 파티션 자동 운영 Cron Worker(`src/workers/partition-maintenance.ts`) — 매월 25일 다음 달 파티션 `REORGANIZE`, 매월 1일 13개월 전 파티션 R2 덤프 + `DROP PARTITION` (SCALABILITY §1·§2).
 - 시드 데이터 `0001_seed.sql` (system terms, 샘플 템플릿 카탈로그).
