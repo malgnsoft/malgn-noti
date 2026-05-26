@@ -1,4 +1,4 @@
-# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53
+# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53 + Aurora DDL 적용
 
 ## 한 줄 요약
 
@@ -123,7 +123,58 @@
 - 검증: `/`, `/sender/numbers`, `/history/sms` 모두 HTTP 200. 새로고침 버튼 제거 마커 확인 — `curl -s /sender/numbers | grep -c toolbar-refresh` → `0` (제거 확정).
 - 산출물: `malgn-noti: 52f653b list 툴바 새로고침 버튼 일괄 제거 + guide / DESIGN 갱신` (13 files, +226 −297). 푸시 `252033d..52f653b → origin/main`.
 
-## 12. 다음 단계 / 알려진 한계
+## 12. Aurora MySQL에 0000_initial.sql 적용 — 49 테이블 + 75 파티션 라이브
+
+Aurora가 SG로 Hyperdrive egress IP만 허용해 로컬 mysql CLI는 차단됨 → **Worker 경유 마이그레이션** 인프라를 구축하고 첫 DDL을 적용.
+
+### 12.1 `/admin/*` 라우트 (`malgn-noti-api/src/routes/admin.ts`)
+
+- **게이트**: 모든 `/admin/*`는 `X-Migrate-Token` 헤더 = `env.MIGRATE_TOKEN` 일치 필수. 미설정 시 라우트 전체 403. 로컬은 `.dev.vars`(gitignored, `openssl rand -hex 16`로 생성), 프로덕션은 `wrangler secret put MIGRATE_TOKEN`.
+- `GET /admin/tables` — `information_schema.TABLES`에서 `TB_*` 목록 조회.
+- `GET /admin/partitions` — `information_schema.PARTITIONS`에서 파티션 명세 조회.
+- `POST /admin/migrate` — body로 SQL 텍스트를 받아 **statement 단위로 순차 실행**:
+  - `--` 주석 제거 + `;` 줄바꿈 기준 split.
+  - 이미 `TB_*` 테이블이 존재하면 409 거부(실수 방지).
+  - 첫 에러에서 중단(DDL 부분 적용 위험).
+  - 응답: `{ ok, statements_total, statements_succeeded, duration_ms, errors[] }`.
+
+### 12.2 적용 절차
+
+`pnpm dev`(`wrangler dev --remote`)로 로컬 Worker가 실제 Hyperdrive → Aurora에 접근. curl로 SQL을 본문 전달:
+
+```bash
+TOKEN=$(cat .dev.vars | cut -d= -f2)
+curl -X POST http://localhost:8787/admin/migrate \
+  -H "X-Migrate-Token: $TOKEN" \
+  -H "Content-Type: application/sql" \
+  --data-binary @src/db/migrations/0000_initial.sql
+```
+
+응답:
+```json
+{ "ok": true, "statements_total": 52, "statements_succeeded": 52, "duration_ms": 6684, "errors": [] }
+```
+
+### 12.3 검증
+
+- `GET /admin/tables` → **49개 `TB_*` 테이블** 전부 생성 확인.
+- `GET /admin/partitions` → **75개 파티션** (`TB_DISPATCH_REQUEST`·`TB_DISPATCH_ITEM`·`TB_DISPATCH_EVENT`·`TB_CREDIT_LEDGER`·`TB_AUDIT_LOG` × 각 15 파티션 = `p202605..p202706` + `pmax`).
+- 적용 시간 6.7초.
+
+### 12.4 산출물
+
+- `malgn-noti-api: a390f32 admin: /admin/migrate · /admin/tables · /admin/partitions 라우트 추가` (2 files, +163).
+- `.dev.vars`는 gitignored — `MIGRATE_TOKEN`만 로컬 보관. 프로덕션 배포 시에는 별도로 `wrangler secret put` 필요(현 시점 미배포 — 라이브 Worker에는 admin 라우트 없음).
+- 푸시 `e09f70e..a390f32 → origin/main`.
+
+### 12.5 다음 단계 (마이그레이션 운영)
+
+- `wrangler secret put MIGRATE_TOKEN`으로 프로덕션 토큰 설정 후 admin 라우트 배포 여부 결정 (배포하면 향후 0001~ 마이그레이션도 동일 경로로 적용 가능).
+- 파티션 자동 운영 Cron Worker(`src/workers/partition-maintenance.ts`) — 매월 25일 다음 달 파티션 `REORGANIZE`, 매월 1일 13개월 전 파티션 R2 덤프 + `DROP PARTITION` (SCALABILITY §1·§2).
+- 시드 데이터 `0001_seed.sql` (system terms, 샘플 템플릿 카탈로그).
+- `pnpm db:introspect`로 `src/db/schema.ts` 자동 생성.
+
+## 13. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
