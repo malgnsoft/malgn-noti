@@ -340,7 +340,62 @@ history              → 본 절 추가
 
 배포 시점 working tree와 `main`이 이미 일치 (`beef401`). 추가 동기화 커밋 불필요.
 
-## 16. 다음 단계 / 알려진 한계
+## 16. 14개 도메인 라우트 추가 — 발신정보 / 주소록 / 템플릿 / 문의 / 결제 (`3bd9864`)
+
+§13의 4개 라우트(기본 CRUD 골격) 패턴을 복제해 나머지 주요 도메인을 일괄 확장. 49 테이블 중 ~24개를 API로 노출.
+
+### 16.1 스키마 확장 (`src/db/schema.ts`)
+
+13개 Drizzle 테이블 추가:
+- 발신정보: `rcsBrand`·`emailDomain`·`pushCert`·`kakaoProfileGroup`·`kakaoSenderProfile`·`optout080Number`
+- 주소록: `optoutEntry`
+- 템플릿: `templateCategory`·`template`
+- 시스템: `inquiry`·`inquiryReply`·`landingPage`·`companySettings`
+- 결제: `paymentMethod`·`creditLedger`(파티션 PK)
+
+### 16.2 신규 라우트 14종
+
+| 라우트 | 메서드 | 특징 |
+| --- | --- | --- |
+| `/rcs-brands` | CRUD | brandCode UNIQUE 409 처리 |
+| `/email-domains` | CRUD | verified_yn / dkim_state 워크플로 |
+| `/push-certs` | CRUD | credentialEnc 응답 제외, base64 입력 |
+| `/kakao-profile-groups` | CRUD | 단순 그룹 메타 |
+| `/kakao-sender-profiles` | CRUD | sendKeyEnc 응답 제외, profileId UNIQUE |
+| `/optout-080-numbers` | CRUD | line_state 워크플로 |
+| `/optout-entries` | CRUD | 채널별, 발송 직전 핫 경로, status=-1로 거부 해제 |
+| `/template-categories` | CRUD | 트리(부모 검증), 자식 있으면 삭제 거부 |
+| `/templates` | CRUD | 채널 필터, 시스템 샘플(company_id NULL) 조회 포함, 수정 시 review_state→draft |
+| `/inquiries` | CRUD + `/:id/replies` | 답변 추가 시 answer_state→progress |
+| `/company-settings` | GET / PUT | 1:1 upsert (settings JSON) |
+| `/payment-methods` | CRUD | billingKeyEnc 마스킹, default_yn 단일성 보장 |
+| `/landing-pages` | CRUD | publishedYn=Y 시 publishedAt 자동 |
+| `/credit-ledger` | GET (read-only) | append-only, entryType/기간 필터 |
+
+### 16.3 공통 패턴 (기존 §13과 동일)
+
+- `requireAuth()` 미들웨어 + `companyId` 스코프
+- 커서 페이징 `(created_at DESC, id DESC)`
+- soft delete `status=-1`
+- 시크릿 필드(credentialEnc·sendKeyEnc·billingKeyEnc)는 응답에서 제외
+- UNIQUE 위반은 409 conflict 응답
+
+### 16.4 검증 (pnpm dev + curl)
+
+9개 라우트 POST/GET 정상 동작 확인:
+- `/rcs-brands`, `/email-domains`, `/optout-entries`, `/template-categories`
+- `/templates` (한글 + JSON spec)
+- `/inquiries`, `/company-settings` (GET/PUT upsert)
+- `/credit-ledger` (빈 목록 페이징)
+
+### 16.5 미완료 / 알려진 한계
+
+- **`/doc` OpenAPI 스펙 동기화 미반영** — 14개 신규 라우트가 `src/openapi.ts`에 없음. 손으로 작성 부담이 너무 큼. 다음 단계로 **`hono-openapi` 자동 생성 마이그레이션** 후 일괄 갱신 권장.
+- 일부 PATCH 미제공 — sender-phones, kakao-profile-groups, optout-080-numbers, optout-entries 등 워크플로 상태 변경은 별도 RPC 라우트(`/sender-phones/:id/approve`)로 분리하는 게 깔끔.
+- 인증·JWT는 여전히 dev 헤더만. signup/login 구현이 다음 큰 마일스톤.
+- `dispatch-*` 라우트(발송 이력 read-only)는 파티션 테이블이라 별도 설계 필요. 다음 단계.
+
+## 17. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
