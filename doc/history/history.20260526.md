@@ -462,7 +462,47 @@ openapi.ts에 4 paths + 3 스키마(DispatchRequest/Item/Stat) 추가. 최종 pa
 - from-to 145일 → 400 validation + "range too wide ... use Export job"
 - /dispatch-stats 채널·기간 필터 → 200 empty + window
 
-## 18. 다음 단계 / 알려진 한계
+## 18. malgn-noti-api 프로덕션 배포 #3 — 인증·14 라우트·발송 이력 라이브
+
+§16·§17 누적 변경(14 도메인 라우트 + /auth + /dispatch + openapi 확장)을 라이브 반영.
+
+### 18.1 사전
+
+- `JWT_SECRET` wrangler secret 등록 — `openssl rand -hex 32 | pnpm wrangler secret put JWT_SECRET` (값은 로그 안 남김, 향후에도 노출 불가).
+- typecheck 통과, working tree clean (`main`이 모든 변경 이미 포함).
+
+### 18.2 배포
+
+- `pnpm run deploy` (wrangler deploy)
+- Version: `926017d2-6ba8-440f-b405-5330ef3f2ffb`
+- 번들: 2439 KiB / gzip 568 KiB (이전 #2 2310 → +130 KiB, auth + dispatch + openapi 확장)
+- Worker Startup 62 ms
+
+### 18.3 검증 — 프로덕션 엔드투엔드 인증 흐름
+
+| 엔드포인트 | 결과 |
+| --- | --- |
+| `GET /health` | 200 `env: production` |
+| `GET /health/db` | 200 `mysql_version: 8.0.42` |
+| `GET /doc/openapi.json` | 200, 61.9 KB, **43 paths · 77 ops · 51 schemas** (`/auth/signup`·`/auth/login` 포함) |
+| `GET /admin/tables` (유효 토큰) | **404** ← env 가드 유지 |
+| `GET /me` (no auth) | **401** |
+| `POST /auth/signup` (실제 가입) | **201** + JWT — companyId=4, "프로덕션테스트" 생성 |
+| `GET /me` with Bearer JWT | **200** — `user.role=owner`, `company.name=프로덕션테스트` |
+| `POST /auth/login` (잘못된 pw) | **401** |
+
+**의미** — 프로덕션 Worker가 실제 Aurora에 직접 INSERT/SELECT 수행, JWT가 7일 만료로 발급, dev 헤더는 production에서 무시되어 보안 격리 유지.
+
+### 18.4 라이브 ↔ main 일치
+
+배포 시점 working tree와 `main`(`f45ad01`) 일치. 추가 동기화 커밋 불필요.
+
+### 18.5 다음 단계
+
+추천 2번 — **POST /send (발송 큐 producer)** + NHN 어댑터. 발송 이력은 readonly 갖췄으니 쓰기 경로 차례.
+추천 3번 — Export 잡 (`/export-jobs`): 90일 초과 이력 조회 우회.
+
+## 19. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
