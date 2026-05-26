@@ -1,4 +1,4 @@
-# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53 + Aurora DDL 적용
+# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53 + Aurora DDL 적용 + 기본 CRUD API 골격
 
 ## 한 줄 요약
 
@@ -211,7 +211,67 @@ DDL과 동기화된 시각 ERD를 외부 공유·인쇄용 PDF로 생성:
 - 시드 데이터 `0001_seed.sql` (system terms, 샘플 템플릿 카탈로그).
 - `pnpm db:introspect`로 `src/db/schema.ts` 자동 생성.
 
-## 13. 다음 단계 / 알려진 한계
+## 13. 기본 CRUD API 골격 — Hono + Drizzle + Zod (`a146e81`, `8128468`, `2b6f720`)
+
+49 테이블 전부 CRUD는 과하므로, **재사용 가능한 인프라(errors/pagination/auth/schema) + 가장 활용도 높은 도메인(주소록·발신번호)을 패턴 사례로** 완성. 나머지 도메인은 동일 패턴 복제.
+
+### 13.1 사전 픽스 (`a146e81`)
+
+- `getDb()`가 `ctx.waitUntil(conn.end())`을 즉시 등록해서 핸들러 사용 전에 연결이 닫히던 버그. 모든 라우트가 500 (`Can't add new command when connection is in closed state`). → `conn.end()` 호출 제거. Hyperdrive 풀링에 의존, isolate 종료시 GC. TODO: `withDb` 미들웨어로 finally + waitUntil 구조 리팩터.
+- `/admin/migrate`에 `?allow_existing=1` 쿼리 — 0001+ 마이그레이션 / 시드 데이터 적용 시 TB_* 존재 가드 우회. 신규 DDL은 가드 유지.
+
+### 13.2 의존성 (`8128468`)
+
+`zod 4.4.3` + `@hono/zod-validator 0.8.0`. CLAUDE.md §9 "모든 입력은 Zod로 파싱" 규칙 준수. Zod v4는 `.partial()`이 `.refine()`된 스키마에서 동작하지 않으므로 베이스 스키마 공유 + refine 각각 적용 패턴 채택.
+
+### 13.3 인프라 + 라우트 (`2b6f720`)
+
+**재사용 가능 인프라**
+- `src/lib/errors.ts` — `AppError` + `errors` 헬퍼(notFound/forbidden/conflict/validation 등).
+- `src/lib/pagination.ts` — 커서 페이징 (SCALABILITY §5) base64url JSON `{ c: ISO, i: id }`, `paginate(rows, limit, toCursor)` 헬퍼.
+- `src/middleware/auth.ts` — `requireAuth()`/`requireRole()`/`authCtx()`. 로컬 dev 단축(`X-Dev-Company-Id`/`X-Dev-User-Id`/`X-Dev-Role` 헤더). 프로덕션 JWT는 signup/login 라우트 구현 시 활성.
+- `src/db/schema.ts` — Drizzle 수기 스키마 (touch한 6개 — TB_COMPANY, TB_USER, TB_CONTACT, TB_CONTACT_GROUP, TB_CONTACT_GROUP_MEMBER, TB_SENDER_PHONE). TS camelCase ↔ 물리 snake_case, `status INT default 1`, `*_yn CHAR(1)`.
+
+**도메인 라우트**
+- `GET /me` — 현재 사용자 + 소속 고객사 (auth 검증용 최소).
+- `/contacts` — CRUD 완전체. list (커서·`?q=`·`?status=`), POST/GET/PATCH/DELETE(soft).
+- `/contact-groups` — CRUD + `/:id/members` POST·DELETE (memberCount 캐시 자동 갱신, IN 절 + 소유 검증).
+- `/sender-phones` — 신청·조회·삭제. `approval_state=대기` 신청, 승인된 번호는 자가 삭제 금지(403).
+
+**전역 wiring (`src/index.ts`)**
+- `AppError` `onError` 핸들러 → `{ code, message, details? }` 표준 응답.
+- 4개 라우트 등록 + 기존 `/health`·`/health/db`·`/admin/*` 유지.
+
+### 13.4 검증 (`pnpm dev --remote` + curl)
+
+```bash
+TOKEN=$(grep ^MIGRATE_TOKEN= .dev.vars | cut -d= -f2)
+# 시드
+{ echo 'INSERT IGNORE INTO TB_COMPANY (id, name, status) VALUES (1, "테스트사", 1);';
+  echo 'INSERT IGNORE INTO TB_USER (id, company_id, loginid, password_hash, name, role, status) VALUES (1, 1, "admin@test.com", "stub", "테스트관리자", "admin", 1);';
+} | curl -X POST "http://localhost:8787/admin/migrate?allow_existing=1" \
+    -H "X-Migrate-Token: $TOKEN" -H "Content-Type: application/sql" --data-binary @-
+```
+
+확인된 동작:
+- 401 미인증 / 200 인증 / 400 Zod 검증 실패 / 404 미존재 모두 표준 응답
+- `GET /me` → 200, `{ user, company, ctxRole }`
+- `POST /contacts` → 201, 한글·JSON 필드 정상 (`extraVars: {"city":"서울"}`)
+- `GET /contacts?limit=5` → 커서 페이지, `nextCursor: null` (1건)
+- `POST /sender-phones` → 201, `approvalState: "대기"`
+- `GET /sender-phones?approvalState=대기` → URL 인코딩 한글 필터 정상
+
+### 13.5 다음 단계
+
+동일 패턴 복제:
+- `/optout-entries`, `/templates`(채널별 spec), `/history/*`(read-only 조인 뷰), `/sender-*`(브랜드·도메인·인증서), `/campaigns`, `/charge`·`/credit`.
+
+코어 미흡 영역:
+- `signup`/`login` → JWT 검증 + auth 미들웨어 활성. 현재는 dev 단축만.
+- `withDb` 미들웨어 (finally + waitUntil 패턴) — 현재는 conn auto-close 안 함.
+- Zod 검증 실패 응답 — 현재 `@hono/zod-validator` 기본 형식. `AppError` 형식과 통일하려면 hook 등록 검토.
+
+## 14. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
