@@ -1,4 +1,4 @@
-# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53 + Aurora DDL 적용 + 기본 CRUD API 골격
+# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53 + Aurora DDL 적용 + 기본 CRUD API 골격 + /doc + 두 번째 프로덕션 배포
 
 ## 한 줄 요약
 
@@ -302,7 +302,45 @@ GET /doc              → 200, text/html, scalar 마커 포함
 
 브라우저로 http://localhost:8787/doc 접속 → 좌측 사이드바 네비게이션 + 우측 인터랙티브 콜 패널.
 
-## 15. 다음 단계 / 알려진 한계
+## 15. malgn-noti-api 프로덕션 배포 #2
+
+§7에서 적용한 첫 배포(`Version 8b0d8674`) 이후 누적된 변경(§10 운영 컨벤션 명문화 / §12 admin 라우트 + Aurora DDL 적용 인프라 / §13 기본 CRUD API + Drizzle 스키마 / §14 /doc Scalar UI)을 한 번에 라이브로.
+
+### 15.1 배포 흐름 (`malgn-noti-api/CLAUDE.md §8.1` 준수)
+
+```
+pnpm typecheck       → 통과
+pnpm run deploy      → Cloudflare Workers
+검증                  → /health, /health/db, /doc, /doc/openapi.json, /me, /admin/* 7건
+커밋·푸시              → 이미 sync (이전 단계마다 push했음)
+history              → 본 절 추가
+```
+
+### 15.2 배포 결과
+
+- **Version ID**: `1fdc3b12-9e43-4c31-90c4-609845569e65`
+- 번들: 2309.97 KiB / gzip 549.75 KiB (이전 1638.71 KiB → 2309.97 KiB, drizzle + mysql2 + zod + Scalar 포함으로 증가)
+- Worker Startup: 49 ms
+
+### 15.3 검증 (https://malgn-noti-api.malgnsoft.workers.dev)
+
+| 엔드포인트 | 결과 |
+| --- | --- |
+| `GET /` | 200, `env: "production"` |
+| `GET /health` | 200 |
+| `GET /health/db` | 200, `mysql_version: "8.0.42"` |
+| `GET /doc/openapi.json` | 200, 17 KB, 10 paths |
+| `GET /doc` | 200, text/html (Scalar UI) |
+| `GET /me` (인증 없음) | **401** `unauthenticated` ← 인증 가드 작동 |
+| `GET /admin/tables` (유효 토큰) | **404** `not_found` ← env 가드(APP_ENV=production) 작동 |
+
+두 가드 모두 프로덕션에서 정상 작동 — auth는 dev 헤더 거부 + JWT 미구현으로 401, admin은 토큰과 무관하게 404로 위장.
+
+### 15.4 라이브 ↔ main 일치
+
+배포 시점 working tree와 `main`이 이미 일치 (`beef401`). 추가 동기화 커밋 불필요.
+
+## 16. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
