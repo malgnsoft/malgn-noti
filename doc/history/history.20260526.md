@@ -1,4 +1,4 @@
-# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화
+# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화 + malgn-noti 배포 #53
 
 ## 한 줄 요약
 
@@ -112,7 +112,18 @@
 
 산출물: `malgn-noti-api: e09f70e docs: 배포·Git·작업 이력 운영 컨벤션 명문화 (§8.1)`. 푸시 `7a17504..e09f70e → origin/main`.
 
-## 11. 다음 단계 / 알려진 한계
+## 11. malgn-noti 프론트 배포 #53 — 새로고침 버튼 일괄 제거
+
+§7.1 흐름대로 `pnpm build → npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main --commit-dirty=true --commit-message "Remove refresh buttons from list toolbars + update guide and DESIGN"` 실행. **Working tree에 누적된 사용자 작업분**(13개 파일)을 그대로 라이브로 올리고, 직후 `52f653b` 커밋으로 main을 라이브와 동기화.
+
+- 변경 패턴: 발송 조회·관리·연락처·발신정보·랜딩 등 **목록 페이지의 `list-toolbar` 새로고침 버튼**과 보조 CSS(`toolbar-sep`, `toolbar-refresh`)를 일괄 제거. 페이지당 평균 −27~28라인.
+- 동시 변경: `app/pages/guide.vue` +162라인(가이드 확장), `doc/DESIGN.md` 86라인 갱신.
+- 빌드: Nitro `cloudflare-pages` 프리셋 → `dist/`, 총 2.96 MB / gzip 889 KB.
+- 배포 URL: 프로덕션 https://malgn-noti.pages.dev, alias https://127705c3.malgn-noti.pages.dev.
+- 검증: `/`, `/sender/numbers`, `/history/sms` 모두 HTTP 200. 새로고침 버튼 제거 마커 확인 — `curl -s /sender/numbers | grep -c toolbar-refresh` → `0` (제거 확정).
+- 산출물: `malgn-noti: 52f653b list 툴바 새로고침 버튼 일괄 제거 + guide / DESIGN 갱신` (13 files, +226 −297). 푸시 `252033d..52f653b → origin/main`.
+
+## 12. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
