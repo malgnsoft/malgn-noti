@@ -1,0 +1,112 @@
+# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포
+
+## 한 줄 요약
+
+`malgn-noti-api`의 **데이터 모델링부터 첫 프로덕션 배포까지** 한 흐름으로 진행 — 사용자단 화면·소스·MD를 읽고 49개 테이블 데이터 모델 작성(**TB_** 접두어, `company_id` FK, `status INT` 1/0/-1 + `*_state VARCHAR` 분리, `*_yn CHAR(1)` Y/N, `loginid`/`email` 분리), 시각 ERD를 Mermaid 9종으로 작성, 발송량 시나리오 분석 후 **월 RANGE 파티셔닝 + Hot/Warm/Cold + R2 오프로드** 확장성 전략을 정본 §13 + 별도 `SCALABILITY.md`로 정리, 49 테이블 초기 마이그레이션 SQL(파티션 5종 + `raw_payload_r2_key` 포함)을 작성, **Hyperdrive(MySQL) 바인딩 `a2ba4efe7421464da1d5ff5e620b33a3`** 연결 + `drizzle-orm/mysql2` 셋업 + `/health/db` 헬스 체크 + `wrangler dev --remote` 로 로컬에서도 실제 Aurora MySQL 8.0.42 응답 확인, 최종적으로 `wrangler deploy`로 **`https://malgn-noti-api.malgnsoft.workers.dev` 프로덕션 첫 배포** 완료 (모든 엔드포인트 200, `/health/db` mysql_version 8.0.42).
+
+## 1. 데이터 모델 (`malgn-noti-api/doc/DATA-MODEL.md`)
+
+- 입력: `malgn-noti`의 화면 73개·`app/types/*`·목업 데이터, `malgn-noti-api/CLAUDE.md §5 1차 모델`, `doc/DESIGN.md §14`.
+- **49개 테이블** / 9개 도메인. Aurora MySQL 8.0 / Drizzle 대상.
+- 공통 규칙:
+  - **`TB_` 접두어 + 대문자 스네이크** (`TB_DISPATCH_REQUEST`).
+  - 컬럼 `snake_case`, 고객사 FK는 `company_id`. 멀티 테넌트 격리(`§1.2`).
+  - 시간 `DATETIME` UTC. PK `BIGINT UNSIGNED AUTO_INCREMENT`.
+  - 불리언 `CHAR(1)` `'Y'`/`'N'`, 컬럼명 `*_yn` (`§1.11`).
+  - **`status INT NOT NULL DEFAULT 1`** — `1`=정상/`0`=중지/`-1`=삭제 (`§1.12`).
+  - 다단계 업무 상태는 **`*_state VARCHAR(20)`** 으로 분리 — `dispatch_state`/`review_state`/`approval_state`/`pay_state`/`answer_state` 등 16개.
+  - `enum` 회피 → `VARCHAR` + Zod 검증.
+  - JSON 컬럼(`spec`, `message_spec`, `nodes`)으로 채널 형상 다양성 흡수.
+- **TB_USER** — `loginid` (로그인 ID, `UNIQUE(company_id, loginid)`) + `email` (알림·영수증 수신) 분리.
+- 도메인별 §3~§10 — 계정/인증, 크레딧/결제, 발신정보, 주소록, 템플릿, 발송·Flow·캠페인, 이력/Export, 문의/시스템.
+
+## 2. ERD (`malgn-noti-api/doc/ERD.md`)
+
+- Mermaid `erDiagram` **9종** — 전체 관계 개관 1 + 도메인 8 (§2~§9).
+- 모든 컬럼에 코멘트 4번째 항목 추가 — 박스 내부에 `bigint id PK "고객사 식별자"` 형태로 렌더링.
+- 카디널리티 `||--o{`(1:N)·`||--||`(1:1)·`||--o|`(1:0/1)·M:N(junction)·자기참조(트리·중첩답글)·복합 PK 모두 표현.
+
+## 3. 확장성·파티셔닝 전략 (`malgn-noti-api/doc/SCALABILITY.md`)
+
+볼륨 가정(1년차 100만~1천만/월 → 5년차 1억+/월)에서 13억 행 Aurora 누적 시나리오를 분석하고, **DDL 첫 작성 시점부터** 적용해야 사후 마이그레이션 비용을 회피할 수 있는 결정 사항을 §1~§7로 정리.
+
+- **§1 월 RANGE 파티셔닝** — `TB_DISPATCH_REQUEST/ITEM/EVENT` + `TB_CREDIT_LEDGER` + `TB_AUDIT_LOG` 5개. PK 복합 `(id, created_at)` (또는 `received_at`) — MySQL 8 파티셔닝 제약. `DROP PARTITION`으로 회수, `DELETE` 금지.
+- **§2 Hot/Warm/Cold** — Hot(Aurora 90일) → Warm(Aurora 콜드 13개월) → **Cold(R2 Parquet)**. `DROP PARTITION` 직전 Parquet 덤프 Worker Cron.
+- **§3 `raw_payload` R2 오프로드** — 1 KB 미만은 인라인, 초과분은 `raw_payload_r2_key`로 분리. 평균 DB 부담 1/10 수준.
+- **§4 사전 집계** — 기존 `TB_DISPATCH_STAT_DAILY` 옆에 **`TB_DISPATCH_STAT_HOURLY`** 추가 (5분 주기). 시간 범위별 출처 계층화.
+- **§5 인덱스·쿼리 가드** — OFFSET 금지·커서 페이징·30일 기본 윈도우·JSON generated column.
+- **§6 Aurora 토폴로지** — Writer/Reader 분리, Hyperdrive 바인딩 2개(`_W`/`_R`), Limitless 전환 기준.
+- **§7 운영 트리거** — `DISPATCH_ITEM > 5억 행 → ClickHouse PoC`, `Writer CPU 60%+ → Reader 추가` 등 임계 룰북.
+
+## 4. 초기 DDL (`malgn-noti-api/src/db/migrations/0000_initial.sql`)
+
+- **49개 테이블** — MySQL 8.0 / Aurora MySQL 3 호환, `utf8mb4_0900_ai_ci`, `ENGINE=InnoDB`, 모든 컬럼·테이블에 `COMMENT`.
+- **파티션 적용** — 5개 테이블, 2026-05~2027-06 (14개월) + `pmax`. 매월 25일 `REORGANIZE`, 매월 1일 `DROP PARTITION`(외부 Cron Worker).
+- **§13.3 R2 오프로드 컬럼** — `TB_DISPATCH_EVENT.raw_payload_r2_key VARCHAR(255) NULL` 1차 스키마에 포함.
+- 파티션 테이블은 MySQL 제약상 FK 미사용 → application-level 정합성, 주석 명시.
+- `drizzle.config.ts` 신설 — `db:introspect`/`db:generate`/`db:migrate` 스크립트.
+
+## 5. Hyperdrive 연결 (`malgn-noti-api/wrangler.toml` + 신규 코드)
+
+- 사용자 제공 Hyperdrive ID: **`a2ba4efe7421464da1d5ff5e620b33a3`**.
+- `wrangler.toml`:
+  ```toml
+  [[hyperdrive]]
+  binding = "HYPERDRIVE"
+  id = "a2ba4efe7421464da1d5ff5e620b33a3"
+  ```
+- **`src/db/client.ts`** — `drizzle-orm/mysql2` + `mysql2/promise.createConnection`. `getDb(env, ctx)` 요청 스코프 핸들(`ctx.waitUntil(conn.end())`), `pingDb(env)` 헬스. mysql2 mixin 타입 이슈는 `db.execute(sql\`...\`)`로 우회.
+- **`src/index.ts`** — `GET /health/db` 추가, `Bindings.HYPERDRIVE: Hyperdrive` 타입 결합 (cf-typegen).
+- **의존성**: `drizzle-orm@0.36.4`, `mysql2@3.22.3`, `drizzle-kit@0.28.1`. wrangler `4.90 → 4.94` 업그레이드.
+
+## 6. 로컬 개발 = 실제 Hyperdrive
+
+- 로컬 `wrangler dev` 기본 모드는 Hyperdrive를 로컬 Postgres로 에뮬레이트하려 하므로 실패 → `wrangler dev --remote` 필요.
+- Hyperdrive는 4.94 시점에도 per-binding `remote = true` 미지원 (`wrangler.toml`에 메모만 남김) → `package.json` `dev` 스크립트를 **`wrangler dev --remote`** 로 변경.
+- `pnpm dev` 단독으로 `http://localhost:8787` 기동, 모든 요청이 실제 Cloudflare edge 경유 Hyperdrive → Aurora.
+
+## 7. 프로덕션 배포
+
+- `pnpm typecheck` 통과 → `pnpm run deploy` (`wrangler deploy`).
+- 산출: **`https://malgn-noti-api.malgnsoft.workers.dev`**, Version `8b0d8674-57d0-4b00-966e-bdafc4de7a83`.
+- 검증:
+  ```
+  GET /             → 200 {"name":"malgn-noti-api","status":"placeholder","env":"production"}
+  GET /health       → 200 {"ok":true,"env":"production"}
+  GET /health/db    → 200 {"ok":true,"mysql_version":"8.0.42"}   ← Aurora 응답
+  ```
+- 의미 — `malgn-noti-api`의 **첫 프로덕션 배포**이자, Cloudflare Workers ↔ Hyperdrive ↔ AWS Aurora MySQL 경로가 살아 있음을 확인한 마일스톤.
+
+## 8. 산출물
+
+### 신규 파일 (`malgn-noti-api/`)
+- `doc/DATA-MODEL.md` (49 테이블 정본)
+- `doc/ERD.md` (Mermaid 9 다이어그램)
+- `doc/SCALABILITY.md` (§13 상세 가이드)
+- `src/db/migrations/0000_initial.sql` (1049라인)
+- `src/db/client.ts`
+- `drizzle.config.ts`
+- `worker-configuration.d.ts` (cf-typegen 산출)
+
+### 수정 파일
+- `wrangler.toml` — Hyperdrive 바인딩 추가
+- `src/index.ts` — `/health/db` 라우트 + 타입 확장
+- `package.json` — drizzle 의존성 + `dev: wrangler dev --remote` + db 스크립트
+- `pnpm-lock.yaml`
+
+### 커밋 (malgn-noti-api)
+- `eecf226` — doc: 데이터 모델 / ERD / 확장성 전략 정리
+- `0653472` — db: 초기 마이그레이션 0000_initial.sql + drizzle-kit 설정
+- `7a17504` — Hyperdrive(MySQL) 연결 + /health/db + Drizzle 런타임 셋업
+
+푸시: `decfaf0..7a17504 → origin/main`.
+
+## 9. 다음 단계 / 알려진 한계
+
+- **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
+- **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
+- **시드 데이터** — `0001_seed.sql` (system terms, 샘플 템플릿 카탈로그).
+- **Drizzle 스키마 자동 생성** — DDL 적용 후 `pnpm db:introspect`로 `src/db/schema.ts` 생성, 카멜케이스 객체명 정리.
+- **Reader 분리** — 트래픽 증가 시 별도 Reader Hyperdrive 추가, `HYPERDRIVE_R` 바인딩 (SCALABILITY §6).
+- **`before`/`after`** — `TB_AUDIT_LOG`는 DDL에서 MySQL 예약어 충돌 회피 차 `before_json`/`after_json`으로 명명. DATA-MODEL.md 본문 표기와 다음 동기화 시 일치 필요.
+- **로컬 MySQL 옵션** — 오프라인 개발이 필요해지면 `localConnectionString = "mysql://..."` 추가하고 `dev`에서 `--remote` 제거.
