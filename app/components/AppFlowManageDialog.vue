@@ -118,9 +118,6 @@ function placeholder(msg: string) {
         <input v-model="search" class="input" placeholder="플로우 이름을 입력하세요." style="padding-right: 30px">
         <UIcon name="i-lucide-search" class="text-sm" style="position: absolute; right: 10px; top: 11px; color: var(--ink-400)" />
       </div>
-      <button type="button" class="btn btn-outline btn-sm" @click="placeholder('새로고침했습니다.')">
-        <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-      </button>
       <button type="button" class="btn btn-outline btn-sm" disabled>
         ‹ 이전
       </button>

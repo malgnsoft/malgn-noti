@@ -87,11 +87,6 @@ function onReleaseConfirm() {
   toast.add({ title: '080 수신 거부 번호 이용 해지', description: `${n}개 번호의 이용 해지를 요청했습니다.`, icon: 'i-lucide-info' })
 }
 
-function onRefresh() {
-  selected.value = []
-  page.value = 1
-  toast.add({ title: '목록을 새로고침했습니다.', color: 'info', icon: 'i-lucide-rotate-cw' })
-}
 </script>
 
 <template>
@@ -120,10 +115,6 @@ function onRefresh() {
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>건</span>
-          <span class="toolbar-sep">|</span>
-          <button type="button" class="toolbar-refresh" @click="onRefresh">
-            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
           <div class="o8-search">
             <input v-model="search" class="input" placeholder="080 수신 거부 번호를 입력하세요.">
             <UIcon name="i-lucide-search" class="text-sm o8-search-icon" />
@@ -301,25 +292,6 @@ function onRefresh() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
-  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

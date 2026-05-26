@@ -64,12 +64,6 @@ function profileTone(s: ProfileStatus) {
 function onSearch() {
   page.value = 1
 }
-function onRefresh() {
-  selected.value = []
-  page.value = 1
-  search.value = ''
-  toast.add({ title: '발신 프로필 목록을 새로고침했습니다.', color: 'info', icon: 'i-lucide-rotate-cw' })
-}
 
 /* ── 모달 ─────────────────────────────────────────── */
 const openRegister = ref(false)
@@ -137,10 +131,6 @@ function onDeleteConfirm() {
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>
-          <span class="toolbar-sep">|</span>
-          <button type="button" class="toolbar-refresh" @click="onRefresh">
-            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
           <div class="search-box">
             <input
               v-model="search"
@@ -343,25 +333,6 @@ function onDeleteConfirm() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
-  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

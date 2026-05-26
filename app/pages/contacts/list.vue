@@ -75,10 +75,6 @@ function onGroupMoveConfirm() {
   selected.value = []
 }
 
-function onRefresh() {
-  toast.add({ title: '새로고침', description: '연락처 목록을 새로고침했습니다.', icon: 'i-lucide-refresh-cw' })
-}
-
 /* ── 그룹 등록 ───────────────────────────────────────────────────── */
 const groupFormOpen = ref(false)
 
@@ -192,10 +188,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
           <div class="list-toolbar">
             <div class="row" style="gap: 10px; flex-wrap: wrap">
               <span class="ct-count">총 <strong>{{ filtered.length }}</strong>명</span>
-              <span class="toolbar-sep">|</span>
-              <button type="button" class="toolbar-refresh" @click="onRefresh">
-                <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-              </button>
               <div class="ct-search">
                 <input v-model="search" class="input" placeholder="이름 / 휴대폰 / 이메일 검색">
                 <UIcon name="i-lucide-search" class="text-sm ct-search-icon" />
@@ -424,25 +416,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
 }
 .list-table-scroll {
   overflow-x: auto;
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
-  color: var(--ink-900);
 }
 .ct-search {
   position: relative;

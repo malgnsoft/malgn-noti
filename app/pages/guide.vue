@@ -717,8 +717,6 @@ const segDemo = ref('a')
               <div class="gt-toolbar">
                 <div class="gt-grp">
                   <span class="gt-count">총 <strong>24</strong>건</span>
-                  <span class="gt-sep">|</span>
-                  <span class="gt-refresh"><UIcon name="i-lucide-refresh-cw" class="gt-ico" /> 새로고침</span>
                 </div>
                 <div class="gt-grp">
                   <span class="btn btn-outline btn-sm">목록 다운로드 요청</span>
@@ -743,8 +741,6 @@ const segDemo = ref('a')
               <div class="gt-toolbar">
                 <div class="gt-grp">
                   <span class="gt-count">총 <strong>1</strong>개</span>
-                  <span class="gt-sep">|</span>
-                  <span class="gt-refresh"><UIcon name="i-lucide-refresh-cw" class="gt-ico" /> 새로고침</span>
                 </div>
                 <div class="gt-grp">
                   <span class="btn btn-outline-dark btn-sm">발신 번호 등록 안내</span>
@@ -768,8 +764,6 @@ const segDemo = ref('a')
               <div class="gt-toolbar">
                 <div class="gt-grp">
                   <span class="gt-count">총 <strong>2</strong>개</span>
-                  <span class="gt-sep">|</span>
-                  <span class="gt-refresh"><UIcon name="i-lucide-refresh-cw" class="gt-ico" /> 새로고침</span>
                   <span class="gt-search">
                     도메인을 입력하세요.
                     <UIcon name="i-lucide-search" class="gt-ico gt-search-ico" />
@@ -928,6 +922,62 @@ const segDemo = ref('a')
               </div>
               <h1>SMS 발송</h1>
               <p>SMS · LMS · MMS 단발 발송. 한 건당 9.9 C부터.</p>
+            </div>
+          </div>
+
+          <div class="g-block-t">
+            페이지 레이아웃 타입 (A · B · C)
+          </div>
+          <p class="g-desc">
+            화면 골격을 3가지로 정의한다. 새 화면은 셋 중 하나를 따른다. (§11 "테이블 스타일 A/B/C"와는 별개 축 — 페이지 전체 골격.)
+          </p>
+          <div class="g-lt-grid">
+            <div class="g-lt">
+              <div class="g-lt-mock">
+                <div class="g-lt-gnb">GNB</div>
+                <div class="g-lt-body">
+                  <div class="g-lt-head" />
+                  <div class="g-lt-pane" />
+                </div>
+              </div>
+              <div class="g-lt-meta">
+                <span class="g-lt-tag">A 페이지</span>
+                <strong>표준 페이지</strong>
+                <span>전체 GNB + 페이지 헤더 + 단일 콘텐츠 열. 앱 화면 대부분.</span>
+                <code>default · 대부분 화면</code>
+              </div>
+            </div>
+            <div class="g-lt">
+              <div class="g-lt-mock">
+                <div class="g-lt-gnb">GNB</div>
+                <div class="g-lt-body">
+                  <div class="g-lt-head" />
+                  <div class="g-lt-cols">
+                    <div class="g-lt-side" />
+                    <div class="g-lt-pane" />
+                  </div>
+                </div>
+              </div>
+              <div class="g-lt-meta">
+                <span class="g-lt-tag">B 페이지</span>
+                <strong>좌측 메뉴 페이지 (LNB)</strong>
+                <span>전체 GNB + 좌측 sticky 서브메뉴 + 콘텐츠 패널.</span>
+                <code>default + 셸 · AppMyPageShell</code>
+              </div>
+            </div>
+            <div class="g-lt">
+              <div class="g-lt-mock">
+                <div class="g-lt-gnb logo">로고</div>
+                <div class="g-lt-body">
+                  <div class="g-lt-pane tall" />
+                </div>
+              </div>
+              <div class="g-lt-meta">
+                <span class="g-lt-tag">C 페이지</span>
+                <strong>독립 페이지 (Standalone)</strong>
+                <span>GNB 없이 로고 바만. 새 창으로 보는 참고 · 문서 화면.</span>
+                <code>blank · /help</code>
+              </div>
             </div>
           </div>
         </section>
@@ -1175,6 +1225,98 @@ const segDemo = ref('a')
   color: var(--ink-500);
   font-size: var(--fz-md);
 }
+
+/* 페이지 레이아웃 타입 A·B·C */
+.g-lt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.g-lt {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--white);
+}
+.g-lt-mock {
+  padding: 14px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.g-lt-gnb {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  background: var(--ink-900);
+  color: var(--white);
+  font-size: 9px;
+  font-weight: 700;
+}
+.g-lt-gnb.logo {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--ink-500);
+}
+.g-lt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.g-lt-head {
+  width: 50%;
+  height: 13px;
+  border-radius: 3px;
+  background: var(--ink-200);
+}
+.g-lt-pane {
+  height: 72px;
+  border-radius: 4px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+.g-lt-pane.tall { height: 96px; }
+.g-lt-cols {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 6px;
+}
+.g-lt-side {
+  border-radius: 4px;
+  background: var(--ink-100);
+}
+.g-lt-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+}
+.g-lt-tag {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: var(--fz-2xs);
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+.g-lt-meta strong {
+  font-size: var(--fz-sm);
+  color: var(--ink-900);
+}
+.g-lt-meta span {
+  font-size: var(--fz-xs);
+  color: var(--ink-500);
+  line-height: 1.55;
+}
+.g-lt-meta code {
+  margin-top: 2px;
+  font-size: var(--fz-2xs);
+  color: var(--ink-400);
+}
+@media (max-width: 720px) {
+  .g-lt-grid { grid-template-columns: 1fr; }
+}
 .g-card-num {
   width: 26px;
   height: 26px;
@@ -1270,14 +1412,6 @@ const segDemo = ref('a')
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--ink-900);
-}
-.gt-sep { color: var(--line); }
-.gt-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
 }
 .gt-search {
   position: relative;

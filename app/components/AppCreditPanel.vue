@@ -92,9 +92,6 @@ function resetFilter() {
   applyPreset('month')
   applied.value = { keyword: '', type: '전체구분' }
 }
-function onRefresh() {
-  toast.add({ title: '내역을 새로고침했습니다.', color: 'info', icon: 'i-lucide-refresh-cw' })
-}
 function goCharge() {
   navigateTo('/charge')
 }
@@ -177,10 +174,6 @@ function openReceipt(r: CreditRow) {
         <div class="list-toolbar">
           <div class="tb-group">
             <span class="toolbar-count">총 <strong>{{ filteredRows.length.toLocaleString() }}</strong>건</span>
-            <span class="toolbar-sep">|</span>
-            <button type="button" class="toolbar-refresh" @click="onRefresh">
-              <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-            </button>
           </div>
           <div class="tb-group">
             <select v-model="pageSize" class="select cr-pagesize">
@@ -460,23 +453,6 @@ function openReceipt(r: CreditRow) {
   font-weight: 600;
   color: var(--ink-900);
 }
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover { color: var(--ink-900); }
 .cr-pagesize { width: 110px; }
 
 .list-table-scroll { overflow-x: auto; }

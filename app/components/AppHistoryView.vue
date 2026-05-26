@@ -198,10 +198,6 @@ function onSearch() {
   }
   page.value = 1
 }
-function onRefresh() {
-  page.value = 1
-  toast.add({ title: '목록을 새로고침했습니다.', color: 'info', icon: 'i-lucide-refresh-cw' })
-}
 function onResetFilter() {
   dSendSt.value = 'all'
   dTiming.value = 'all'
@@ -431,10 +427,6 @@ function onExportList() {
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="toolbar-count">총 <strong>{{ filtered.length.toLocaleString() }}</strong>건</span>
-          <span class="toolbar-sep">|</span>
-          <button type="button" class="toolbar-refresh" @click="onRefresh">
-            <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
         </div>
         <div class="row" style="gap: 6px; flex-wrap: wrap">
           <button class="btn btn-outline btn-sm" @click="onExportRequest">
@@ -650,25 +642,6 @@ function onExportList() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
-  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);

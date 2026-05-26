@@ -118,11 +118,6 @@ function onDeleteConfirm() {
   openDelete.value = false
   toast.add({ title: `랜딩페이지 ${n}개를 삭제했습니다.`, color: 'info', icon: 'i-lucide-info' })
 }
-function onRefresh() {
-  selected.value = []
-  page.value = 1
-  toast.add({ title: '목록을 새로고침했습니다.', color: 'info', icon: 'i-lucide-rotate-cw' })
-}
 /* 미리보기 — 공개·비공개 모두 가능 */
 const openPreview = ref(false)
 const previewRow = ref<Landing | null>(null)
@@ -184,10 +179,6 @@ async function onCopyUrl(r: Landing) {
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>
-          <span class="toolbar-sep">|</span>
-          <button type="button" class="toolbar-refresh" @click="onRefresh">
-            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
           <select v-model="publishFilter" class="select ln-filter">
             <option value="all">
               공개여부
@@ -408,25 +399,6 @@ async function onCopyUrl(r: Landing) {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--ink-900);
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
   color: var(--ink-900);
 }
 .ln-filter {

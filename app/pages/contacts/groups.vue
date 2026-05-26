@@ -54,10 +54,6 @@ function toggleOne(id: number) {
   selected.value = selected.value.includes(id) ? selected.value.filter(x => x !== id) : [...selected.value, id]
 }
 
-function onRefresh() {
-  toast.add({ title: '새로고침', description: '그룹 목록을 새로고침했습니다.', icon: 'i-lucide-refresh-cw' })
-}
-
 /* ── 그룹 등록 / 수정 ────────────────────────────────────────────── */
 const groupFormOpen = ref(false)
 const editGroup = ref<Group | null>(null)
@@ -160,10 +156,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="gp-count">총 <strong>{{ filtered.length }}</strong>개</span>
-          <span class="toolbar-sep">|</span>
-          <button type="button" class="toolbar-refresh" @click="onRefresh">
-            <UIcon name="i-lucide-refresh-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
           <div class="gp-search">
             <input v-model="search" class="input" placeholder="그룹 이름 검색">
             <UIcon name="i-lucide-search" class="text-sm gp-search-icon" />
@@ -295,25 +287,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onSendDocClick))
 }
 .list-table-scroll {
   overflow-x: auto;
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
-  color: var(--ink-900);
 }
 .gp-search {
   position: relative;

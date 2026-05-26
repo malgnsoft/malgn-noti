@@ -60,11 +60,6 @@ function onDeleteConfirm() {
   toast.add({ title: `발신 번호 ${count}건을 삭제했습니다.`, color: 'info', icon: 'i-lucide-info' })
 }
 
-function onRefresh() {
-  selected.value = []
-  page.value = 1
-  toast.add({ title: '목록을 새로고침했습니다.', color: 'info', icon: 'i-lucide-rotate-cw' })
-}
 </script>
 
 <template>
@@ -94,10 +89,6 @@ function onRefresh() {
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="toolbar-count">총 <strong>{{ rows.length }}</strong>개</span>
-          <span class="toolbar-sep">|</span>
-          <button type="button" class="toolbar-refresh" @click="onRefresh">
-            <UIcon name="i-lucide-rotate-cw" class="text-[length:var(--fz-sm)]" /> 새로고침
-          </button>
         </div>
         <div class="row" style="gap: 6px; flex-wrap: wrap">
           <button type="button" class="btn btn-outline-dark btn-sm" @click="openGuide = true">
@@ -285,25 +276,6 @@ function onRefresh() {
   font-size: var(--fz-sm);
   color: var(--ink-500);
   white-space: nowrap;
-}
-.toolbar-sep {
-  color: var(--line);
-  user-select: none;
-}
-.toolbar-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.toolbar-refresh:hover {
-  color: var(--ink-900);
 }
 .toolbar-count strong {
   font-family: var(--font-mono);
