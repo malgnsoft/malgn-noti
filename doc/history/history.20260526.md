@@ -1,8 +1,8 @@
-# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포
+# 2026-05-26 — malgn-noti-api 데이터 모델·초기 DDL·Hyperdrive 연결·첫 프로덕션 배포 + 운영 컨벤션 명문화
 
 ## 한 줄 요약
 
-`malgn-noti-api`의 **데이터 모델링부터 첫 프로덕션 배포까지** 한 흐름으로 진행 — 사용자단 화면·소스·MD를 읽고 49개 테이블 데이터 모델 작성(**TB_** 접두어, `company_id` FK, `status INT` 1/0/-1 + `*_state VARCHAR` 분리, `*_yn CHAR(1)` Y/N, `loginid`/`email` 분리), 시각 ERD를 Mermaid 9종으로 작성, 발송량 시나리오 분석 후 **월 RANGE 파티셔닝 + Hot/Warm/Cold + R2 오프로드** 확장성 전략을 정본 §13 + 별도 `SCALABILITY.md`로 정리, 49 테이블 초기 마이그레이션 SQL(파티션 5종 + `raw_payload_r2_key` 포함)을 작성, **Hyperdrive(MySQL) 바인딩 `a2ba4efe7421464da1d5ff5e620b33a3`** 연결 + `drizzle-orm/mysql2` 셋업 + `/health/db` 헬스 체크 + `wrangler dev --remote` 로 로컬에서도 실제 Aurora MySQL 8.0.42 응답 확인, 최종적으로 `wrangler deploy`로 **`https://malgn-noti-api.malgnsoft.workers.dev` 프로덕션 첫 배포** 완료 (모든 엔드포인트 200, `/health/db` mysql_version 8.0.42).
+`malgn-noti-api`의 **데이터 모델링부터 첫 프로덕션 배포까지** 한 흐름으로 진행 — 사용자단 화면·소스·MD를 읽고 49개 테이블 데이터 모델 작성(**TB_** 접두어, `company_id` FK, `status INT` 1/0/-1 + `*_state VARCHAR` 분리, `*_yn CHAR(1)` Y/N, `loginid`/`email` 분리), 시각 ERD를 Mermaid 9종으로 작성, 발송량 시나리오 분석 후 **월 RANGE 파티셔닝 + Hot/Warm/Cold + R2 오프로드** 확장성 전략을 정본 §13 + 별도 `SCALABILITY.md`로 정리, 49 테이블 초기 마이그레이션 SQL(파티션 5종 + `raw_payload_r2_key` 포함)을 작성, **Hyperdrive(MySQL) 바인딩 `a2ba4efe7421464da1d5ff5e620b33a3`** 연결 + `drizzle-orm/mysql2` 셋업 + `/health/db` 헬스 체크 + `wrangler dev --remote` 로 로컬에서도 실제 Aurora MySQL 8.0.42 응답 확인, **`https://malgn-noti-api.malgnsoft.workers.dev` 프로덕션 첫 배포** 완료 (모든 엔드포인트 200, `/health/db` mysql_version 8.0.42). 이어 `malgn-noti-api/CLAUDE.md §8.1`에 **배포·Git·작업 이력 운영 컨벤션을 명문화**하여, 프론트와 동일한 디스플린(typecheck → 배포 → 검증 → 커밋·푸시·history)을 백엔드에서도 강제하도록 정리. 작업 이력은 `malgn-noti/doc/history/`가 3 레포 공통 정본임을 §8.1에 못박음.
 
 ## 1. 데이터 모델 (`malgn-noti-api/doc/DATA-MODEL.md`)
 
@@ -101,7 +101,18 @@
 
 푸시: `decfaf0..7a17504 → origin/main`.
 
-## 9. 다음 단계 / 알려진 한계
+## 10. 운영 컨벤션 명문화 (`malgn-noti-api/CLAUDE.md §8.1`)
+
+배포 직후 사용자가 "배포 규정은 `malgn-noti/CLAUDE.md` 파일을 참고해 줘"라고 명확히 짚어 — 이번 흐름이 우연이 아니라 **명문 규정**으로 박혀야 다음에도 재현됨을 확인. `malgn-noti-api/CLAUDE.md`에 §8.1을 추가하여 다음을 정리:
+
+- **Git** — 단일 main, 사용자 명시 요청 시에만 커밋·푸시, 한국어 제목 + 본문 불릿 + `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` trailer, 무관 untracked 파일 끌어들이지 않음.
+- **배포 (Workers)** — `pnpm typecheck → pnpm run deploy` (`pnpm deploy`는 pnpm 워크스페이스 명령과 충돌하므로 `run` 명시), 프로덕션 URL `https://malgn-noti-api.malgnsoft.workers.dev`, 검증은 `/health` + `/health/db`(mysql_version 반환), DDL/시드는 Worker 배포와 분리 멱등 적용.
+- **작업 이력** — `malgn-noti/doc/history/`가 **3 레포 공통 정본**임을 명문화. API 변경도 같은 폴더의 그날 파일에 기록하며, 산출물 절에 별 레포 커밋 해시까지 함께 표기.
+- §8 개발 명령어 표 갱신 — `pnpm dev`가 `wrangler dev --remote`임을 반영, `cf-typegen`·`db:introspect` 추가, `pnpm run deploy` 명시.
+
+산출물: `malgn-noti-api: e09f70e docs: 배포·Git·작업 이력 운영 컨벤션 명문화 (§8.1)`. 푸시 `7a17504..e09f70e → origin/main`.
+
+## 11. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
