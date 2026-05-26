@@ -395,7 +395,74 @@ history              → 본 절 추가
 - 인증·JWT는 여전히 dev 헤더만. signup/login 구현이 다음 큰 마일스톤.
 - `dispatch-*` 라우트(발송 이력 read-only)는 파티션 테이블이라 별도 설계 필요. 다음 단계.
 
-## 17. 다음 단계 / 알려진 한계
+## 17. Phase 1·2·3 — /doc 동기화 + 인증 + 발송 이력 (`32f7ce4`, `c19f116`, `f45ad01`)
+
+§16 직후 사용자의 "차례대로 진행" 지시에 따라 3 phase 연속 진행.
+
+### 17.1 Phase 1 — openapi.ts 확장 (`32f7ce4`)
+
+§16에서 추가한 14개 라우트가 `/doc`에 안 보이던 문제 해결.
+- 자동 생성 시도(`hono-openapi` 1.x) → Standard Schema 기반 새 버전이 Zod v4 vendor 등록 필요로 복잡 → 롤백.
+- 대신 **수기 확장** + `cursorList()`·`single()`·`ok` 헬퍼로 응답 재사용해 간결화.
+- 규모: paths 10→**37**, operations 16→**71**, schemas 11→**45**, tags 5→**19**, 스펙 17 KB → **54 KB**.
+
+### 17.2 Phase 2 — 인증 (signup / login + JWT) (`c19f116`)
+
+dev 헤더만으론 외부에서 호출 불가 → JWT 흐름 정식 구현.
+
+신규 파일:
+- `src/lib/password.ts` — **PBKDF2-SHA256** 100k 라운드 + salt 16B (Workers Web Crypto). 저장 형식 `pbkdf2$<iter>$<saltB64>$<hashB64>`. timing-safe compare.
+- `src/lib/jwt.ts` — HS256 (hono/utils/jwt), payload `{ sub, cid, role, iat, exp }`, 기본 만료 7일.
+- `src/routes/auth.ts`
+  - `POST /auth/signup` — 신규 고객사 + owner 사용자 생성, JWT 발급. loginid 중복 → 409. 사용자 생성 실패 시 고객사 best-effort 무효화.
+  - `POST /auth/login` — companyId + loginid + password 검증, JWT 발급. account enumeration 방지(일관된 401). lastLoginAt 갱신.
+
+미들웨어:
+- `requireAuth()` — **Bearer JWT 우선** 검증 → 실패하면 dev 헤더(APP_ENV=local) 백업 → 둘 다 없으면 401.
+
+설정:
+- `JWT_SECRET` 환경변수 추가 (`.dev.vars` + 운영은 `wrangler secret put`).
+
+검증 6건:
+- signup → 201 + JWT
+- GET /me with JWT → 200
+- login(정확) → 200 + JWT, lastLoginAt 갱신
+- login(틀린 pw) → 401
+- 잘못된 JWT → 401
+- 헤더 없음 → 401
+
+알려진 한계:
+- OTP·약관·재설정·2FA·refresh token·세션 강제 로그아웃 미구현
+- 고객사+사용자 생성 트랜잭션 미사용 (saga 권장)
+
+### 17.3 Phase 3 — 발송 이력 read-only (`f45ad01`)
+
+발송 화면(history/*.vue) 백엔드 API. 파티션 테이블이므로 시간 윈도우 강제.
+
+스키마 추가:
+- `dispatchRequest`·`dispatchItem` 파티션 PK `(id, created_at)`
+- `dispatchStatDaily` 복합 PK `(companyId, channel, statDate)`
+
+신규 라우트 (`src/routes/dispatch-history.ts`):
+- `GET /dispatch/requests` — 기본 30일, **max 90일** 윈도우 강제, channel/dispatchState 필터, 커서 페이징. window > 90일 → 400 Validation + "Use Export job" 힌트
+- `GET /dispatch/requests/:id?createdAt=` — 단건. **createdAt 필수** (파티션 pruning, SCALABILITY §1)
+- `GET /dispatch/requests/:id/items` — 수신자별 항목. `companyId` 비정규화로 스코프 격리
+- `GET /dispatch-stats` — 일별 집계 (max 365일)
+
+설계 (SCALABILITY §5 준수):
+- OFFSET 금지, 커서 페이징
+- 단건 조회는 `createdAt` 명시 — 파티션 pruning 안 되면 전 파티션 스캔
+- 시간 윈도우 강제로 사용자 실수에 의한 대량 스캔 차단
+- 더 넓은 범위는 Export 잡(/export-jobs)으로 우회 — 추후 추가
+
+openapi.ts에 4 paths + 3 스키마(DispatchRequest/Item/Stat) 추가. 최종 paths 41, operations 76, schemas 49.
+
+검증:
+- /dispatch/requests 기본 30일 → 200 empty + window
+- from-to 145일 → 400 validation + "range too wide ... use Export job"
+- /dispatch-stats 채널·기간 필터 → 200 empty + window
+
+## 18. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
