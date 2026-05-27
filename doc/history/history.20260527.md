@@ -1,8 +1,8 @@
-# 2026-05-27 — malgn-noti-admin Nuxt 3 부트스트랩 + 셸 레이아웃 + 첫 프로덕션 배포 + malgn-noti-api 멱등 수정·NHN 어댑터·Queues·배포 #6
+# 2026-05-27 — malgn-noti-admin Nuxt 3 부트스트랩 + 셸 레이아웃 + 첫 프로덕션 배포 + malgn-noti-api 멱등 수정·NHN 어댑터·Queues·webhook·Email/Kakao/Push 채널·배포 #6·#7
 
 ## 한 줄 요약
 
-두 트랙 병행. **(A) malgn-noti-admin** — 비어 있던 BackOffice 레포를 **Nuxt 3 + Nuxt UI v3로 부트스트랩** + `design_handoff_customer_detail` 정본 참조 **LNB(256px sticky · 8 그룹 메뉴) + TopBar(64px sticky)** 셸 레이아웃 + `https://malgn-noti-admin.pages.dev` 첫 Nuxt 앱 프로덕션 배포(정적 placeholder 대체). **(B) malgn-noti-api** — §19에서 추적한 멱등 버그를 `TB_IDEMPOTENCY` + INSERT-then-conflict race-free 패턴으로 정식 해결 + NHN SMS 어댑터(mock/real) + Cloudflare Queues(`malgn-noti-dispatch`) + consumer worker(`dispatch_state` 천이) + Producer·Consumer 동시 바인딩 프로덕션 배포 #6(Version `b30dc2a3...`).
+두 트랙 병행. **(A) malgn-noti-admin** — 비어 있던 BackOffice 레포를 **Nuxt 3 + Nuxt UI v3로 부트스트랩** + `design_handoff_customer_detail` 정본 참조 **LNB(256px sticky · 8 그룹 메뉴) + TopBar(64px sticky)** 셸 레이아웃 + `https://malgn-noti-admin.pages.dev` 첫 Nuxt 앱 프로덕션 배포(정적 placeholder 대체). **(B) malgn-noti-api** — §19에서 추적한 멱등 버그를 `TB_IDEMPOTENCY` + INSERT-then-conflict race-free 패턴으로 정식 해결 + NHN SMS 어댑터(mock/real) + Cloudflare Queues(`malgn-noti-dispatch`) + consumer worker(`dispatch_state` 천이) + `POST /webhooks/nhn/sms` HMAC 콜백 수신 + Producer·Consumer 동시 바인딩 프로덕션 배포 #6(Version `b30dc2a3...`) + **Email · Kakao(알림톡/친구톡) · Push 3채널 동시 추가** + 배포 #7(Version `12dae362...`).
 
 ## 1. 사전 조사
 
@@ -131,6 +131,80 @@ Cloudflare 회복 후 검증 절차:
 - 검증 5건 — `/health`, `/health/db`(mysql 8.0.42), `/doc`(paths 44·ops 78·schemas 53), `/send/sms` no-auth 401, `/auth/login` JWT 발급 정상.
 - **큐 e2e 검증 보류** — Cloudflare 원격 미리보기 인프라 장애(1105 Temporarily unavailable, Ray ID `a02212096ea185af`·`a02213318ecb85af` 등 30분 지속) → 로컬 `pnpm dev --remote` 가 edge-preview 토큰을 받지 못해 prod Aurora 시드 SQL 송신 자체 실패. 코드·바인딩은 정상이며 Cloudflare 회복 후 외부에서 e2e 절차로 검증 가능.
 
+## 10. Email · Kakao · Push 채널 추가 (`malgn-noti-api 06cf052`)
+
+§7 SMS 토대 위에 3개 추가 채널을 동일 패턴으로 적층 — **producer · adapter · worker · OpenAPI** 4지점 갱신.
+
+### 10.1 공통 패턴
+
+모든 `POST /send/{channel}` 라우트는 §6 멱등 + §7 큐 패턴을 재사용:
+
+1. **`Idempotency-Key` 헤더 점유** — TB_IDEMPOTENCY INSERT-then-conflict (race-free).
+2. **발신자 자격 검증** — own + 채널별 승인 상태(아래 표).
+3. **수신자 옵트아웃 필터** — channelKind 키(`phone`/`email`)로 TB_OPTOUT_ENTRY 매칭. Push만 예외(앱 내 설정 책임).
+4. **단가·총액 계산** + 크레딧 hold (`TB_COMPANY.credit_balance` UPDATE…WHERE balance ≥ amount + `TB_CREDIT_LEDGER` append).
+5. **`TB_DISPATCH_REQUEST` + `TB_DISPATCH_ITEM`** bulk insert (단일 트랜잭션).
+6. **`TB_IDEMPOTENCY.result_id` = 발송 ID** (트랜잭션 안에서).
+7. **큐 enqueue** + `dispatch_state=queued` 천이 (`executionCtx.waitUntil`).
+
+### 10.2 채널별 발신자·옵트아웃·단가
+
+| 채널 | senderRef | 검증 | 옵트아웃 키 | 단가(1건) | 추가 검증 |
+| --- | --- | --- | --- | --- | --- |
+| `email` | `emailDomainId` | `verified_yn=Y` | `email` | 0.65 | `from`의 도메인이 emailDomain.domain과 일치 |
+| `kakao` | `kakaoSenderProfileId` | `profile_state=승인` + `token_state=완료` | `phone` | alimtalk 8 / friendtalk 12 | 알림톡은 `templateCode` 필수(Zod refine) |
+| `push` | `pushCertId` | `status=1` + `expires_at` 미경과 | (없음) | 0.5 | `recipients[].token` 8~255자 device token |
+
+### 10.3 어댑터 (신규 파일)
+
+- **`src/adapters/nhn/email.ts`** — NHN `/email/v2.1/appKeys/{appKey}/sender/mail` POST. `receiverList[].receiveType='MRT0'`(TO). mock 시 `mock-email-<uuid>` requestId.
+- **`src/adapters/nhn/kakao.ts`** — 알림톡 `/alimtalk/v2.3/...` + 친구톡 `/friendtalk/v2.0/...` 분기. `senderKey` 는 `TB_KAKAO_SENDER_PROFILE.send_key_enc` (평문 가정 — envelope 복호화는 TODO).
+- **`src/adapters/nhn/push.ts`** — NHN `/push/v2.5/appkeys/{appKey}/messages` POST. `target.type='TOKEN'`. NHN Push는 messageId 1개만 반환 → 개별 토큰 결과는 webhook(후속)으로 갱신.
+
+기존 `src/adapters/nhn/types.ts` 의 `NormalizedSendResult.perRecipient` 필드 `phone → address` 로 리네임 → 채널 무관(phone/email/token). SMS 어댑터도 동반 수정.
+
+### 10.4 worker 분기
+
+`src/workers/dispatch.ts` — 조건 `channel !== 'sms' && !== 'email' && !== 'kakao' && !== 'push'` 외 skip. channel별 spec 파싱 + 어댑터 호출:
+
+```
+sms   → senderRefId → TB_SENDER_PHONE.number
+email → senderRefId → TB_EMAIL_DOMAIN (존재만 확인, verified는 producer 단계에서 검증 완료)
+kakao → senderRefId → TB_KAKAO_SENDER_PROFILE.send_key_enc → senderKey
+push  → senderRefId → TB_PUSH_CERT (존재만 확인)
+```
+
+credential 조회는 `nhn_credential.channel = dr.channel` 로 generic 변경(SMS 하드코딩 제거).
+
+### 10.5 단가 정의
+
+`src/lib/pricing.ts` 확장:
+
+```ts
+export const EMAIL_PRICING = 0.65
+export const KAKAO_PRICING = { alimtalk: 8, friendtalk: 12 } as const
+export const PUSH_PRICING = 0.5
+```
+
+프론트엔드 `app/types/channel.ts`의 `*_META.pricePerUnit` 와 동기. 실제 운영 시 `TB_PRICING` 테이블로 이전 예정.
+
+### 10.6 OpenAPI
+
+`src/openapi.ts` — `SendEmailRequest` · `SendKakaoRequest` · `SendPushRequest` 스키마 + `/send/email` · `/send/kakao` · `/send/push` 경로 추가. 응답은 SMS와 동일한 `SendResponse` 재사용.
+
+## 11. malgn-noti-api 프로덕션 배포 #7
+
+§10 변경을 라이브 반영.
+
+- **Version**: `12dae362-2900-42ca-9a2e-e6dfb9c60091`. 번들 2508 KiB / gzip 579. Worker Startup 80 ms.
+- 명령: `pnpm run deploy` (자동 `wrangler deploy`).
+- 바인딩: DISPATCH_QUEUE · HYPERDRIVE(a2ba4efe...) · APP_ENV=production · NHN_MOCK=1(default).
+- 검증 3건:
+  - `/health` → 200, `{"ok":true,"env":"production","time":"2026-05-27T04:42:50.327Z"}`
+  - `/health/db` → 200, `{"ok":true,"mysql_version":"8.0.42",...}`
+  - `/doc` → 200 (Scalar UI 페이지 응답)
+- 큐 e2e + 외부 NHN 자격증명 연결은 별도 작업(미수행).
+
 ## 산출물
 
 ### 트랙 A (admin)
@@ -145,7 +219,8 @@ Cloudflare 회복 후 검증 절차:
 - `malgn-noti-api: 020307f fix(idempotency): TB_IDEMPOTENCY + INSERT-then-conflict 패턴 — 멱등 버그 해결` (4 files, +151 −74). `0001_idempotency.sql` 신규.
 - `malgn-noti-api: 5e1ac72 feat(send): NHN SMS 어댑터 + Cloudflare Queues + consumer worker (mock 모드)` (8 files, +439 −5). `src/adapters/nhn/{types,sms}.ts`·`src/workers/dispatch.ts` 신규.
 - `malgn-noti-api: 0d28173 feat(webhooks): POST /webhooks/nhn/sms — NHN 발송 결과 콜백 수신` (6 files). `src/db/schema.ts` (dispatchEvent) · `src/lib/webhook-signature.ts` · `src/adapters/nhn/webhook.ts` · `src/routes/webhooks.ts` 신규.
-- Cloudflare Queue `malgn-noti-dispatch` (id `6c67d698...`) + Workers Version `b30dc2a3-dc5a-4050-a435-c3d03a5e69a7` (배포 #6).
+- `malgn-noti-api: 06cf052 feat(send): Email · Kakao · Push 채널 추가 — 3채널 producer + adapter + worker` (9 files, +1211 −50). `src/adapters/nhn/{email,kakao,push}.ts` 신규.
+- Cloudflare Queue `malgn-noti-dispatch` (id `6c67d698...`) + Workers Version `b30dc2a3-dc5a-4050-a435-c3d03a5e69a7` (배포 #6) → `12dae362-2900-42ca-9a2e-e6dfb9c60091` (배포 #7).
 - `history.20260526.md §22·§23` 에 트랙 B 상세 기록.
 
 ## 다음 단계 / 알려진 한계
@@ -161,8 +236,9 @@ Cloudflare 회복 후 검증 절차:
 ### 트랙 B (api)
 
 - 큐 e2e 검증 — Cloudflare 1105 회복 후 `pnpm dev` + 시드 + PROD URL 발송 → `dispatch_state` 천이 추적.
-- 다른 채널 send (`/send/rcs` · `/send/kakao` · `/send/email` · `/send/push` · `/send/flow`) — 각 채널 어댑터 + 라우트.
-- 웹훅 핸들러 (`POST /webhooks/nhn`) — `TB_DISPATCH_EVENT` 적재 + dispatch_item.recv_state 갱신.
-- 실 NHN 자격증명 등록 + `NHN_MOCK` secret 삭제 → real 모드 전환.
+- 남은 채널: `/send/rcs` (브랜드+템플릿 검수, 가장 복잡) · `/send/flow` (폴백 엔진: 알림톡→친구톡→LMS 등).
+- 채널별 webhook — `/webhooks/nhn/email` · `/webhooks/nhn/kakao` · `/webhooks/nhn/push` (현재는 SMS만). Push는 별도 결과 조회 API 필요.
+- 실 NHN 자격증명 등록 + `NHN_MOCK` secret 삭제 → real 모드 전환 (채널별 appKey).
+- Kakao senderKey · pushCert credential의 envelope 복호화 (현재 평문 가정).
 - Export 잡 (`/export-jobs`) — 90일 초과 이력 우회.
 - 트랜잭션 rollback 시 idempotency cleanup race 추가 보강.
