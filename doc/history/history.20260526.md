@@ -632,7 +632,51 @@ openapi.ts: `SendSmsRequest`·`SendResponse` + `POST /send/sms`. 최종 paths 44
 3. 다른 채널 send (RCS/Kakao/Email/Push/Flow)
 4. Export 잡 — 90일 초과 이력 우회
 
-## 23. 다음 단계 / 알려진 한계
+## 23. malgn-noti-api 프로덕션 배포 #6 — Queues Producer + Consumer 라이브
+
+§22 멱등 수정 + NHN 어댑터 + Queues 일체(`020307f`, `5e1ac72`) 라이브 반영.
+
+### 23.1 배포
+
+- Version: `b30dc2a3-dc5a-4050-a435-c3d03a5e69a7`
+- 번들: 2460 KiB / gzip 572 KiB
+- Worker Startup 74 ms
+- **신규 바인딩 라이브**:
+  - `env.DISPATCH_QUEUE` (`malgn-noti-dispatch`) — Producer + Consumer 동시
+  - `env.NHN_MOCK` secret = `"1"` (모의 모드)
+
+### 23.2 검증
+
+| 엔드포인트 | 결과 |
+| --- | --- |
+| `GET /health` | 200 `env: production` |
+| `GET /health/db` | 200 `mysql_version: 8.0.42` |
+| `GET /doc/openapi.json` | 200, 65.3 KB, paths 44 · ops 78 · schemas 53 |
+| `POST /send/sms` (no auth) | 401 `unauthenticated` |
+| `POST /auth/login` (`prod-1@test.com`) | 200 + JWT |
+
+배포 명세 — `Producer for malgn-noti-dispatch` + `Consumer for malgn-noti-dispatch` 동시 등록 확인.
+
+### 23.3 큐 end-to-end 검증 — 보류
+
+**원인**: Cloudflare 원격 미리보기 인프라 장애 (1105 Temporarily unavailable, Ray ID `a02212096ea185af`·`a02213318ecb85af` 등). 30분간 지속.
+
+- 로컬 `pnpm dev --remote`가 Cloudflare edge-preview 토큰을 받아오는 단계에서 503 → 시드 SQL POST가 모두 1105 응답
+- 결과: 프로덕션 company 4에 `sender_phone` (승인) + `credit_balance` 시드 불가 → `/send/sms` 호출이 404 `sender_phone not found`로 종료
+
+코드·바인딩 자체는 정상 등록됐고, 큐 처리 흐름은 Cloudflare 회복 후 재검증 예정. 검증 절차:
+1. `pnpm dev --remote` (인프라 회복 후)
+2. `/admin/migrate?allow_existing=1` 로 company 4 시드
+3. PROD URL `/auth/login` → JWT
+4. PROD URL `/send/sms` (senderPhoneId=100)
+5. 5~10초 대기 후 PROD `/dispatch/requests/:id` 로 `dispatch_state` 천이 추적: `queued` → `sending` → `delivered`
+6. `/dispatch/requests/:id/items` 에서 `send_state=sent`, `nhn_request_id=mock-...` 확인
+
+### 23.4 라이브 ↔ main 일치
+
+배포 시점 working tree와 `main`(`5e1ac72`) 일치.
+
+## 24. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
