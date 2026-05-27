@@ -596,7 +596,43 @@ openapi.ts: `SendSmsRequest`·`SendResponse` + `POST /send/sms`. 최종 paths 44
 
 라이브 ↔ main: `fb99b66`로 일치.
 
-## 22. 다음 단계 / 알려진 한계
+## 22. 🐛 멱등 버그 해결 — TB_IDEMPOTENCY + INSERT-then-conflict (`020307f`)
+
+§19·§21에서 추적했던 발송 멱등 버그(같은 Idempotency-Key 재호출 시 중복 적재) 정식 수정.
+
+### 22.1 해결 패턴
+
+- **0001_idempotency.sql** — 비파티션 추적 테이블 `TB_IDEMPOTENCY` (PK `company_id` + `scope` + `idempotency_key`, `result_id NULL→채움`)
+- **race-free**: MySQL이 PK 인덱스로 atomic dedup. 진행 중 트랜잭션과는 row-lock 대기 후 duplicate key error.
+- **/send/sms 신규 흐름**:
+  1. `INSERT TB_IDEMPOTENCY (resultType='pending')` — 점유 시도
+  2. 중복키 에러 → 다른 요청이 owner. `result_id`로 기존 `TB_DISPATCH_REQUEST` 반환 (idempotent:true)
+  3. 점유 성공 → 검증·트랜잭션 진행, 마지막에 `UPDATE result_id` 로 매핑
+  4. 트랜잭션 실패 시 `rollbackIdempotency()` — 키 해제(재시도 가능)
+  5. 진행 중인 요청이 commit 전인 경우 `202 idempotent_in_flight` 응답
+
+### 22.2 적용 + 검증
+
+- Aurora에 `0001_idempotency.sql` 적용: `count=50` (TB_IDEMPOTENCY 신규)
+- pnpm dev 검증:
+  - call 1 (key=K) → dispatchRequestId=8, idempotent:false
+  - call 2 (key=K) → dispatchRequestId=**8** (같음), idempotent:**true** ✅
+  - call 3 (key=K2) → dispatchRequestId=9 (새), idempotent:false ✅
+
+### 22.3 부속 변경
+
+- `src/db/schema.ts` — `idempotency` 테이블 정의 추가
+- `src/openapi.ts` — `/send/sms` description의 TODO 문구 제거 + 202 `idempotent_in_flight` 응답 추가
+- `src/lib/jwt.ts` — linter가 `verifyJwt` 캐스트를 `as unknown as JwtPayload`로 명시화
+
+### 22.4 다음 단계 (변동 없음)
+
+1. ✅ 멱등 버그 — 완료
+2. NHN SMS 어댑터 + Cloudflare Queues + consumer worker (실 발송)
+3. 다른 채널 send (RCS/Kakao/Email/Push/Flow)
+4. Export 잡 — 90일 초과 이력 우회
+
+## 23. 다음 단계 / 알려진 한계
 
 - **DDL 적용** — Hyperdrive 콘솔은 자격증명만 보유. Aurora 측에 `0000_initial.sql`을 적용해야 실제 테이블 생성. MySQL CLI 또는 Bastion 경유.
 - **파티션 자동 운영 Cron Worker** — `src/workers/partition-maintenance.ts` (월 1일 DROP + 25일 REORGANIZE).
