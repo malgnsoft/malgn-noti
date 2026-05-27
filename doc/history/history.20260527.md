@@ -1,8 +1,8 @@
-# 2026-05-27 — malgn-noti-admin Nuxt 3 부트스트랩 + 셸 레이아웃 + 첫 프로덕션 배포 + malgn-noti-api 멱등 수정·NHN 어댑터·Queues·webhook·Email/Kakao/Push 채널·배포 #6·#7
+# 2026-05-27 — malgn-noti-admin Nuxt 3 부트스트랩 + 셸 레이아웃 + 첫 프로덕션 배포 + malgn-noti-api 멱등 수정·NHN 어댑터·Queues·webhook·Email/Kakao/Push 채널·배포 #6·#7 + 사용자단 추가(랜딩페이지·문의 이동·나의 페이지·충전 — 배포 #44~#46) + malgn-noti-api 루트→/doc 리다이렉트
 
 ## 한 줄 요약
 
-두 트랙 병행. **(A) malgn-noti-admin** — 비어 있던 BackOffice 레포를 **Nuxt 3 + Nuxt UI v3로 부트스트랩** + `design_handoff_customer_detail` 정본 참조 **LNB(256px sticky · 8 그룹 메뉴) + TopBar(64px sticky)** 셸 레이아웃 + `https://malgn-noti-admin.pages.dev` 첫 Nuxt 앱 프로덕션 배포(정적 placeholder 대체). **(B) malgn-noti-api** — §19에서 추적한 멱등 버그를 `TB_IDEMPOTENCY` + INSERT-then-conflict race-free 패턴으로 정식 해결 + NHN SMS 어댑터(mock/real) + Cloudflare Queues(`malgn-noti-dispatch`) + consumer worker(`dispatch_state` 천이) + `POST /webhooks/nhn/sms` HMAC 콜백 수신 + Producer·Consumer 동시 바인딩 프로덕션 배포 #6(Version `b30dc2a3...`) + **Email · Kakao(알림톡/친구톡) · Push 3채널 동시 추가** + 배포 #7(Version `12dae362...`).
+세 트랙 병행. **(A) malgn-noti-admin** — 비어 있던 BackOffice 레포를 **Nuxt 3 + Nuxt UI v3로 부트스트랩** + `design_handoff_customer_detail` 정본 참조 **LNB(256px sticky · 8 그룹 메뉴) + TopBar(64px sticky)** 셸 레이아웃 + `https://malgn-noti-admin.pages.dev` 첫 Nuxt 앱 프로덕션 배포(정적 placeholder 대체). **(B) malgn-noti-api** — §19에서 추적한 멱등 버그를 `TB_IDEMPOTENCY` + INSERT-then-conflict race-free 패턴으로 정식 해결 + NHN SMS 어댑터(mock/real) + Cloudflare Queues(`malgn-noti-dispatch`) + consumer worker(`dispatch_state` 천이) + `POST /webhooks/nhn/sms` HMAC 콜백 수신 + Producer·Consumer 동시 바인딩 프로덕션 배포 #6(Version `b30dc2a3...`) + **Email · Kakao(알림톡/친구톡) · Push 3채널 동시 추가** + 배포 #7(Version `12dae362...`). **(C) malgn-noti 사용자단** — 메시지 관리 랜딩페이지 만들기 신규(목록·기본형/확장형 등록 폼·미리보기 모달) + 문의하기 경로를 `/account/inquiry`로 이동(GNB·푸터·사이트맵 링크 정리) + 나의 페이지 섹션(공통 셸 + 9개 라우트·회원 정보 변경·결제 카드 관리·이메일/휴대폰 인증 모달) + 크레딧 충전 플로우(충전 페이지 재구성·결제 컨펌·결과 화면)로 Pages 배포 #44·#45·#46. **(D) malgn-noti-api 추가** — 루트(`/`) placeholder JSON을 `c.redirect('/doc')`로 교체해 워커 도메인 접속이 곧장 Scalar API 문서로 이동하도록 변경, Workers 재배포(Version `f3fd3eb4...`).
 
 ## 1. 사전 조사
 
@@ -205,6 +205,24 @@ export const PUSH_PRICING = 0.5
   - `/doc` → 200 (Scalar UI 페이지 응답)
 - 큐 e2e + 외부 NHN 자격증명 연결은 별도 작업(미수행).
 
+---
+
+# 트랙 C — malgn-noti 사용자단 추가 작업
+
+> 비고: 본 트랙의 §12·§13은 같은 날(2026-05-27) 작업이지만 세션 도중 시스템 날짜 알림 혼선으로 일부 세부 섹션이 `history.20260521.md §22~§25`로 먼저 기록됨. 거기에는 화면별 상세 + 동시 작업 격리 절차가 남아 있고, 본 파일에는 요약·배포·커밋만 둠.
+
+## 12. 사용자단 추가 — 랜딩페이지 만들기·문의 경로 이동·나의 페이지·충전 (배포 #44·#45·#46)
+
+- **#44 — 메시지 관리 / 랜딩페이지 만들기** ([/manage/landing](../../app/pages/manage/landing.vue)): GNB 메시지 관리 메뉴 `상세 설정` 위에 신규. C 테이블 스타일 목록(공개여부 필터·이름 검색·선택 복사/삭제·`미리보기`·`URL 복사`) + 기본형/확장형 등록·수정 폼 뷰 전환(공개 여부 토글·랜딩페이지명·URL·메인 타이틀·확장형 비주얼 이미지·콘텐츠 영역·확장형 CTA 버튼) + `AppLandingPreviewDialog`(LIVELY SHOP 빅세일 샘플 렌더, width 960·min-height 74vh) + `AppLandingUrlDialog`(URL 복사 완료). alias `https://184b0fe1.malgn-noti.pages.dev`.
+- **#45 — 문의하기 페이지 `/account/inquiry` 경로로 이동**: 문의 폼·완료 페이지를 `app/pages/account/inquiry/` 하위로 이동, 중복되던 별도 문의 목록 페이지 삭제(나의 문의 목록은 `/account/inquiries`에 별도 작업). [AppGnb](../../app/components/AppGnb.vue)·[AppFooter](../../app/components/AppFooter.vue)·[sitemap.vue](../../app/pages/sitemap.vue)의 `/inquiry` 링크를 새 경로로 갱신. 동시 진행 중인 '나의 페이지'·충전 작업분이 working tree에 섞여 있어 임시 git worktree(`a021e2b` 체크아웃)에서 문의 변경만 격리 빌드 후 배포. alias `https://aa4503b7.malgn-noti.pages.dev`.
+- **#46 — 나의 페이지 섹션 + 크레딧 충전 플로우**: 계정 관리를 `나의 페이지`로 개편. `AppMyPageShell`(공통 셸 + 좌측 메뉴 9종) + 라우트 9개(`/account/{settings,cards,password,security,multi,contract,credit,billing,inquiries}`) + `AppMemberInfoPanel`·`AppCardListPanel`·`AppEmailChangeDialog`·`AppPhoneVerifyDialog`·`AppCardAddDialog`. 크레딧 충전은 [/charge](../../app/pages/charge/index.vue) 시안 기반 재구성(충전 금액 선택·결제 카드 등록·결제 및 환불안내·동의) + 진행 컨펌 모달 + [/charge/result](../../app/pages/charge/result.vue) 완료 화면. alias `https://fcb87146.malgn-noti.pages.dev`.
+
+## 13. malgn-noti-api 루트(/) → /doc 리다이렉트
+
+- [src/index.ts:55](../../../malgn-noti-api/src/index.ts) 의 placeholder JSON 핸들러를 `c.redirect('/doc')` 한 줄로 교체 — `https://malgn-noti-api.malgnsoft.workers.dev/` 접속이 곧장 Scalar API 문서로 302 이동.
+- 동시 진행 중인 API 작업분(NHN webhook·send·schema·dispatch worker·`flow-definitions`/`export-jobs` 신규 라우트)이 working tree에 섞여 있어 — 배포는 working tree 기준이라 함께 라이브에 올라갔으나(typecheck 통과·`/health` 정상), 커밋은 임시 `git checkout HEAD -- src/index.ts`로 베이스라인 복원 → 리다이렉트만 재적용 → stage·commit 후 WIP 복원 방식으로 **리다이렉트 한 줄만** 격리 기록.
+- Version `f3fd3eb4-c594-471c-949a-f61ba1b30db1`. `GET /` → 302 `Location: /doc`, `GET /doc` → 200 (Scalar UI), `GET /health` → 200 production 확인.
+
 ## 산출물
 
 ### 트랙 A (admin)
@@ -222,6 +240,14 @@ export const PUSH_PRICING = 0.5
 - `malgn-noti-api: 06cf052 feat(send): Email · Kakao · Push 채널 추가 — 3채널 producer + adapter + worker` (9 files, +1211 −50). `src/adapters/nhn/{email,kakao,push}.ts` 신규.
 - Cloudflare Queue `malgn-noti-dispatch` (id `6c67d698...`) + Workers Version `b30dc2a3-dc5a-4050-a435-c3d03a5e69a7` (배포 #6) → `12dae362-2900-42ca-9a2e-e6dfb9c60091` (배포 #7).
 - `history.20260526.md §22·§23` 에 트랙 B 상세 기록.
+
+### 트랙 C (사용자단 추가)
+
+- `malgn-noti: 265395a` 랜딩페이지 만들기 — 목록·등록/수정 폼·미리보기 신규 구성 (배포 #44, alias `https://184b0fe1.malgn-noti.pages.dev`)
+- `malgn-noti: a021e2b` 문의하기 페이지를 /account/inquiry 경로로 이동 (배포 #45, alias `https://aa4503b7.malgn-noti.pages.dev`)
+- `malgn-noti: 83c4c37` 나의 페이지 섹션 + 크레딧 충전 플로우 신규 구성 (배포 #46, alias `https://fcb87146.malgn-noti.pages.dev`)
+- `malgn-noti-api: 677dffa` 루트(/) 요청을 API 문서(/doc)로 302 리다이렉트 (Workers Version `f3fd3eb4-c594-471c-949a-f61ba1b30db1`)
+- 화면·격리 절차 상세는 `history.20260521.md §22~§25` 에 기록(세션 도중 시스템 날짜 알림 혼선으로 1차 작성된 위치).
 
 ## 다음 단계 / 알려진 한계
 
