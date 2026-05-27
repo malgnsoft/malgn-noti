@@ -87,7 +87,42 @@
 - **secret** — `NHN_MOCK=1` wrangler secret 등록(프로덕션도 모의 모드로 시작).
 - **로컬 검증 한계** — wrangler 경고 `"Queues are not yet supported in wrangler dev remote mode"` → 로컬 dev에서 큐 처리 검증 불가.
 
-## 8. malgn-noti-api 프로덕션 배포 #6 (`history.20260526.md §23.1~23.3`)
+## 8. NHN webhook 핸들러 — `POST /webhooks/nhn/sms` (`malgn-noti-api 0d28173`)
+
+NHN의 발송 결과 콜백을 받아 `TB_DISPATCH_EVENT` 적재 + `TB_DISPATCH_ITEM.recv_state` 갱신. 발송 흐름의 피드백 루프를 완성.
+
+### 8.1 흐름
+
+1. **HMAC-SHA256 서명 검증** — `X-NHN-Signature: sha256=<hex>` 헤더 + `NHN_WEBHOOK_SIGNING_SECRET` env.
+   - 프로덕션: secret 미설정 → 403, 서명 불일치 → 401.
+   - 로컬 dev (`APP_ENV=local`): 서명 헤더 없으면 우회(개발 편의).
+2. **payload 정규화** — `parseSmsCallback()` → `msgStatus` (0/1/2/3/4) → `eventType` (accepted/sent/delivered/failed/bounced).
+3. **dispatch_item lookup** — `nhn_request_id` + `recipient_address` 로 매핑.
+4. **`TB_DISPATCH_EVENT` INSERT** — `dedup_key = "sms:<requestId>:<recipientNo>"`. UNIQUE 위반 → 200 dedup (멱등).
+5. **`recv_state` 천이** — delivered→success / failed,bounced→failed / 그 외 pending 유지.
+6. **dispatch_request 마무리** — 모든 item이 final 이면 `dispatch_state` 갱신(best-effort).
+
+### 8.2 신규 파일
+
+- `src/db/schema.ts` — `dispatchEvent` (파티션 PK `(id, received_at)`).
+- `src/lib/webhook-signature.ts` — `verifyHmacSignature()`, Web Crypto + timing-safe.
+- `src/adapters/nhn/webhook.ts` — `parseSmsCallback()` (NHN payload → NormalizedEvent).
+- `src/routes/webhooks.ts` — `POST /webhooks/nhn/sms`.
+
+`index.ts` — `app.route('/webhooks', webhooks)`, Bindings에 `NHN_WEBHOOK_SIGNING_SECRET` 추가.
+`openapi.ts` — `webhooks` 태그 + `/webhooks/nhn/sms` 경로(요청·응답·서명 헤더 명세).
+
+### 8.3 검증 보류
+
+Cloudflare 원격 미리보기 인프라 장애(1105) 지속 — 로컬 `pnpm dev` 자체가 503 → 웹훅 라우트 검증 차단. 타입 검사·코드 패턴은 동일.
+
+Cloudflare 회복 후 검증 절차:
+1. NHN_WEBHOOK_SIGNING_SECRET 등록(`wrangler secret put`)
+2. 외부에서 NHN 형식 + 서명 헤더로 POST
+3. `/dispatch/requests/:id/items` 에서 `recv_state=success` + `received_at` 확인
+4. `/admin/...` 로 `TB_DISPATCH_EVENT` 적재 행 확인
+
+## 9. malgn-noti-api 프로덕션 배포 #6 (`history.20260526.md §23.1~23.3`)
 
 §6·§7 변경을 라이브 반영.
 
@@ -109,6 +144,7 @@
 
 - `malgn-noti-api: 020307f fix(idempotency): TB_IDEMPOTENCY + INSERT-then-conflict 패턴 — 멱등 버그 해결` (4 files, +151 −74). `0001_idempotency.sql` 신규.
 - `malgn-noti-api: 5e1ac72 feat(send): NHN SMS 어댑터 + Cloudflare Queues + consumer worker (mock 모드)` (8 files, +439 −5). `src/adapters/nhn/{types,sms}.ts`·`src/workers/dispatch.ts` 신규.
+- `malgn-noti-api: 0d28173 feat(webhooks): POST /webhooks/nhn/sms — NHN 발송 결과 콜백 수신` (6 files). `src/db/schema.ts` (dispatchEvent) · `src/lib/webhook-signature.ts` · `src/adapters/nhn/webhook.ts` · `src/routes/webhooks.ts` 신규.
 - Cloudflare Queue `malgn-noti-dispatch` (id `6c67d698...`) + Workers Version `b30dc2a3-dc5a-4050-a435-c3d03a5e69a7` (배포 #6).
 - `history.20260526.md §22·§23` 에 트랙 B 상세 기록.
 
