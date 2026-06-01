@@ -336,3 +336,76 @@ API 통한 e2e 4건 × 2환경(로컬 dev + 프로덕션 Pages):
 - **OTP 인증(`TB_VERIFICATION`)·약관 동의(`TB_TERMS_AGREEMENT`)·서비스 담당자 초대** — signup 라우트는 이를 적재하지 않음. 프런트에서 입력은 받지만 백엔드는 무시. 후속 라우트(`/auth/verify-email`, `/auth/verify-phone`, `/auth/agree-terms`, `/manager-invites`) 구현 필요.
 - **나머지 화면 연동** — 발송 6채널·이력·주소록·발신정보·템플릿·캠페인·크레딧·문의·나의 페이지 — 모두 여전히 목업. 화면별 도메인 API(`/contacts`, `/sender-phones` 등)로 점진 교체.
 - **로그아웃 UX** — 현재 `useAuthStore().logout()`만 정의. GNB의 로그아웃 버튼은 `AppGnb.vue`에서 데모용 ref만 토글 중 — 실 호출로 교체 필요.
+
+---
+
+# §5. 이메일 OTP 인증 — `/auth/email-code/send`·`/verify` 신설 + signup.vue 실 API 연동 (배포 #9·#50)
+
+## 한 줄
+
+§4의 알려진 한계 #4(이메일 OTP 미연동, 화면용 토스트만 동작)를 해소. 백엔드에 OTP 발송·검증 라우트 2개 추가(TB_VERIFICATION 적재 + SHA-256 코드 해시 + TTL 10분·재발송 시 직전 코드 만료·5회 시도 제한·소비 후 재사용 차단), Drizzle `schema.ts`에 `verification` 정의(라이브 정본과 인덱스 일치), OpenAPI 4지점 갱신(2 paths + 3 schemas), Workers 배포 #9(Version `83f32a61...`). 프런트 [signup.vue](../../app/pages/signup.vue)의 `sendIdCode`/`confirmIdCode`를 실 API 호출로 교체 + 버튼 로딩 상태(`sendingCode`/`verifyingCode`) + 재발송 라벨 + 에러 메시지 표준화. NHN_MOCK=1 환경에서만 응답에 `mockCode` 노출(개발 편의 — production 자동 차단). Pages 배포 #50 (alias `c2100890.malgn-noti.pages.dev`). 라이브 e2e 6 시나리오 모두 통과 (발송·잘못된 코드 401·올바른 코드 200·소비 후 재시도 401·재발송 신규 코드·DB 행 검증).
+
+## 5.1 결정 사항
+
+- **저장**: `TB_VERIFICATION` (이미 라이브) 활용. `code_hash`로 평문 코드 저장 회피. 해시는 `SHA-256(target|purpose|code)` — Web Crypto API 네이티브.
+- **TTL**: 10분. `expires_at = now + 10*60*1000`.
+- **재발송**: 같은 `(email, purpose)`의 미소비·미만료 레코드를 즉시 만료 처리(`expires_at = now`) → 직전 코드로 검증 불가.
+- **시도 제한**: 5회 초과 시 즉시 만료(`OTP_MAX_ATTEMPTS = 5`).
+- **소비**: 검증 성공 시 `consumed_at = now` → 같은 코드 재사용 차단.
+- **purpose enum**: `signup` / `reset_password` / `change_email`. signup 외 흐름은 후속 라우트가 활용.
+- **`mockCode` 노출**: `c.env.NHN_MOCK === '1'`일 때만 응답에 `mockCode: code` 포함. production은 secret 미설정이면 자동으로 노출 안 됨. real NHN 자격증명 등록 후 secret도 영구 제거.
+- **`/auth/signup`에 강제 검증 미추가**: 후속 결정 사항(검증 게이트 도입 시점)이 필요하므로 본 단계에서는 백엔드 호환성 유지 + 프런트가 UX 차원에서 검증 강제. 이전 e2e 테스트·기존 통합 사용처에 영향 없음.
+
+## 5.2 코드 변경 (백엔드 — `malgn-noti-api`)
+
+| 파일 | 변경 |
+| --- | --- |
+| [src/db/schema.ts](../../../malgn-noti-api/src/db/schema.ts) | `verification` 테이블 신규 정의 (8 컬럼 + `idx_verif_target(target_type, target, purpose, expires_at)` — 라이브 정본과 1:1). |
+| [src/lib/errors.ts](../../../malgn-noti-api/src/lib/errors.ts) | `errors.unauthenticated()`에 default 메시지 파라미터 추가 (`(msg = 'Authentication required')`). 호환성 유지 + OTP 라우트에서 한국어 메시지 첨부 가능. |
+| [src/routes/auth.ts](../../../malgn-noti-api/src/routes/auth.ts) | 헬퍼 4개 추가: `generateOtpCode()` (Web Crypto getRandomValues 4 bytes → 6 digits), `hashOtpCode()` (SHA-256), `purposeLabel()`, `buildEmailBody()` (HTML 템플릿). 라우트 2개: `POST /auth/email-code/send` + `POST /auth/email-code/verify`. NHN Email 어댑터 호출(`sendEmail(null, ...)`) — 자격증명 미설정 시 어댑터 내부에서 mock fallback. |
+| [src/openapi.ts](../../../malgn-noti-api/src/openapi.ts) | 2 paths(`/auth/email-code/send`·`/verify`) + 3 schemas(`EmailCodeSendRequest`·`EmailCodeSendResponse`·`EmailCodeVerifyRequest`). |
+| `wrangler.toml` | 변경 없음. |
+
+## 5.3 코드 변경 (프런트 — `malgn-noti`)
+
+| 파일 | 변경 |
+| --- | --- |
+| [app/pages/signup.vue](../../app/pages/signup.vue) | `sendIdCode()` → `POST /auth/email-code/send` async. 응답 `mockCode` 있으면 토스트에 노출(개발 편의). `sendingCode` 로딩 ref. 버튼 라벨 `발송 중…` / `재발송` / `인증코드 발송` 3-상태. `confirmIdCode()` → `POST /auth/email-code/verify` async. 백엔드 한국어 에러 메시지(`인증코드가 만료되었거나 …`·`시도 횟수를 초과했습니다 …`·`인증코드가 올바르지 않습니다`)를 그대로 토스트에. `verifyingCode` 로딩 + 버튼 라벨 `확인 중…`. |
+
+## 5.4 라이브 e2e 검증 (Production)
+
+`NHN_MOCK=1` secret을 production에 일시 적용 → 6 시나리오 검증 → secret 즉시 제거.
+
+| # | 시나리오 | 결과 |
+| --- | --- | --- |
+| 1 | `POST /auth/email-code/send` → 200 + `mockCode: "092004"` + `expiresAt` | ✅ |
+| 2 | `POST /verify` 잘못된 코드(`"000000"`) → 401 `인증코드가 올바르지 않습니다.` | ✅ |
+| 3 | `POST /verify` 올바른 코드 → 200 + `{verified:true}` | ✅ |
+| 4 | 같은 코드 재시도 → 401 `인증코드가 만료되었거나 발급된 적이 없습니다.` (consumed) | ✅ |
+| 5 | 재발송 → 새 코드(`461872`) + 직전 코드(`092004`) 즉시 만료 | ✅ |
+| 6 | DB 행 점검 — id=1 attempts=1+consumed_at, id=2 신규+expires_at 신규 | ✅ |
+
+검증 후 `NHN_MOCK` secret `wrangler secret delete NHN_MOCK` → `wrangler secret list` 응답에 JWT_SECRET만 잔존 확인. 재호출 시 응답에서 `mockCode` 사라짐 확인.
+
+검증 과정에서 생성된 TB_VERIFICATION 임시 행은 즉시 cleanup.
+
+## 5.5 배포 #9·#50
+
+- **API (Workers)**: `pnpm typecheck` 통과 → `pnpm run deploy` → Version `83f32a61-ca2c-4094-ae21-0cfcb174f26c`.
+- **사용자단 (Pages)**: `pnpm build` → `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main --commit-dirty=true --commit-message "email OTP integration"` → alias `https://c2100890.malgn-noti.pages.dev`.
+
+## 5.6 산출물
+
+- API: 4 파일 수정 — schema.ts + errors.ts + auth.ts + openapi.ts.
+- 사용자단: 1 파일 수정 — signup.vue.
+- SIGNUP.md §8 #4 → ✅ (이메일) + #4b 휴대폰 미연동으로 재구성.
+- 라이브 DB — TB_VERIFICATION에 라이브 행이 실 사용자 가입 시점부터 적재 시작 (검증용 임시 행은 cleanup).
+- 라이브 Worker — 변경 #9 적용. `/health/db` 정상.
+
+## 5.7 알려진 한계 / 다음 단계
+
+- **실제 이메일은 발송되지 않음** — TB_NHN_CREDENTIAL 비어 있어 `sendEmail`이 `(creds=null, mockMode=false)` → 어댑터 내부 mock fallback. 사용자가 가입 시 코드 자체는 발급되지만 메일함에 도착 0. **자격증명 등록은 별도 작업**(NHN Cloud 콘솔에서 채널별 appKey 발급 → TB_NHN_CREDENTIAL 적재 + envelope 암호화). 그 전까지는 NHN_MOCK secret을 운영자가 일시 적용해 mockCode 확인 가능.
+- **휴대폰 OTP 미연동** — Step 4(휴대폰 본인 인증)는 여전히 화면 더미. 인증 사업자(PASS·NICE 등) 선정 후 어댑터 + `/auth/phone-code/send`·`/verify` 동일 패턴 신설.
+- **`/auth/signup` 강제 검증 미적용** — 정책 결정 후 적용 가능(`emailVerificationToken` 필수화 또는 signup 직전 TB_VERIFICATION 조회).
+- **`schema.ts` 인덱스 누락 점검** — 본 단계에서 verification만 인덱스/FK 명시화. 다른 테이블은 §3에서 export/flow 4 테이블만 처리한 상태 그대로.
+- **Rate limit** — IP·이메일별 분 단위 발송 제한 미적용. 후속 작업으로 Cloudflare KV 또는 Durable Objects 카운터 도입 검토.

@@ -92,15 +92,46 @@ const allAgreed = computed({
 const requiredTermsOk = computed(() => TERMS.filter(t => t.badge === '필수').every(t => agreed.value[t.key]))
 const activeTermKey = ref('')
 
-function sendIdCode() {
+const sendingCode = ref(false)
+
+async function sendIdCode() {
   if (!emailValid.value) {
     toast.add({ title: '올바른 이메일 주소를 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  idCodeSent.value = true
-  idVerified.value = false
-  codeDigits.value = ['', '', '', '', '', '']
-  toast.add({ title: '인증코드 6자리를 이메일로 발송했습니다.', color: 'info', icon: 'i-lucide-mail' })
+  sendingCode.value = true
+  try {
+    const res = await useApi()<{ data: { sent: boolean, expiresAt: string, mockCode?: string } }>(
+      '/auth/email-code/send',
+      { method: 'POST', body: { email: email.value.trim(), purpose: 'signup' } },
+    )
+    idCodeSent.value = true
+    idVerified.value = false
+    codeDigits.value = ['', '', '', '', '', '']
+
+    // NHN_MOCK=1 환경(개발용)에서만 응답에 mockCode 노출됨 — 토스트로 안내
+    if (res.data.mockCode) {
+      toast.add({
+        title: `인증코드 발송됨 (개발 모드: ${res.data.mockCode})`,
+        color: 'info',
+        icon: 'i-lucide-mail',
+      })
+    }
+    else {
+      toast.add({ title: '인증코드 6자리를 이메일로 발송했습니다.', color: 'info', icon: 'i-lucide-mail' })
+    }
+  }
+  catch (e: unknown) {
+    const status = (e as { response?: { status?: number } })?.response?.status
+    toast.add({
+      title: status === 400 ? '이메일 형식이 올바르지 않습니다.' : '인증코드 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    sendingCode.value = false
+  }
 }
 function onCodeInput(i: number, e: Event) {
   const el = e.target as HTMLInputElement
@@ -115,7 +146,9 @@ function onCodeKeydown(i: number, e: KeyboardEvent) {
     (el.previousElementSibling as HTMLInputElement | null)?.focus()
   }
 }
-function confirmIdCode() {
+const verifyingCode = ref(false)
+
+async function confirmIdCode() {
   if (!idCodeSent.value) {
     toast.add({ title: '먼저 인증코드를 발송해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
@@ -124,8 +157,26 @@ function confirmIdCode() {
     toast.add({ title: '인증코드 6자리를 모두 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  idVerified.value = true
-  toast.add({ title: '이메일 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  verifyingCode.value = true
+  try {
+    await useApi()<{ data: { verified: boolean } }>(
+      '/auth/email-code/verify',
+      { method: 'POST', body: { email: email.value.trim(), purpose: 'signup', code: fullCode.value } },
+    )
+    idVerified.value = true
+    toast.add({ title: '이메일 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e: unknown) {
+    const data = (e as { data?: { message?: string } })?.data
+    toast.add({
+      title: data?.message ?? '인증코드 확인 실패. 다시 시도해 주세요.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    verifyingCode.value = false
+  }
 }
 function onTermAgree(key: string) {
   agreed.value[key] = true
@@ -413,8 +464,8 @@ function finish() {
               autocomplete="email"
               :disabled="idVerified"
             >
-            <button type="button" class="btn btn-outline-dark" :disabled="idVerified" @click="sendIdCode">
-              인증코드 발송
+            <button type="button" class="btn btn-outline-dark" :disabled="idVerified || sendingCode" @click="sendIdCode">
+              {{ sendingCode ? '발송 중…' : (idCodeSent ? '재발송' : '인증코드 발송') }}
             </button>
           </div>
         </div>
@@ -435,8 +486,8 @@ function finish() {
                 @keydown="onCodeKeydown(i, $event)"
               >
             </div>
-            <button type="button" class="btn btn-primary" :disabled="idVerified" @click="confirmIdCode">
-              {{ idVerified ? '인증 완료' : '확인' }}
+            <button type="button" class="btn btn-primary" :disabled="idVerified || verifyingCode" @click="confirmIdCode">
+              {{ idVerified ? '인증 완료' : (verifyingCode ? '확인 중…' : '확인') }}
             </button>
           </div>
         </div>
