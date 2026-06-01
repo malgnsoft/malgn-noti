@@ -1,8 +1,8 @@
-# 2026-05-27 — malgn-noti-admin Nuxt 3 부트스트랩 + 셸 레이아웃 + 첫 프로덕션 배포 + malgn-noti-api 멱등 수정·NHN 어댑터·Queues·webhook·Email/Kakao/Push 채널·배포 #6·#7 + 사용자단 추가(랜딩페이지·문의 이동·나의 페이지·충전 — 배포 #44~#46) + malgn-noti-api 루트→/doc 리다이렉트
+# 2026-05-27 — malgn-noti-admin Nuxt 3 부트스트랩 + 셸 레이아웃 + 첫 프로덕션 배포 + malgn-noti-api 멱등 수정·NHN 어댑터·Queues·webhook·Email/Kakao/Push 채널·배포 #6·#7 + 사용자단 추가(랜딩페이지·문의 이동·나의 페이지·충전 — 배포 #44~#46) + malgn-noti-api 루트→/doc 리다이렉트 + RCS 채널·Export 잡·Flow 정의 정식 커밋·배포 #8
 
 ## 한 줄 요약
 
-세 트랙 병행. **(A) malgn-noti-admin** — 비어 있던 BackOffice 레포를 **Nuxt 3 + Nuxt UI v3로 부트스트랩** + `design_handoff_customer_detail` 정본 참조 **LNB(256px sticky · 8 그룹 메뉴) + TopBar(64px sticky)** 셸 레이아웃 + `https://malgn-noti-admin.pages.dev` 첫 Nuxt 앱 프로덕션 배포(정적 placeholder 대체). **(B) malgn-noti-api** — §19에서 추적한 멱등 버그를 `TB_IDEMPOTENCY` + INSERT-then-conflict race-free 패턴으로 정식 해결 + NHN SMS 어댑터(mock/real) + Cloudflare Queues(`malgn-noti-dispatch`) + consumer worker(`dispatch_state` 천이) + `POST /webhooks/nhn/sms` HMAC 콜백 수신 + Producer·Consumer 동시 바인딩 프로덕션 배포 #6(Version `b30dc2a3...`) + **Email · Kakao(알림톡/친구톡) · Push 3채널 동시 추가** + 배포 #7(Version `12dae362...`). **(C) malgn-noti 사용자단** — 메시지 관리 랜딩페이지 만들기 신규(목록·기본형/확장형 등록 폼·미리보기 모달) + 문의하기 경로를 `/account/inquiry`로 이동(GNB·푸터·사이트맵 링크 정리) + 나의 페이지 섹션(공통 셸 + 9개 라우트·회원 정보 변경·결제 카드 관리·이메일/휴대폰 인증 모달) + 크레딧 충전 플로우(충전 페이지 재구성·결제 컨펌·결과 화면)로 Pages 배포 #44·#45·#46. **(D) malgn-noti-api 추가** — 루트(`/`) placeholder JSON을 `c.redirect('/doc')`로 교체해 워커 도메인 접속이 곧장 Scalar API 문서로 이동하도록 변경, Workers 재배포(Version `f3fd3eb4...`).
+세 트랙 병행. **(A) malgn-noti-admin** — 비어 있던 BackOffice 레포를 **Nuxt 3 + Nuxt UI v3로 부트스트랩** + `design_handoff_customer_detail` 정본 참조 **LNB(256px sticky · 8 그룹 메뉴) + TopBar(64px sticky)** 셸 레이아웃 + `https://malgn-noti-admin.pages.dev` 첫 Nuxt 앱 프로덕션 배포(정적 placeholder 대체). **(B) malgn-noti-api** — §19에서 추적한 멱등 버그를 `TB_IDEMPOTENCY` + INSERT-then-conflict race-free 패턴으로 정식 해결 + NHN SMS 어댑터(mock/real) + Cloudflare Queues(`malgn-noti-dispatch`) + consumer worker(`dispatch_state` 천이) + `POST /webhooks/nhn/sms` HMAC 콜백 수신 + Producer·Consumer 동시 바인딩 프로덕션 배포 #6(Version `b30dc2a3...`) + **Email · Kakao(알림톡/친구톡) · Push 3채널 동시 추가** + 배포 #7(Version `12dae362...`). **(C) malgn-noti 사용자단** — 메시지 관리 랜딩페이지 만들기 신규(목록·기본형/확장형 등록 폼·미리보기 모달) + 문의하기 경로를 `/account/inquiry`로 이동(GNB·푸터·사이트맵 링크 정리) + 나의 페이지 섹션(공통 셸 + 9개 라우트·회원 정보 변경·결제 카드 관리·이메일/휴대폰 인증 모달) + 크레딧 충전 플로우(충전 페이지 재구성·결제 컨펌·결과 화면)로 Pages 배포 #44·#45·#46. **(D) malgn-noti-api 추가** — 루트(`/`) placeholder JSON을 `c.redirect('/doc')`로 교체해 워커 도메인 접속이 곧장 Scalar API 문서로 이동하도록 변경, Workers 재배포(Version `f3fd3eb4...`). **(E) malgn-noti-api §13 WIP 정식 커밋** — §13 시점에 라이브로 올라가 있던 RCS 채널(5채널째 — adapter·producer·consumer·webhook·`RCS_PRICING`) + Export 잡(`TB_EXPORT_JOB` + `/export-jobs` CRUD) + Flow 정의(`TB_FLOW_DEFINITION/RUN/STEP_RUN` + `/flow-definitions` CRUD) + OpenAPI 4지점(+230) + `0002_export_flow.sql` 마이그레이션을 단일 배치 커밋(`1e7bd61`, 12 files +1228 −16) + 배포 #8(Version `95f9f894...`)로 working tree ↔ main 동기화. DDL 적용은 Cloudflare 1105 회복 후로 보류.
 
 ## 1. 사전 조사
 
@@ -223,6 +223,51 @@ export const PUSH_PRICING = 0.5
 - 동시 진행 중인 API 작업분(NHN webhook·send·schema·dispatch worker·`flow-definitions`/`export-jobs` 신규 라우트)이 working tree에 섞여 있어 — 배포는 working tree 기준이라 함께 라이브에 올라갔으나(typecheck 통과·`/health` 정상), 커밋은 임시 `git checkout HEAD -- src/index.ts`로 베이스라인 복원 → 리다이렉트만 재적용 → stage·commit 후 WIP 복원 방식으로 **리다이렉트 한 줄만** 격리 기록.
 - Version `f3fd3eb4-c594-471c-949a-f61ba1b30db1`. `GET /` → 302 `Location: /doc`, `GET /doc` → 200 (Scalar UI), `GET /health` → 200 production 확인.
 
+## 14. malgn-noti-api §13 WIP 정식 커밋 — RCS 채널 + Export 잡 + Flow 정의 + 배포 #8
+
+§13 시점에 working tree에 라이브로 올라가 있었으나 커밋 격리로 인해 `main`과 어긋난 채 남아 있던 3 도메인 슬라이스를 단일 배치로 정리 — 코드 + 신규 마이그레이션 SQL + Workers 재배포까지 일관화.
+
+### 14.1 RCS 채널 (5채널째 — sms·email·kakao·push 잇는)
+
+- `src/adapters/nhn/rcs.ts` 신규 — NHN `/rcs-biz/v2.0` 4타입(sms/lms/mms/template) 어댑터. `NHN_MOCK=1` 또는 `brandId` 미설정 시 mock 응답. 실 모드는 `X-Secret-Key` 헤더 + `chatbotId` 발신.
+- `src/adapters/nhn/webhook.ts` — RCS 콜백 파서 추가(`nhnRequestId`·`recipientNo`·`resultCode`·`recv_state` 천이).
+- `src/routes/send.ts` (+227) — RCS producer. 발신 RCS 브랜드(`TB_RCS_BRAND`) 검증 + 옵트아웃 필터 + 크레딧 hold + 트랜잭션 적재(기존 SMS/Email/Kakao/Push 패턴 generic 재사용).
+- `src/routes/webhooks.ts` — `POST /webhooks/nhn/rcs` (기존 SMS 핸들러와 동일 HMAC-SHA256 검증 + `dedup_key` 멱등).
+- `src/workers/dispatch.ts` — Consumer에 RCS 채널 분기 추가.
+- `src/lib/pricing.ts` — `RCS_PRICING = { sms: 12, lms: 40, mms: 120, template: 50 }` (frontend `app/types/channel.ts` RCS_META 참조).
+
+### 14.2 Export 잡 (비동기 다운로드)
+
+- 시안의 "**다운로드 요청 PU + 목록 PU**" 패턴 + 90일 윈도우 우회 경로.
+- `src/db/schema.ts` — `TB_EXPORT_JOB` 비파티션. `resource_type` 7종(history_sms/email/kakao/push/rcs + contacts + credit_ledger) · `job_state` 5단계(pending → running → ready / failed / expired) · `r2_key`(R2 결과 위치) · `expires_at`(등록 +30일).
+- `src/routes/export-jobs.ts` 신규 — POST 등록 / GET 목록(커서·필터) / GET 단건(ready면 `downloadUrl` placeholder 노출) / DELETE soft.
+- 처리 worker + R2 presigned URL 발급은 후속.
+
+### 14.3 Flow 정의 (복합 발송 그래프)
+
+- `src/db/schema.ts` — `TB_FLOW_DEFINITION`(nodes JSON) + `TB_FLOW_RUN`(1회 실행 인스턴스) + `TB_FLOW_STEP_RUN`(노드 단위). 3 테이블 모두 비파티션 + 인덱스.
+- `src/routes/flow-definitions.ts` 신규 — Zod superRefine로 노드 검증(order 0부터 연속 + 첫 노드 `condition='always'` 강제 + 채널 5종 enum + `delayMinutes ≤ 7일`).
+- 실행 엔진(`POST /send/flow`)·`TB_FLOW_STEP_RUN` 천이는 후속.
+
+### 14.4 신규 마이그레이션
+
+- `src/db/migrations/0002_export_flow.sql` 신규 — TB_EXPORT_JOB + TB_FLOW_DEFINITION + TB_FLOW_RUN + TB_FLOW_STEP_RUN (인덱스 4종 포함).
+- **DDL 적용 보류** — `wrangler dev --remote`가 Cloudflare API edge-preview 호출에서 실패(1105 잔류). 1105 회복 후 `pnpm dev --remote` 띄워 `/admin/migrate`에 POST 예정. 그동안 `/export-jobs`·`/flow-definitions`는 라이브 5xx(table not found) 가능 — **프런트 호출처 0개**로 무영향.
+
+### 14.5 OpenAPI 4지점 갱신
+
+- `src/openapi.ts` (+230) — RCS 발송·Export 잡 CRUD·Flow 정의 CRUD 문서화. Scalar UI(`/doc`)에서 즉시 확인 가능.
+
+### 14.6 배포 #8 + 검증
+
+- `wrangler whoami` OAuth 토큰 재인증(info@malgnsoft.com) 선행 후 `pnpm run deploy`.
+- Workers Version `95f9f894-4d6c-419d-9cec-8bc7f6c37999`. Total Upload 2549.53 KiB / gzip 583.70 KiB, Startup 78 ms.
+- 검증: `/health` 200(env=production), `/health/db` 200(mysql 8.0.42), `/export-jobs`·`/flow-definitions` 모두 401(auth 가드 작동 — DDL 부재가 트리거되지 않음).
+
+### 14.7 정리 — working tree ↔ main 동기
+
+- 단일 배치 커밋 `malgn-noti-api: 1e7bd61 feat: RCS 채널 + Export 잡 + Flow 정의 — 3 도메인 슬라이스` (12 files, +1228 −16). origin/main 푸시 완료(`677dffa..1e7bd61`).
+
 ## 산출물
 
 ### 트랙 A (admin)
@@ -249,6 +294,12 @@ export const PUSH_PRICING = 0.5
 - `malgn-noti-api: 677dffa` 루트(/) 요청을 API 문서(/doc)로 302 리다이렉트 (Workers Version `f3fd3eb4-c594-471c-949a-f61ba1b30db1`)
 - 화면·격리 절차 상세는 `history.20260521.md §22~§25` 에 기록(세션 도중 시스템 날짜 알림 혼선으로 1차 작성된 위치).
 
+### 트랙 E (api §13 WIP 정식 커밋 — RCS·Export·Flow)
+
+- `malgn-noti-api: 1e7bd61 feat: RCS 채널 + Export 잡 + Flow 정의 — 3 도메인 슬라이스` (12 files, +1228 −16). 신규: `src/adapters/nhn/rcs.ts` · `src/routes/{export-jobs,flow-definitions}.ts` · `src/db/migrations/0002_export_flow.sql`. 수정: `src/db/schema.ts`(4 테이블 추가) · `src/openapi.ts`(+230) · `src/routes/send.ts`(+227 RCS producer) · `src/lib/pricing.ts`(`RCS_PRICING`) · `src/adapters/nhn/webhook.ts` · `src/routes/webhooks.ts` · `src/workers/dispatch.ts` · `src/index.ts`(라우트 마운트).
+- Workers Version `95f9f894-4d6c-419d-9cec-8bc7f6c37999` (배포 #8). `wrangler whoami` 재인증 후 `pnpm run deploy`. `/health`·`/health/db`·`/export-jobs(401)`·`/flow-definitions(401)` 검증.
+- **DDL 보류**: `0002_export_flow.sql` 적용은 `wrangler dev --remote`가 Cloudflare 1105로 막혀 있어 1105 회복 후 `/admin/migrate`로 적용 예정.
+
 ## 다음 단계 / 알려진 한계
 
 ### 트랙 A (admin)
@@ -262,9 +313,10 @@ export const PUSH_PRICING = 0.5
 ### 트랙 B (api)
 
 - 큐 e2e 검증 — Cloudflare 1105 회복 후 `pnpm dev` + 시드 + PROD URL 발송 → `dispatch_state` 천이 추적.
-- 남은 채널: `/send/rcs` (브랜드+템플릿 검수, 가장 복잡) · `/send/flow` (폴백 엔진: 알림톡→친구톡→LMS 등).
-- 채널별 webhook — `/webhooks/nhn/email` · `/webhooks/nhn/kakao` · `/webhooks/nhn/push` (현재는 SMS만). Push는 별도 결과 조회 API 필요.
+- `0002_export_flow.sql` DDL 적용 — 1105 회복 후 `/admin/migrate`로 4 테이블 생성. 그 전까지 `/export-jobs`·`/flow-definitions` 호출 시 5xx(table not found).
+- 채널별 webhook — `/webhooks/nhn/email` · `/webhooks/nhn/kakao` · `/webhooks/nhn/push` (현재는 SMS·RCS만). Push는 별도 결과 조회 API 필요.
+- Flow 실행 엔진 — `POST /send/flow` + `TB_FLOW_RUN`/`TB_FLOW_STEP_RUN` 천이 + 폴백 정책(예: 알림톡→친구톡→LMS) 실행기.
+- Export 잡 처리 worker — Cloudflare Queues 컨슈머 + 채널별 이력 조회 → R2 업로드 → presigned URL 발급.
 - 실 NHN 자격증명 등록 + `NHN_MOCK` secret 삭제 → real 모드 전환 (채널별 appKey).
 - Kakao senderKey · pushCert credential의 envelope 복호화 (현재 평문 가정).
-- Export 잡 (`/export-jobs`) — 90일 초과 이력 우회.
 - 트랜잭션 rollback 시 idempotency cleanup race 추가 보강.
