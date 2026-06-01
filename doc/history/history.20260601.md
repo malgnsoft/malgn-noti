@@ -91,3 +91,86 @@
 - **외부 자료 링크 일부 placeholder.** 컨설팅팀/디자인팀 산출물(단가표·계약서·디자인 스타일 가이드 등)의 실제 URL이 정해지면 MD·Vue 양쪽에 채워 넣기.
 - **Step 4 정식 산출물.** 디자인팀의 정식 디자인 스타일 가이드 + 퍼블리싱 MD는 여전히 미. 개발 측 `doc/DESIGN.md` + `/guide` 카탈로그로 대체 운영 중.
 - **자동화 가능성**: helper-pms처럼 R2 영속 + 자동 저장 형태로 운영하고 싶다면, `malgn-noti-api`에 `GET /wbs` + `PUT /wbs` 추가 → 본 페이지를 편집 가능 페이지로 전환. 1차에서는 스코프에서 제외.
+
+---
+
+# §2. `0002_export_flow.sql` DDL — 라이브 이미 적용 확인 + 라이브 검증 + SQL 파일 동기화
+
+## 한 줄
+
+`wrangler dev --remote`의 1105 잔류로 `/admin/migrate` 경로가 막혀 있던 상태에서, Aurora 직결(`noti` 계정 + SSL REQUIRED)로 들어가 **4 신규 테이블(TB_EXPORT_JOB / TB_FLOW_DEFINITION / TB_FLOW_RUN / TB_FLOW_STEP_RUN)이 이미 적용돼 있음**을 확인. 컬럼은 우리 `0002_export_flow.sql`과 100% 일치, **인덱스·FK는 라이브 쪽이 더 정교**(FK 6개 + 의미 있는 인덱스명) — 출처는 사전 작업으로 추정. 라이브 워커의 `/export-jobs`·`/flow-definitions` GET/POST 4건 모두 200/201 정상 응답으로 e2e 확인. 검증 과정에서 생긴 테스트 데이터(임시 user/company 2건 + export_job/flow_def 각 1건)를 즉시 cleanup해 빈 상태 복구. `0002_export_flow.sql`을 라이브 정본(인덱스·FK 포함)에 맞춰 갱신해 신규 환경에서도 동일하게 적용되도록 동기화.
+
+## 2.1 Cloudflare 1105 재시도 (3회) → 모두 실패
+
+| 시도 | 시각 (UTC) | Ray ID | 결과 |
+| --- | --- | --- | --- |
+| 1차 | 01:47 | `a04a8ca2dd1125d4` | HTTP 503 — `Error 1105 Temporarily unavailable` |
+| 2차 | 01:54 | `a04a9753cbaedd38` | HTTP 503 — 동일 |
+| 3차 | 02:24~02:28 | — | HTTP 503 12회 폴링 모두 (10초 간격) |
+
+- 모두 `wrangler dev --remote`가 띄운 임시 edge-preview 워커에서 발생. 라이브 워커(`https://malgn-noti-api.malgnsoft.workers.dev`)는 `/health`·`/health/db` 200으로 영향 없음 → **1105는 Cloudflare 측 dev/preview 인프라 한정 장애**로 확정.
+- 결정: 한 번만 쓸 카드인 일회용 Aurora SG whitelist 경로로 우회. 운영 정책 갱신(Cloudflare Tunnel·RDS Proxy·bastion 등)은 별도 후속 작업으로 분리.
+
+## 2.2 Hyperdrive ↔ Aurora 라이브 연결 정상성 사전 확인
+
+- `wrangler hyperdrive get a2ba4efe7421464da1d5ff5e620b33a3` — 설정 정상 (origin: `malgn-dev-db.cluster-c53h9wjjbjbr.ap-northeast-2.rds.amazonaws.com:3306` / db `noti` / user `admin` / SSL REQUIRED / connection_limit 60 / 캐싱 활성).
+- `/health/db` 3회 — 모두 200, `mysql_version: 8.0.42`, **cold 512ms → warm 355ms → warm 360ms** (Hyperdrive 캐시 효과 뚜렷).
+- 보호 라우트 가드 — `/me`·`/contacts`·`/dispatch/requests` 모두 401 (DB 단계 진입 전 차단). `/admin/*` 404 (프로덕션 가드 정상).
+- 실 DB write+read — `/auth/signup`(임시) → JWT 169자 → `/me` SELECT 2회 → **249ms 응답** + 컬럼 정상 매핑.
+- 결론: 1105와 무관하게 라이브 인프라는 한 통으로 살아 있음.
+
+## 2.3 Aurora 직결 — TCP 도달성 + mysql 인증
+
+- 사용자 제공 — `noti` 계정 + 패스워드(채팅 외부에 기록 안 함, `MYSQL_PWD` 환경변수로만 1회 쉘에서 사용).
+- 내 outbound IP — `211.119.233.35`.
+- TCP probe: `nc -zv -G 5 malgn-dev-db.cluster-...:3306` → **즉시 connection succeeded** — SG 인바운드가 이미 열려 있는 상태(추정: 사전에 noti IP 또는 관련 대역이 화이트리스트됨).
+- mysql 접속(`--ssl-mode=REQUIRED`): `noti@%`, DB `noti`, 서버 8.0.42 → ✅.
+
+## 2.4 사전 DDL 적용 확인 — 컬럼 100% 일치, 인덱스·FK 더 풍부
+
+- 전체 TB_ 카운트: **50** (= 49 initial + 1 idempotency + 4 신규 − 4 중복? 아님. 0000_initial.sql의 정확 적용본은 45 + 0001 1 + 0002 4 = 50.) — 4 신규가 50 안에 이미 포함돼 있음.
+- 4 신규 테이블 컬럼 — `0002_export_flow.sql`(2026-05-31자 초안)과 **모두 일치**: 데이터 타입·NULL 여부·기본값·자동 타임스탬프 모두 동일.
+- **인덱스/FK는 라이브 쪽이 더 정교**:
+  - `TB_EXPORT_JOB`: 라이브 `idx_export_company_state(company_id, job_state, requested_at) + idx_export_user(user_id, requested_at) + FK fk_export_company → TB_COMPANY + FK fk_export_user → TB_USER`. 초안 안은 단일 `idx_export_company_user(company_id, user_id, requested_at) + idx_export_state(job_state, requested_at)`만 있었음.
+  - `TB_FLOW_DEFINITION`: 라이브 `idx_flowdef_company_status(company_id, status, created_at) + FK fk_flowdef_company → TB_COMPANY`. 초안은 `idx_flow_def_company(company_id, created_at)`만.
+  - `TB_FLOW_RUN`: 라이브 `idx_flowrun_company_state(company_id, run_state, started_at) + FK fk_flowrun_company → TB_COMPANY + FK fk_flowrun_def → TB_FLOW_DEFINITION + 보조 키 fk_flowrun_def`. 초안은 인덱스 2개만, FK 없음.
+  - `TB_FLOW_STEP_RUN`: 라이브 `idx_fsr_run(flow_run_id, node_order) + idx_fsr_dispatch(dispatch_request_id) + FK fk_fsr_run → TB_FLOW_RUN`. 초안은 단일 인덱스만, FK 없음.
+- 4 테이블 모두 행 수 **0** → 빈 신규 생성. **즉, 출처는 사전 작업(SG whitelist + 직결 또는 다른 운영 경로)**.
+
+## 2.5 라이브 워커 e2e 검증 (4 호출 모두 통과)
+
+| 호출 | 결과 |
+| --- | --- |
+| `GET /export-jobs` (auth) | 200 — `{data:[], nextCursor:null}` · 449ms |
+| `POST /export-jobs` `{resourceType:"history_sms", params:{from,to}}` | 201 — id=1 / `jobState:"pending"` / `expires_at` 등록 +30일 자동 계산 · 306ms |
+| `GET /flow-definitions` (auth) | 200 — `{data:[], nextCursor:null}` · 400ms |
+| `POST /flow-definitions` (alimtalk→sms on_fail 5분 폴백) | 201 — id=1 / nodes JSON 보존 / `createdAt`·`updatedAt` 자동 / `deletedAt:null` · 563ms |
+
+→ **라이브 워커 + 4 신규 라우트 + 라이브 DB**가 한 통으로 정상. CRUD ✅. 처리 worker / 실행 엔진은 여전히 미.
+
+## 2.6 테스트 데이터 cleanup
+
+- 검증 과정에서 생성: `TB_USER`(loginid `hd-check-…`·`ddl-…`) 2건 / `TB_COMPANY`(name `hyperdrive-check-…`·`ddl-live-check-…`) 2건 / `TB_EXPORT_JOB` id=1 / `TB_FLOW_DEFINITION` id=1 / `TB_TERMS_AGREEMENT` 0건(현재 약관 미배포로 자동 생성 없음).
+- 단일 트랜잭션 묶음 없이 순서대로 DELETE — FK 제약을 만족하도록 자식 → 부모 순.
+- 사후 카운트: `TB_EXPORT_JOB=0` / `TB_FLOW_DEFINITION=0` / `leftover_users=0` / `leftover_companies=0` ✅.
+- AUTO_INCREMENT 잔류: `TB_EXPORT_JOB.AUTO_INCREMENT=2` / `TB_FLOW_DEFINITION.AUTO_INCREMENT=2` (정상 — 다음 INSERT는 id=2부터 시작).
+
+## 2.7 `0002_export_flow.sql` 라이브 정본 동기화
+
+- 초안 SQL 파일을 라이브 `SHOW CREATE TABLE` 결과 기준으로 갱신 — 인덱스명 변경(`idx_export_company_state` 등) + FK 6개 추가(`fk_export_company`·`fk_export_user`·`fk_flowdef_company`·`fk_flowrun_company`·`fk_flowrun_def`·`fk_fsr_run`) + 코멘트 일치(`'history_sms, contacts 등'`·`'[{order, channel, template_id, condition, delay_minutes}]'` 등).
+- CLAUDE.md §5 "파티션 테이블 — FK 미사용" 원칙은 유지 — 이번 4 테이블은 모두 비파티션이라 FK 적용 가능.
+- 파일 헤더에 "2026-06-01 현행화 — 라이브(Aurora) 정본과 동기화: FK 6개 + 의미 있는 인덱스명" 명시.
+
+## 2.8 산출물
+
+- `malgn-noti-api: src/db/migrations/0002_export_flow.sql` — 라이브 정본 동기화 (1 file, 인덱스명 변경 + FK 6 추가 + 코멘트 일치).
+- 라이브 DB — 변경 없음(이미 적용된 정본 그대로 + cleanup으로 빈 상태 복원).
+- 라이브 Worker — 변경 없음(이미 배포 #8 `95f9f894...`이 4 라우트를 정상 노출 중).
+- `malgn-noti: doc/WBS.md` 갱신 — 5-2-11/12 🟢 (CRUD ✅, 처리 worker / 실행 엔진 미) / 5-5-4 ⛔→✅ (DDL 적용 확인).
+
+## 2.9 다음 단계 / 알려진 한계
+
+- **Drizzle schema.ts vs 라이브 인덱스/FK** — `src/db/schema.ts`의 export/flow 테이블 정의는 인덱스/FK를 선언하지 않음(컬럼만). 런타임 동작에는 영향 없지만, `drizzle-kit introspect` 또는 schema에서 명시적으로 `index()`/`foreignKey()`를 선언해 정합화하는 게 위생적. 후속.
+- **운영 절차 갱신** — `wrangler dev --remote` 1105 같은 dev/preview 장애가 또 발생할 때를 대비, CLAUDE.md §12 후보 중 **Cloudflare Tunnel(cloudflared) → Aurora** 셋업 검토. 별도 작업.
+- **SG 정책 재검토** — 사전 작업에서 어떤 IP 대역이 화이트리스트됐는지 한 번 정리. `noti` 계정의 권한 범위(CREATE TABLE 가능 여부)도 운영 문서화 필요.
+- **처리 worker 미** — `/export-jobs` 처리 워커(R2 업로드 + presigned URL) / `/send/flow` 실행 엔진 + `TB_FLOW_RUN`·`TB_FLOW_STEP_RUN` 천이 — 둘 다 별도 마일스톤.

@@ -220,8 +220,8 @@
 | 5-2-8 | NHN 어댑터 — 5채널 (mock/real) | ✅ | 김도형 | `src/adapters/nhn/{sms,email,kakao,push,rcs}.ts` + types | 5/27 | 5/27 |
 | 5-2-9 | Cloudflare Queues + Consumer Worker | ✅ | 김도형 | `malgn-noti-dispatch` + `dispatch_state` 천이 | 5/27 | 5/27 |
 | 5-2-10 | NHN Webhook 핸들러 (SMS·RCS) | 🟢 | 김도형 | `POST /webhooks/nhn/{sms,rcs}` — HMAC-SHA256 + dedup_key. Email/Kakao/Push 미 | 5/27 | — |
-| 5-2-11 | Export 잡 (다운로드 요청) | 🟢 | 김도형 | `TB_EXPORT_JOB` + `/export-jobs` CRUD ✅, 처리 worker + R2 미. DDL 적용은 Cloudflare 1105 회복 후 | — | — |
-| 5-2-12 | Flow 정의 (복합 발송) | 🟢 | 김도형 | `TB_FLOW_*` 3 테이블 + `/flow-definitions` CRUD ✅, 실행 엔진(`POST /send/flow`) 미. DDL 적용 보류 | — | — |
+| 5-2-11 | Export 잡 (다운로드 요청) | 🟢 | 김도형 | `TB_EXPORT_JOB` ✅ DDL 적용 + `/export-jobs` CRUD ✅ 라이브 검증 (POST 201, GET 200). 처리 worker + R2 미 | — | 6/1 |
+| 5-2-12 | Flow 정의 (복합 발송) | 🟢 | 김도형 | `TB_FLOW_DEFINITION/RUN/STEP_RUN` ✅ DDL 적용 (FK 6 포함) + `/flow-definitions` CRUD ✅ 라이브 검증 (POST 201, GET 200). 실행 엔진(`POST /send/flow`) 미 | — | 6/1 |
 | 5-2-13 | 캠페인 API (스케줄러·시뮬레이션·테스트 발송) | ⚪ | 김도형 | — | — | — |
 | 5-2-14 | PG(결제) 어댑터 + 카드 등록·결제·취소 | ⚪ | 김도형 | 게이트웨이 선정 미정 (토스 / 포트원 / 나이스) | — | — |
 | 5-2-15 | AI 템플릿 게이트웨이 (LLM) | ⚪ | 김도형 | 제공자 미정 (Anthropic / OpenAI) | — | — |
@@ -272,7 +272,7 @@
 | 5-5-1 | 사용자단 Cloudflare Pages 배포 #1~#46 | 🟢 | 김도형 | 매 마일스톤 직후 배포 |
 | 5-5-2 | 관리자단 Cloudflare Pages 첫 Nuxt 배포 | ✅ | 김도형 | 정적 placeholder → 실 Nuxt 앱 (#1) |
 | 5-5-3 | API Workers 배포 #1~#8 | ✅ | 김도형 | 최신 Version `95f9f894...` |
-| 5-5-4 | DDL — `0002_export_flow.sql` 적용 | ⛔ | 김도형 | Cloudflare 1105로 `wrangler dev --remote` 불가 — 회복 후 `/admin/migrate` 경로 |
+| 5-5-4 | DDL — `0002_export_flow.sql` 적용 | ✅ | 김도형 | 라이브 적용 확인 (6/1). 라이브 정본은 우리 초안보다 더 정교(FK 6 + 의미 인덱스명) — 초안 SQL을 라이브 정본에 맞춰 동기화 |
 | 5-5-5 | NHN 실 자격증명 등록 + real 모드 전환 | ⚪ | 김도형 | 채널별 appKey + envelope 키 |
 | 5-5-6 | PG 카드 결제 연동 | ⚪ | 김도형 | — |
 | 5-5-7 | AI 템플릿 게이트웨이 연동 | ⚪ | 김도형 | — |
@@ -281,7 +281,9 @@
 
 ## 알려진 한계 / 다음 단계
 
-- **DDL 적용 보류** — `0002_export_flow.sql` (TB_EXPORT_JOB + TB_FLOW_*) Cloudflare 1105 회복 후 즉시 적용 예정. 그동안 `/export-jobs`·`/flow-definitions` 호출 시 5xx — 프런트 호출처 0개.
+- ~~**DDL 적용 보류**~~ — 2026-06-01 라이브 적용 확인 + e2e 검증 완료. 라이브 정본이 더 정교한 인덱스/FK로 적용돼 있어 `0002_export_flow.sql` 파일도 정본에 맞춰 동기화 — 신규 환경에서도 동일 적용 가능.
+- **`wrangler dev --remote` 의존성 다중화** — 1105 같은 dev/preview 장애가 또 일어나면 또 막힘. Cloudflare Tunnel·RDS Proxy·bastion 등 후보 중 하나 도입 검토 (CLAUDE.md §12 TODO).
+- **Drizzle schema.ts 정합화** — `src/db/schema.ts`의 export/flow 테이블 정의는 인덱스/FK 미선언(컬럼만). 동작 영향은 없으나 위생적으로 명시화 후속.
 - **백엔드 연동 미** — 사용자단 모든 화면이 목업으로 동작. API CRUD는 라이브이므로 점진 교체 필요.
 - **관리자단 페이지 미** — 셸·기획만 완료. P0 14개부터 본격 작업.
 - **NHN real 모드 + PG + AI 게이트웨이** — 채택 미정 (PG: 토스/포트원/나이스, AI: Anthropic/OpenAI).
