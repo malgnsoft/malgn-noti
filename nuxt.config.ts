@@ -44,8 +44,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // NUXT_PUBLIC_API_BASE_URL 환경변수로 자동 override됨
-      apiBaseUrl: '/api'
+      // NUXT_PUBLIC_API_BASE_URL 환경변수로 자동 override됨.
+      // 기본값은 프로덕션 워커. 로컬에서 다른 백엔드를 쓰려면 .env로 override.
+      apiBaseUrl: 'https://malgn-noti-api.malgnsoft.workers.dev'
     }
   },
 

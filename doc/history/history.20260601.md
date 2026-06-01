@@ -238,3 +238,101 @@ import에 `foreignKey`, `index` 2개 추가 (drizzle-orm/mysql-core).
 
 - **49 테이블 전체 점검은 별도 작업** — schema.ts의 나머지 46 테이블도 동일하게 인덱스/FK 미선언 가능성 큼. 단 서비스 중이라 한 번에 큰 정합 작업은 위험. 추후 별도 마일스톤에서 테이블별로 점진적 점검.
 - **`drizzle-kit introspect` 한 번 돌려보기** — 라이브에서 schema 자동 생성해 우리 수기 정의와 diff를 보면 다른 drift도 발견 가능. Aurora 직결 경로 운영 절차 정착 후 진행.
+
+---
+
+# §4. 사용자단 인증 백엔드 연동 — `/auth/signup`·`/auth/login`·`/me` 실 API 연동 (배포 #49)
+
+## 한 줄
+
+사용자단의 모든 화면이 목업 데이터로 동작하던 상태에서 **인증·계정 영역을 첫 번째로 실 API에 연결**. JWT를 `auth-token` 쿠키에 저장, `useApi()` $fetch 래퍼가 자동으로 `Authorization: Bearer` 주입, 글로벌 미들웨어는 쿠키 존재만으로 1차 가드, 클라이언트 부트스트랩 플러그인이 `/me`로 스토어 풀 컨텍스트 페치. 회원가입은 Step 4(본인 인증) → Step 5(완료) 전이에서 실 API 호출 + 토큰 저장 + 자동 로그인 → `/home` 이동, 로그인은 `companyId` 쿠키(`last-company-id`, 1년) 자동 사용 + 없으면 필드 노출. 5 파일 수정 + 1 파일 신규(`plugins/auth.client.ts`), typecheck 통과, 로컬 + 프로덕션 모두 e2e 검증(쿠키 동봉 시 `/home` 200, 없으면 `/login?redirect=/home` 리다이렉트, `/login`·`/signup` 200). Cloudflare Pages 배포 #49 (alias `9be4ff61.malgn-noti.pages.dev`).
+
+## 4.1 API 계약 사전 확인 (변경 없음)
+
+`malgn-noti-api/src/routes/auth.ts` (배포 #8 `95f9f894...` 그대로):
+
+| 라우트 | 요청 | 응답 |
+| --- | --- | --- |
+| `POST /auth/signup` | `{ companyName, loginid, password, name?, email?, phone? }` (Zod) | `201 { data: { user: {id, loginid, name, role}, company: {id, name}, token } }` |
+| `POST /auth/login` | `{ companyId: number, loginid, password }` (Zod) | `200 { data: { user, company:{id}, token } }` |
+| `GET /me` (Bearer) | — | `200 { data: { user, company, ctxRole } }` |
+
+**핵심 제약**: `loginid`는 회사 스코프 내 unique (composite UNIQUE on company_id, loginid) → `/auth/login`이 `companyId`를 필수로 받음. 사용자가 자신의 companyId를 항상 알기 어려우므로 UX 보정 필요.
+
+## 4.2 결정 사항
+
+- **JWT 저장 위치**: `auth-token` 쿠키 (maxAge 7일, sameSite=lax, secure는 PROD에서만). 백엔드가 Set-Cookie를 안 쓰고 응답 본문에 토큰을 담아 보내므로 일반 쿠키(HttpOnly 아님). 향후 백엔드가 Set-Cookie + HttpOnly + SameSite=Strict로 응답하면 그쪽으로 이관.
+- **`companyId` 자동 사용**: `last-company-id` 쿠키(1년)에 회원가입/로그인 시 저장 → 다음 로그인 폼에서 자동 사용. 새 브라우저/쿠키 삭제 시에만 "고객사 ID" 필드 노출.
+- **SSR 안전성**: 미들웨어는 쿠키 존재만 확인 → 통과/리다이렉트만 결정. `/me` 호출(스토어 페치)은 **클라이언트 플러그인**으로 분리 — Pinia store action 안에서 `useCookie()` 호출이 SSR 미들웨어 컨텍스트를 잃어 `"composable was called outside of …"` 에러를 내는 문제 회피(실제 발생 → 수정 후 통과).
+- **회원가입 흐름**: Step 4(본인 인증 완료) → "가입 완료" 클릭 → 실 API 호출 → 성공 시 Step 5(완료) 노출 + 자동 로그인 + 발급 고객사 ID 표시 → "대시보드로 이동" 클릭 시 `/home`. 실패 시 토스트 + 단계 유지.
+
+## 4.3 코드 변경 (6 파일)
+
+| 파일 | 변경 |
+| --- | --- |
+| `app/composables/useApi.ts` | `useAuthToken()`·`useLastCompanyId()` 쿠키 헬퍼 export. $fetch `onRequest`에서 토큰 자동 `Authorization: Bearer` 주입. 401 응답 시 토큰 클리어 + 스토어 클리어 + `/login` 이동. |
+| `app/stores/auth.ts` | `AuthUser`·`AuthCompany` 타입 신규 (`malgn-noti-api/src/routes/auth.ts` 응답 형상 그대로). `signup()` · `login()` · `fetchMe()` · `logout()` 액션. `signup`은 응답을 즉시 store에 hydrate해 isAuthed=true. `login`은 응답 hydrate + `/me`로 풀 컨텍스트 보강. `fetchMe`는 토큰 만료 시 토큰 클리어 후 false 반환. |
+| `app/middleware/auth.global.ts` | 토큰 쿠키 존재 여부만 확인 (SSR 안전). 없으면 `/login?redirect=…` 리다이렉트. `meta.auth === false`는 그대로 통과. |
+| `app/plugins/auth.client.ts` (신규) | 클라이언트 부트스트랩 1회 — 토큰 쿠키가 있고 store가 비어 있으면 `auth.fetchMe()` 호출. SSR 미들웨어 컨텍스트 손실 문제를 피해 클라이언트 측에서 처리. |
+| `app/pages/login/index.vue` | `useAuthStore()`·`useLastCompanyId()` 사용. `last-company-id` 쿠키가 있으면 자동 사용, 없으면 "고객사 ID" 필드(`v-if="needCompanyId"`) 노출. `onLogin()`이 `auth.login()` 호출 → 성공 시 `redirect` 쿼리(`/home` 기본)로 이동. 401 응답은 "아이디 또는 비밀번호가 올바르지 않습니다" 토스트. |
+| `app/pages/signup.vue` | `goNext()`가 `step.value === 4`일 때 `submitSignup()` 호출(이전: 단순 step 증가만). `submitSignup()`은 `auth.signup({companyName, loginid: email, password, email, name, phone})` 호출 → 성공 시 `step.value = 5`로 완료 화면 노출, 실패 시 409 응답을 "이미 가입된 이메일입니다" 안내. Step 5는 발급 고객사 ID 표시 + "대시보드로 이동" 버튼이 `finish()` → `/home`. |
+| `nuxt.config.ts` | `runtimeConfig.public.apiBaseUrl` 기본값을 `'/api'` → `'https://malgn-noti-api.malgnsoft.workers.dev'`로 변경. `NUXT_PUBLIC_API_BASE_URL`로 그대로 override 가능. |
+
+## 4.4 발견된 SSR 이슈 + 우회 (의미 있는 발견)
+
+첫 시도(`auth.global.ts`에서 `await auth.fetchMe()` 호출)는 500 에러:
+
+```
+[nuxt] A composable that requires access to the Nuxt instance was called outside of a plugin,
+       Nuxt hook, Nuxt middleware, or Vue setup function.
+  at useCookie (...cookie.js:38:19)
+  at useAuthToken (.../useApi.ts:15:45)
+  at Proxy.fetchMe (.../auth.ts:70:47)
+  at .../auth.global.ts:15:104
+```
+
+원인 — Pinia store action(`fetchMe`) 내부에서 `useCookie()`(via `useAuthToken()`)를 호출하면, await 경계를 넘으면서 Nuxt instance 컨텍스트가 끊김. 동기 미들웨어 함수 안에서는 통하지만 store action 안에서는 컨텍스트 보장이 약함.
+
+해결 — SSR 미들웨어는 쿠키 존재만 확인하고 통과 결정. `/me` 검증은 클라이언트 부트스트랩 플러그인에서 1회만 호출. 토큰이 위조/만료면 fetchMe가 토큰을 클리어하고 false 반환 → 다음 라우트 가드에서 `/login`으로 리다이렉트. SSR 비용 0 + 안전.
+
+## 4.5 검증 (로컬 + 프로덕션)
+
+API 통한 e2e 4건 × 2환경(로컬 dev + 프로덕션 Pages):
+
+| 호출 | 기대 | 결과 |
+| --- | --- | --- |
+| `GET /home` (토큰 쿠키 없음) | 302 → `/login?redirect=/home` | ✅ |
+| `GET /home` (토큰 쿠키 동봉) | 200 (통과) | ✅ |
+| `GET /login` (`meta.auth: false`) | 200 | ✅ |
+| `GET /signup` (`meta.auth: false`) | 200 | ✅ |
+| `GET /wbs` (`auth: false`) | 200 | ✅ (회귀 없음) |
+
+토큰 자체는 `/auth/signup` 라이브 호출로 발급 → 쿠키 동봉으로 SSR 진입 → 미들웨어 통과 확인. 클라이언트 측 `/me` 호출은 브라우저 환경 필요라 별도 수동 점검 필요(다음 단계).
+
+### 4.5.1 발견된 SSR 컨텍스트 버그(첫 미들웨어 버전) — 우회 후 통과 확인
+
+- 1차 시도: `auth.global.ts`에서 `await auth.fetchMe()` 직접 호출 → 500 (위 §4.4).
+- 2차 시도: 미들웨어 단순화 + `plugins/auth.client.ts` 신설 → 500 → 200 회복 확인.
+
+## 4.6 배포 #49
+
+- `pnpm build` → Nitro `cloudflare-pages` 프리셋. login/signup 청크 + auth plugin 청크 새로 생성.
+- `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main --commit-dirty=true --commit-message "user-side auth integration"`.
+- alias `https://9be4ff61.malgn-noti.pages.dev`. 프로덕션 `https://malgn-noti.pages.dev` 갱신.
+
+## 4.7 산출물
+
+- `malgn-noti: 사용자단 인증 백엔드 연동 (배포 #49)` — 6 파일 수정 + 1 신규.
+- 수정: [app/composables/useApi.ts](../../app/composables/useApi.ts) · [app/stores/auth.ts](../../app/stores/auth.ts) · [app/middleware/auth.global.ts](../../app/middleware/auth.global.ts) · [app/pages/login/index.vue](../../app/pages/login/index.vue) · [app/pages/signup.vue](../../app/pages/signup.vue) · [nuxt.config.ts](../../nuxt.config.ts).
+- 신규: [app/plugins/auth.client.ts](../../app/plugins/auth.client.ts).
+- WBS 갱신: 5-3-15 ⚪ → 🟢 (인증·계정 실 API 연동 완료, 발송·이력 등 나머지 점진 교체).
+- 라이브 API/DB — 변경 없음(쓰기는 검증 과정의 임시 계정 4건, 모두 cleanup).
+
+## 4.8 알려진 한계 / 다음 단계
+
+- **`/auth/login`의 `companyId` 요구** — 새 브라우저에서 사용자가 자신의 ID를 외워야 함. 후속에서 `/auth/login-by-email` 등 이메일 → 회사 lookup 라우트 추가 고려.
+- **`/me` SSR 검증 분리** — 토큰이 유효한지 라우트 진입 시점에 서버에서 확인하지 않으므로, 만료된 토큰이라도 1회는 페이지가 로드되고 그 뒤 클라이언트 fetchMe에서 401 처리. 보안상 큰 문제는 아니지만 첫 페인트 후 리다이렉트가 깜빡일 수 있음.
+- **HttpOnly 미적용** — 토큰이 JS에서 읽힘. XSS 발생 시 토큰 탈취 가능. 백엔드가 Set-Cookie + HttpOnly로 응답하도록 확장 시 클라이언트 코드 단순화 + 보안 강화.
+- **OTP 인증(`TB_VERIFICATION`)·약관 동의(`TB_TERMS_AGREEMENT`)·서비스 담당자 초대** — signup 라우트는 이를 적재하지 않음. 프런트에서 입력은 받지만 백엔드는 무시. 후속 라우트(`/auth/verify-email`, `/auth/verify-phone`, `/auth/agree-terms`, `/manager-invites`) 구현 필요.
+- **나머지 화면 연동** — 발송 6채널·이력·주소록·발신정보·템플릿·캠페인·크레딧·문의·나의 페이지 — 모두 여전히 목업. 화면별 도메인 API(`/contacts`, `/sender-phones` 등)로 점진 교체.
+- **로그아웃 UX** — 현재 `useAuthStore().logout()`만 정의. GNB의 로그아웃 버튼은 `AppGnb.vue`에서 데모용 ref만 토글 중 — 실 호출로 교체 필요.

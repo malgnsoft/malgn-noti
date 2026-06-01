@@ -188,7 +188,7 @@ const STAGES: Stage[] = [
       { id: '5-3-12', group: '사용자단 화면', title: '공개 랜딩페이지 + 운영 가이드', status: 'done', owner: '김도형', note: '/ (히어로·5채널·장점·단가 비교·CTA) + /help', href: 'https://malgn-noti.pages.dev/' },
       { id: '5-3-13', group: '사용자단 화면', title: '디자인 가이드 (라이브 카탈로그)', status: 'done', owner: '김도형', href: 'https://malgn-noti.pages.dev/guide' },
       { id: '5-3-14', group: '사용자단 화면', title: '시스템 페이지 — 404 / system error', status: 'in_progress', owner: '김도형', note: '단독 일부 라이브. 점검 / 네트워크 / 인증 메일 템플릿 미' },
-      { id: '5-3-15', group: '사용자단 화면', title: '백엔드 연동 (목업 → 실 API 교체)', status: 'pending', owner: '김도형', note: '현재 모든 화면이 목업으로 동작' },
+      { id: '5-3-15', group: '사용자단 화면', title: '백엔드 연동 (목업 → 실 API 교체)', status: 'in_progress', owner: '김도형', note: '인증·계정(/auth/signup, /auth/login, /me) 실 API 연동 + JWT 쿠키 + 가드 미들웨어 + 클라이언트 부트스트랩 완료. 발송·이력·주소록 등 나머지 화면 점진 교체' },
       /* 5-4 관리자단 화면 개발 */
       { id: '5-4-1', group: '관리자단 화면', title: '셸 + LNB(8 그룹) + TopBar + 디자인 가이드', status: 'done', owner: '김도형', note: '부트스트랩 · 라이브' },
       { id: '5-4-2', group: '관리자단 화면', title: '페이지 기획 MD (33종)', status: 'done', owner: '김도형', note: 'P0 14 / P1 13 / P2 5' },

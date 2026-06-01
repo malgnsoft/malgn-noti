@@ -190,9 +190,14 @@ const canProceed = computed(() => {
   }
 })
 
-function goNext() {
+async function goNext() {
   if (!canProceed.value) {
     toast.add({ title: '필수 항목을 모두 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  if (step.value === 4) {
+    // 본인 인증 완료 → 실제 가입 API 호출 → 성공 시 step 5
+    await submitSignup()
     return
   }
   if (step.value < 5) {
@@ -206,8 +211,56 @@ function goPrev() {
     if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
+/* ── Step 4 → 5: 실 가입 API 호출 (auto-login) ────────── */
+const auth = useAuthStore()
+const submitting = ref(false)
+
+async function submitSignup() {
+  if (!emailValid.value || !pwValid.value || !pwMatch.value) {
+    toast.add({ title: '입력값을 다시 확인해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    step.value = 3
+    return
+  }
+
+  const fullPhone = `${phonePrefix.value}-${phoneMid.value}-${phoneLast.value}`
+  const displayName = isBusiness.value ? ceoName.value.trim() : personName.value.trim()
+  const companyName = isBusiness.value ? company.value.trim() : displayName
+
+  submitting.value = true
+  try {
+    await auth.signup({
+      companyName,
+      loginid: email.value.trim(),
+      password: password.value,
+      email: email.value.trim(),
+      name: displayName || undefined,
+      phone: fullPhone,
+    })
+    step.value = 5
+    if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  catch (e: unknown) {
+    const status = (e as { response?: { status?: number } })?.response?.status
+    const dataAny = (e as { data?: unknown })?.data
+    const msg = (dataAny && typeof dataAny === 'object' && 'message' in dataAny)
+      ? String((dataAny as { message?: unknown }).message ?? '')
+      : ''
+    toast.add({
+      title: status === 409 || /Duplicate|이미 사용/.test(msg)
+        ? '이미 가입된 이메일입니다. 로그인 화면에서 진행해 주세요.'
+        : '가입 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    submitting.value = false
+  }
+}
+
+/* Step 5에서 호출 — 이미 자동 로그인된 상태 */
 function finish() {
-  navigateTo('/login')
+  navigateTo('/home')
 }
 </script>
 
@@ -555,7 +608,8 @@ function finish() {
       <span class="done-icon"><UIcon name="i-lucide-circle-check" /></span>
       <h2 class="panel-title">회원가입이 완료되었습니다</h2>
       <p class="panel-desc">
-        입력하신 정보 확인 후 승인이 완료되면 서비스를 이용하실 수 있습니다.<br>
+        발급된 고객사 ID: <strong>{{ auth.tenant?.id ?? '-' }}</strong><br>
+        다음 로그인 시 필요할 수 있으니 기억해 주세요.<br>
         승인 결과는 등록하신 휴대폰·이메일로 안내됩니다.
       </p>
     </section>
@@ -574,10 +628,10 @@ function finish() {
         v-if="step < 5"
         type="button"
         class="btn btn-primary nav-btn"
-        :disabled="!canProceed"
+        :disabled="!canProceed || submitting"
         @click="goNext"
       >
-        다음
+        {{ step === 4 ? (submitting ? '가입 처리 중…' : '가입 완료') : '다음' }}
       </button>
       <button
         v-else
@@ -585,7 +639,7 @@ function finish() {
         class="btn btn-primary nav-btn"
         @click="finish"
       >
-        로그인 하러 가기
+        대시보드로 이동
       </button>
     </div>
 

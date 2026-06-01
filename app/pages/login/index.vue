@@ -4,22 +4,66 @@ useHead({ title: '로그인' })
 
 const route = useRoute()
 const toast = useToast()
+const auth = useAuthStore()
+const lastCompanyId = useLastCompanyId()
 
 const userId = ref('')
 const password = ref('')
 const showPw = ref(false)
 const keepId = ref(true)
 
-const canSubmit = computed(() => userId.value.trim().length > 0 && password.value.length > 0)
+// 회원가입 이력 쿠키가 있으면 자동 사용, 없으면 필드 노출
+const companyIdInput = ref('')
+const needCompanyId = computed(() => lastCompanyId.value == null)
+const effectiveCompanyId = computed(() => {
+  if (lastCompanyId.value != null) return lastCompanyId.value
+  const n = Number(companyIdInput.value)
+  return Number.isFinite(n) && n > 0 ? n : null
+})
 
-function onLogin() {
+const submitting = ref(false)
+const canSubmit = computed(
+  () => userId.value.trim().length > 0
+    && password.value.length > 0
+    && effectiveCompanyId.value != null
+    && !submitting.value,
+)
+
+async function onLogin() {
   if (!canSubmit.value) {
-    toast.add({ title: '아이디와 비밀번호를 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    toast.add({
+      title: needCompanyId.value && effectiveCompanyId.value == null
+        ? '고객사 ID·아이디·비밀번호를 모두 입력해 주세요.'
+        : '아이디와 비밀번호를 입력해 주세요.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
     return
   }
-  toast.add({ title: '로그인되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
-  navigateTo(redirect)
+  submitting.value = true
+  try {
+    await auth.login({
+      companyId: effectiveCompanyId.value!,
+      loginid: userId.value.trim(),
+      password: password.value,
+    })
+    toast.add({ title: '로그인되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
+    navigateTo(redirect)
+  }
+  catch (e: unknown) {
+    const status = (e as { response?: { status?: number } })?.response?.status
+    toast.add({
+      title: status === 401
+        ? '아이디 또는 비밀번호가 올바르지 않습니다.'
+        : '로그인 중 오류가 발생했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -28,6 +72,19 @@ function onLogin() {
     <h2>로그인</h2>
 
     <form class="col" style="gap: 16px" @submit.prevent="onLogin">
+      <div v-if="needCompanyId" class="field-group">
+        <label for="login-company" class="auth-label">고객사 ID</label>
+        <input
+          id="login-company"
+          v-model="companyIdInput"
+          class="input"
+          placeholder="회원가입 완료 시 발급된 고객사 ID"
+          inputmode="numeric"
+          autocomplete="off"
+        >
+        <span class="field-hint">처음 이용하시면 회원가입을 먼저 진행해 주세요.</span>
+      </div>
+
       <div class="field-group">
         <label for="login-id" class="auth-label">아이디</label>
         <input
@@ -91,6 +148,10 @@ function onLogin() {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.field-hint {
+  font-size: var(--fz-xs);
+  color: var(--ink-400);
 }
 .auth-label {
   font-size: var(--fz-sm);
