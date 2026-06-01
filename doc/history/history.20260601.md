@@ -174,3 +174,67 @@
 - **운영 절차 갱신** — `wrangler dev --remote` 1105 같은 dev/preview 장애가 또 발생할 때를 대비, CLAUDE.md §12 후보 중 **Cloudflare Tunnel(cloudflared) → Aurora** 셋업 검토. 별도 작업.
 - **SG 정책 재검토** — 사전 작업에서 어떤 IP 대역이 화이트리스트됐는지 한 번 정리. `noti` 계정의 권한 범위(CREATE TABLE 가능 여부)도 운영 문서화 필요.
 - **처리 worker 미** — `/export-jobs` 처리 워커(R2 업로드 + presigned URL) / `/send/flow` 실행 엔진 + `TB_FLOW_RUN`·`TB_FLOW_STEP_RUN` 천이 — 둘 다 별도 마일스톤.
+
+---
+
+# §3. `schema.ts` 정합화 — export/flow 4 테이블 인덱스·FK 명시화
+
+## 한 줄
+
+§2에서 `0002_export_flow.sql` 파일을 라이브 Aurora 정본에 맞춰 동기화했지만, **Drizzle ORM의 `src/db/schema.ts`는 컬럼만 정의되어 있고 인덱스/FK는 0건** — 코드↔라이브 drift 8건이 남아 있던 상태. 이를 라이브 정본 기준으로 명시화 (인덱스 6 + FK 6, 총 12 항목). **컬럼 정의는 일절 변경하지 않음**, **다른 테이블은 손대지 않음**(서비스 중). 런타임 동작에 영향 0, Worker 재배포 불필요. typecheck 통과 + `git diff` 1 file +22 -4 — `schema.ts` 외 변경 0 확인.
+
+## 3.1 작업 범위 — 4 테이블만
+
+원칙: "다른 테이블은 현재 서비스 중이라 함부로 건들면 안 된다" — export/flow 4 테이블 **한정**.
+
+| 테이블 | 추가 인덱스 | 추가 FK |
+| --- | --- | --- |
+| `exportJob` (TB_EXPORT_JOB) | `idx_export_company_state(company_id, job_state, requested_at)` + `idx_export_user(user_id, requested_at)` | `fk_export_company` → `company.id` · `fk_export_user` → `user.id` |
+| `flowDefinition` (TB_FLOW_DEFINITION) | `idx_flowdef_company_status(company_id, status, created_at)` | `fk_flowdef_company` → `company.id` |
+| `flowRun` (TB_FLOW_RUN) | `idx_flowrun_company_state(company_id, run_state, started_at)` | `fk_flowrun_company` → `company.id` · `fk_flowrun_def` → `flowDefinition.id` |
+| `flowStepRun` (TB_FLOW_STEP_RUN) | `idx_fsr_run(flow_run_id, node_order)` + `idx_fsr_dispatch(dispatch_request_id)` | `fk_fsr_run` → `flowRun.id` |
+
+총 **인덱스 6 + FK 6 = 12 항목**. 모두 라이브 `SHOW CREATE TABLE` 출력과 1:1 일치.
+
+## 3.2 Drizzle 문법
+
+각 `mysqlTable(name, columns)` 호출에 2번째 인자 콜백 `(t) => ({...})`을 추가하는 방식. 컬럼은 그대로, 콜백에 `index(...).on(...)` 및 `foreignKey({...})` 선언.
+
+```ts
+export const exportJob = mysqlTable('TB_EXPORT_JOB', {
+  // ... 컬럼 (변경 없음)
+}, t => ({
+  idxCompanyState: index('idx_export_company_state').on(t.companyId, t.jobState, t.requestedAt),
+  idxUser: index('idx_export_user').on(t.userId, t.requestedAt),
+  fkCompany: foreignKey({ name: 'fk_export_company', columns: [t.companyId], foreignColumns: [company.id] }),
+  fkUser: foreignKey({ name: 'fk_export_user', columns: [t.userId], foreignColumns: [user.id] }),
+}))
+```
+
+import에 `foreignKey`, `index` 2개 추가 (drizzle-orm/mysql-core).
+
+## 3.3 효과
+
+- **`drizzle-kit introspect/generate` drift 해소** — 라이브와 코드 사이 인덱스/FK 12건 불일치가 0으로.
+- **신규 마이그레이션 안전** — 누가 schema.ts 기준으로 새 마이그레이션 만들 때 "FK·인덱스 DROP" SQL이 생성되는 사고 방지.
+- **신규 환경 부트스트랩 일관성** — 새 환경에서 schema.ts → 마이그레이션 → DB 적용 시 동일한 정합 보장.
+- **PR 가독성** — "이 테이블에 어떤 인덱스가 있는가?" 답이 한 곳(`schema.ts`)에 모임.
+- **타입 안전성** — FK 명시로 join 쿼리 작성 시 관계 자동 추론.
+
+## 3.4 안전 가드
+
+- **컬럼 정의 변경 0** — 1번째 인자 객체는 1바이트도 안 건드림.
+- **다른 테이블 변경 0** — `git diff --name-only`로 `src/db/schema.ts` 단일 파일만 변경됨을 사전 확인.
+- **typecheck 통과** — `pnpm typecheck` (tsc --noEmit) 에러 0.
+- **런타임 영향 0** — Drizzle 쿼리 빌더는 이 콜백을 마이그레이션/툴체인 단에서만 사용. 런타임 DML/SELECT에 변화 없음.
+- **Worker 재배포 불필요** — 배포 #8(`95f9f894...`) 그대로 라이브 정상.
+
+## 3.5 산출물
+
+- `malgn-noti-api: 0475bd2 db(schema): export/flow 4 테이블 인덱스·FK 명시화 (라이브 정합)` (1 file, +22 -4).
+- 라이브 DB·Worker — 변경 없음.
+
+## 3.6 다음 단계 / 알려진 한계
+
+- **49 테이블 전체 점검은 별도 작업** — schema.ts의 나머지 46 테이블도 동일하게 인덱스/FK 미선언 가능성 큼. 단 서비스 중이라 한 번에 큰 정합 작업은 위험. 추후 별도 마일스톤에서 테이블별로 점진적 점검.
+- **`drizzle-kit introspect` 한 번 돌려보기** — 라이브에서 schema 자동 생성해 우리 수기 정의와 diff를 보면 다른 drift도 발견 가능. Aurora 직결 경로 운영 절차 정착 후 진행.
