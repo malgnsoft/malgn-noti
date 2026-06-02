@@ -9,5 +9,7 @@ export default defineAppConfig({
       primary: 'zinc',
       neutral: 'zinc'
     }
+    // Toast 위치·duration은 app.vue의 <UApp :toaster="..."> prop에서 설정.
+    // (app.config의 ui.toaster는 슬롯/variant 타입이라 런타임 position이 아님)
   }
 })

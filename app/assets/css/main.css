@@ -1865,5 +1865,47 @@ a { text-decoration: none; color: inherit; }
   font-family: var(--font-mono);
 }
 .disclosure-hint .icn { color: var(--ink-300); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Nuxt UI v3 Toast(Sonner 기반) — 크기 강화 (눈에 잘 띄도록)
+ * useToast() 호출 시 자동 적용. 위치는 UApp :toaster prop.
+ * ───────────────────────────────────────────────────────────────────────── */
+[data-sonner-toaster] {
+  --width: 440px !important;
+}
+[data-sonner-toast] {
+  font-size: 17px !important;
+  padding: 20px 24px !important;
+  min-height: 68px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+}
+/* sonner 표준 셀렉터 */
+[data-sonner-toast] [data-title] {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+}
+[data-sonner-toast] [data-description] {
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+}
+[data-sonner-toast] [data-icon] {
+  width: 26px !important;
+  height: 26px !important;
+}
+/* Nuxt UI 가 sonner 위에 자체 클래스를 입히는 경우 — 토스트 내부의 모든 텍스트 요소 강제 보정 */
+[data-sonner-toast] > div,
+[data-sonner-toast] > div > div,
+[data-sonner-toast] p,
+[data-sonner-toast] span:not([data-icon]):not([data-button]) {
+  font-size: 17px !important;
+  line-height: 1.5 !important;
+}
+[data-sonner-toast] [data-button],
+[data-sonner-toast] button {
+  font-size: 14px !important;
+  padding: 6px 12px !important;
+}
 </content>
 </invoke>

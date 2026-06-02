@@ -46,14 +46,23 @@ function createApiClient() {
         options.headers.set('Authorization', `Bearer ${token}`)
       }
     },
-    onResponseError({ response }) {
-      if (response?.status === 401 && import.meta.client) {
-        useAuthToken().value = null
-        const auth = useAuthStore()
-        auth.user = null
-        auth.tenant = null
-        navigateTo('/login')
-      }
+    onResponseError({ request, response }) {
+      if (response?.status !== 401 || !import.meta.client) return
+      const url = typeof request === 'string' ? request : (request as { url?: string }).url ?? ''
+
+      // /auth/* 라우트의 401은 정상적인 "잘못된 자격증명·OTP" 등 호출자가 처리해야 하는 케이스 →
+      // 가입/로그인 도중 페이지 강제 이동 금지. (예: 이메일 OTP verify 실패는 그 자리에 머물러야 함)
+      if (url.includes('/auth/')) return
+
+      // 인증되지 않은 상태에서 보호 라우트 호출 → 의미 있는 리다이렉트 아님(호출자가 처리)
+      if (!useAuthToken().value) return
+
+      // 인증된 상태에서 보호 라우트 호출 시 401 → 토큰 만료로 간주, 정리 + /login 이동
+      useAuthToken().value = null
+      const auth = useAuthStore()
+      auth.user = null
+      auth.tenant = null
+      navigateTo('/login')
     },
   })
 }

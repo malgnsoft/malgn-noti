@@ -204,23 +204,74 @@ const phoneFilled = computed(() =>
   && /^\d{3,4}$/.test(phoneMid.value) && /^\d{4}$/.test(phoneLast.value),
 )
 
-function sendCode() {
+const sendingPhone = ref(false)
+const verifyingPhone = ref(false)
+const fullPhoneE164 = computed(() => `${phonePrefix.value}${phoneMid.value}${phoneLast.value}`)
+
+async function sendCode() {
   if (!phoneFilled.value) {
     toast.add({ title: '통신사·이름·주민등록번호·휴대폰 번호를 모두 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  codeSent.value = true
-  verified.value = false
-  authCode.value = ''
-  toast.add({ title: '인증번호 6자리가 휴대폰으로 발송되었습니다.', color: 'info', icon: 'i-lucide-message-square' })
+  sendingPhone.value = true
+  try {
+    const res = await useApi()<{ data: { sent: boolean, expiresAt: string, mockCode?: string } }>(
+      '/auth/phone-code/send',
+      { method: 'POST', body: { phone: fullPhoneE164.value, purpose: 'signup' } },
+    )
+    codeSent.value = true
+    verified.value = false
+    authCode.value = ''
+
+    if (res.data.mockCode) {
+      toast.add({
+        title: `인증번호 발송됨 (개발 모드: ${res.data.mockCode})`,
+        color: 'info',
+        icon: 'i-lucide-message-square',
+      })
+    }
+    else {
+      toast.add({ title: '인증번호 6자리가 휴대폰으로 발송되었습니다.', color: 'info', icon: 'i-lucide-message-square' })
+    }
+  }
+  catch (e: unknown) {
+    const status = (e as { response?: { status?: number } })?.response?.status
+    toast.add({
+      title: status === 400 ? '휴대폰 번호 형식이 올바르지 않습니다.' : '인증번호 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    sendingPhone.value = false
+  }
 }
-function confirmCode() {
+
+async function confirmCode() {
   if (!/^\d{6}$/.test(authCode.value)) {
     toast.add({ title: '인증번호 6자리를 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  verified.value = true
-  toast.add({ title: '본인 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  verifyingPhone.value = true
+  try {
+    await useApi()<{ data: { verified: boolean } }>(
+      '/auth/phone-code/verify',
+      { method: 'POST', body: { phone: fullPhoneE164.value, purpose: 'signup', code: authCode.value } },
+    )
+    verified.value = true
+    toast.add({ title: '본인 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e: unknown) {
+    const data = (e as { data?: { message?: string } })?.data
+    toast.add({
+      title: data?.message ?? '인증번호 확인 실패. 다시 시도해 주세요.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    verifyingPhone.value = false
+  }
 }
 
 /* ── 진행 가능 여부 ──────────────────────────────────── */
@@ -262,6 +313,91 @@ function goPrev() {
     if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
+/* ── NICE 통합인증(휴대폰 본인확인) — Step 4 ────────── */
+interface NiceResult {
+  state: 'completed' | 'pending' | 'failed' | 'expired' | 'consumed'
+  name?: string
+  birthdate?: string
+  gender?: string
+  nationalInfo?: string
+  mobileCo?: string
+  mobileNo?: string
+}
+const niceSession = ref<string | null>(null)
+const niceResult = ref<NiceResult | null>(null)
+const niceMock = ref(false)
+const nicePending = ref(false)
+
+function formatPhone(n?: string): string {
+  if (!n) return ''
+  const d = n.replace(/\D/g, '')
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`
+  return n
+}
+
+async function startNiceAuth() {
+  nicePending.value = true
+  niceResult.value = null
+  niceSession.value = null
+  verified.value = false
+  try {
+    const init = await useApi()<{ data: { sessionId: string, authUrl: string | null, mockMode: boolean } }>(
+      '/auth/nice/init',
+      { method: 'POST', body: { purpose: 'signup' } },
+    )
+    niceSession.value = init.data.sessionId
+    niceMock.value = init.data.mockMode
+
+    if (init.data.mockMode) {
+      // Mock — popup 없이 즉시 status 1회 호출
+      await pollNiceStatus()
+      return
+    }
+
+    // Real — popup 열고 5초마다 폴링 (최대 5분)
+    window.open(init.data.authUrl!, 'niceAuth', 'width=480,height=812,top=100,scrollbars=no')
+    await pollNiceStatus(60, 5000)
+  }
+  catch {
+    toast.add({ title: 'NICE 본인 인증 시작에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+    nicePending.value = false
+  }
+}
+
+async function pollNiceStatus(maxTries = 1, intervalMs = 0) {
+  for (let i = 0; i < maxTries; i++) {
+    if (intervalMs > 0) await new Promise(r => setTimeout(r, intervalMs))
+    try {
+      const res = await useApi()<{ data: NiceResult }>('/auth/nice/status', {
+        params: { session: niceSession.value },
+      })
+      if (res.data.state === 'completed') {
+        niceResult.value = res.data
+        verified.value = true
+        nicePending.value = false
+        toast.add({ title: '본인 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+        return
+      }
+      if (res.data.state === 'failed' || res.data.state === 'expired') {
+        nicePending.value = false
+        toast.add({
+          title: res.data.state === 'expired' ? '인증 세션이 만료되었습니다. 다시 시도해 주세요.' : '본인 인증에 실패했습니다.',
+          color: 'error', icon: 'i-lucide-circle-alert',
+        })
+        return
+      }
+      // pending → 다음 폴
+    }
+    catch { /* 일시 실패 무시, 다음 폴링 */ }
+  }
+  // 타임아웃
+  if (!verified.value) {
+    nicePending.value = false
+    toast.add({ title: '인증이 시간 안에 완료되지 않았습니다. 다시 시도해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
 /* ── Step 4 → 5: 실 가입 API 호출 (auto-login) ────────── */
 const auth = useAuthStore()
 const submitting = ref(false)
@@ -272,10 +408,15 @@ async function submitSignup() {
     step.value = 3
     return
   }
+  if (!niceSession.value || !verified.value) {
+    toast.add({ title: '본인 인증을 먼저 완료해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
 
-  const fullPhone = `${phonePrefix.value}-${phoneMid.value}-${phoneLast.value}`
-  const displayName = isBusiness.value ? ceoName.value.trim() : personName.value.trim()
+  const displayName = niceResult.value?.name
+    ?? (isBusiness.value ? ceoName.value.trim() : personName.value.trim())
   const companyName = isBusiness.value ? company.value.trim() : displayName
+  const phoneFromNice = niceResult.value?.mobileNo
 
   submitting.value = true
   try {
@@ -285,7 +426,8 @@ async function submitSignup() {
       password: password.value,
       email: email.value.trim(),
       name: displayName || undefined,
-      phone: fullPhone,
+      phone: phoneFromNice,
+      niceSession: niceSession.value,
     })
     step.value = 5
     if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -297,8 +439,8 @@ async function submitSignup() {
       ? String((dataAny as { message?: unknown }).message ?? '')
       : ''
     toast.add({
-      title: status === 409 || /Duplicate|이미 사용/.test(msg)
-        ? '이미 가입된 이메일입니다. 로그인 화면에서 진행해 주세요.'
+      title: status === 409
+        ? (msg.includes('이미 가입된 사용자') ? '이미 가입된 사용자입니다. 비밀번호 재설정으로 진행해 주세요.' : '이미 가입된 이메일입니다.')
         : '가입 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
       color: 'error',
       icon: 'i-lucide-circle-alert',
@@ -542,115 +684,42 @@ function finish() {
       </div>
     </section>
 
-    <!-- ============ STEP 4 — 휴대폰 본인 인증 ============ -->
+    <!-- ============ STEP 4 — 휴대폰 본인 인증 (NICE 통합인증) ============ -->
     <section v-else-if="step === 4" class="panel">
       <h2 class="panel-title">휴대폰 본인 인증</h2>
       <p class="panel-desc">
-        본인 명의의 휴대폰 정보를 입력하고 인증을 진행해 주세요. 인증이 완료되면 다음 단계로 진행할 수 있습니다.
+        NICE 본인확인 서비스를 통해 휴대폰 명의자 본인임을 확인합니다.
+        아래 버튼을 누르면 인증창이 열리고 통신사·이름·생년월일 등을 직접 입력하시게 됩니다.
       </p>
 
-      <div class="form">
-        <div class="frow">
-          <label>통신사 <span class="req-star">*</span></label>
-          <div class="fctrl">
-            <select v-model="carrier" class="select" :disabled="verified">
-              <option value="">통신사를 선택하세요</option>
-              <option v-for="c in CARRIERS" :key="c" :value="c">{{ c }}</option>
-            </select>
+      <div class="nice-box">
+        <button
+          v-if="!verified"
+          type="button"
+          class="btn btn-primary btn-lg nice-start-btn"
+          :disabled="nicePending"
+          @click="startNiceAuth"
+        >
+          <UIcon name="i-lucide-shield-check" />
+          {{ nicePending ? '인증 진행 중…' : '본인 인증하기' }}
+        </button>
+
+        <div v-if="nicePending" class="nice-status">
+          <UIcon name="i-lucide-loader-2" class="nice-spin" />
+          인증창에서 본인 정보를 입력해 주세요. 완료 시 자동으로 다음 단계가 활성화됩니다.
+        </div>
+
+        <div v-if="verified && niceResult" class="auth-ok nice-result">
+          <UIcon name="i-lucide-circle-check" />
+          <div class="nice-result-text">
+            <strong>{{ niceResult.name }}</strong>님 본인 인증이 완료되었습니다.<br>
+            <span class="nice-result-sub">{{ formatPhone(niceResult.mobileNo) }} · {{ niceResult.mobileCo }}</span>
           </div>
         </div>
 
-        <div class="frow">
-          <label>이름 <span class="req-star">*</span></label>
-          <div class="fctrl">
-            <input v-model="authName" class="input" placeholder="실명을 입력하세요" :disabled="verified">
-          </div>
-        </div>
-
-        <div class="frow">
-          <label>주민등록번호 <span class="req-star">*</span></label>
-          <div class="fctrl">
-            <div class="rrn-row">
-              <input
-                v-model="rrnFront"
-                class="input rrn-front"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="앞 6자리"
-                :disabled="verified"
-              >
-              <span class="dash">-</span>
-              <input
-                v-model="rrnGender"
-                class="input rrn-gender"
-                inputmode="numeric"
-                maxlength="1"
-                :disabled="verified"
-              >
-              <span class="rrn-mask">
-                <span v-for="n in 6" :key="n" class="rrn-dot" />
-              </span>
-            </div>
-            <ul class="hint-bullets">
-              <li>본인인증을 위해 주민등록번호 앞 6자리와 뒷자리 첫 번째 숫자(성별)만 입력합니다.</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="frow">
-          <label>내/외국인 <span class="req-star">*</span></label>
-          <div class="fctrl">
-            <div class="radio-group">
-              <label class="radio">
-                <input v-model="foreigner" type="radio" value="local" :disabled="verified"><span>내국인</span>
-              </label>
-              <label class="radio">
-                <input v-model="foreigner" type="radio" value="foreign" :disabled="verified"><span>외국인</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="frow">
-          <label>휴대폰 번호 <span class="req-star">*</span></label>
-          <div class="fctrl">
-            <div class="phone-row">
-              <select v-model="phonePrefix" class="select phone-prefix" :disabled="verified">
-                <option v-for="p in PHONE_PREFIXES" :key="p" :value="p">{{ p }}</option>
-              </select>
-              <span class="dash">-</span>
-              <input v-model="phoneMid" class="input" inputmode="numeric" maxlength="4" :disabled="verified">
-              <span class="dash">-</span>
-              <input v-model="phoneLast" class="input" inputmode="numeric" maxlength="4" :disabled="verified">
-              <button type="button" class="btn btn-outline-dark phone-btn" :disabled="verified" @click="sendCode">
-                {{ codeSent ? '재발송' : '인증번호 받기' }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="codeSent" class="frow">
-          <label>인증번호 <span class="req-star">*</span></label>
-          <div class="fctrl">
-            <div class="phone-row">
-              <input
-                v-model="authCode"
-                class="input"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="인증번호 6자리"
-                :disabled="verified"
-              >
-              <button type="button" class="btn btn-primary phone-btn" :disabled="verified" @click="confirmCode">
-                {{ verified ? '인증 완료' : '확인' }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="verified" class="auth-ok">
-          <UIcon name="i-lucide-circle-check" /> 본인 인증이 완료되었습니다.
-        </div>
+        <p v-if="niceMock" class="nice-mock-hint">
+          ⚠️ 현재 개발 모드 — 실제 NICE 호출 없이 모의 결과로 통과됩니다.
+        </p>
       </div>
     </section>
 
@@ -659,8 +728,6 @@ function finish() {
       <span class="done-icon"><UIcon name="i-lucide-circle-check" /></span>
       <h2 class="panel-title">회원가입이 완료되었습니다</h2>
       <p class="panel-desc">
-        발급된 고객사 ID: <strong>{{ auth.tenant?.id ?? '-' }}</strong><br>
-        다음 로그인 시 필요할 수 있으니 기억해 주세요.<br>
         승인 결과는 등록하신 휴대폰·이메일로 안내됩니다.
       </p>
     </section>
@@ -1018,6 +1085,59 @@ function finish() {
 .err {
   font-size: var(--fz-xs);
   color: var(--danger-ink);
+}
+.nice-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.nice-start-btn {
+  width: 100%;
+  height: 56px;
+  font-size: var(--fz-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.nice-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+}
+.nice-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.nice-result {
+  align-items: flex-start !important;
+  padding: 16px 18px !important;
+}
+.nice-result-text {
+  flex: 1;
+  font-size: var(--fz-sm);
+  line-height: 1.6;
+  font-weight: 500;
+}
+.nice-result-sub {
+  color: var(--ink-500);
+  font-weight: 400;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+}
+.nice-mock-hint {
+  font-size: var(--fz-xs);
+  color: var(--warning-ink);
+  margin: 0;
 }
 .auth-ok {
   display: flex;

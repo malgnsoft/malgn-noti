@@ -1,8 +1,8 @@
-# 2026-06-02 — 사용자단 WBS 3 트랙 분리 + 로그인 UX 개선(고객사 ID 제거) + TB_USER.loginid 전역 UNIQUE 정합화
+# 2026-06-02 — WBS 3 트랙 분리 + 로그인 UX(고객사 ID 제거) + loginid 전역 UNIQUE + 휴대폰 OTP + 토스트 가시성 + NICE 통합인증 인프라
 
 ## 한 줄 요약
 
-이번주 회원·인증 트랙의 첫 날 작업 3건을 한 흐름으로 처리. **(§1)** WBS 구조 개편 — "화면 UI만 됐는데 ✅로 표시돼 진척이 과대평가되는" 문제를 해소하기 위해 사용자단을 **5-3A 화면 UI 구성**(목업 데이터로 페이지만 그리기) + **5-3M 매트릭스**(도메인별 UI/API/연동 한눈에) + **5-3C 화면 ↔ API 연동**(실 데이터 흐름) 3 트랙으로 분리. 5-3-15 단일 항목을 16개 도메인별 5-3C-1~16으로 펼침. Step 5 진척률 55%→40%, 전체 가중평균 45%→38%. **(§2)** 로그인 UX 개선 — `POST /auth/login-by-email` 신설(이메일·아이디 + 비번만으로 회사 자동 찾기) + 프런트 로그인 화면에서 "고객사 ID" 필드 완전 제거. 같은 이메일로 여러 회사 가입 케이스는 회사 선택 카드 UI로 처리(첫 구현). **(§3)** 사용자 정책 결정으로 `TB_USER.loginid`를 전역 UNIQUE로 정합화 — `0003_user_loginid_global_unique.sql` 라이브 적용, login-by-email의 복수 매치 경로 + 회사 선택 UI ~80줄 제거. "한 이메일 = 한 회사 = 한 로그인". Workers 배포 #10·#11 / Pages 배포 #51·#52·#53.
+이번주 회원·인증 트랙 첫 날 5건 처리. **(§1)** WBS 3 트랙 분리(5-3A UI / 5-3M 매트릭스 / 5-3C 연동) — 진척 과대평가 문제 해소, Step 5 55%→40%. **(§2)** `POST /auth/login-by-email` 신설 + 로그인 화면 "고객사 ID" 필드 완전 제거 (Workers #10 / Pages #52). **(§3)** `TB_USER.loginid` 전역 UNIQUE 정합화 — `0003` 라이브 적용, 복수 매치 경로 + 회사 선택 UI 제거 (Workers #11 / Pages #53). **(§4)** 휴대폰 OTP 라우트 (`/auth/phone-code/send`·`/verify`) + signup.vue Step 4 SMS OTP 연동 + 로그인 401 처리 정합화(`/auth/*` 호출은 자동 리다이렉트 안 함) + 회원가입 완료 화면 고객사 ID 노출 제거 + 토스트 위치(오른쪽 위) + 크기 강화(17px). NHN_MOCK secret 적용 — 자격증명 발급 전 mock 통과. (Workers #12 / Pages #54~#58). **(§5)** **NICE 통합인증(휴대폰 본인확인)** 인프라 — `doc/NICE_AUTH.md` 신규 정본 + `0004_user_nice_auth.sql` 라이브 적용(TB_NICE_AUTH + TB_USER에 ci/birthdate/gender/national_info/mobile_co + UNIQUE ci) + NICE 어댑터(mock/real, AES-256-GCM + PBKDF2 + HMAC) + 3 라우트(init/callback/status) + `/auth/signup` 확장(niceSession 검증·CI 중복 차단·NICE 결과로 이름·휴대폰·생년월일 덮어쓰기) + signup.vue Step 4 통째로 NICE 흐름으로 교체("본인 인증하기" 버튼 + 폴링 + 결과 표시) + NICE_MOCK secret 적용. (Workers #13 / Pages #60). 라이브 e2e 모두 통과. **이메일 인증창** 차단 UX 버그 발견·수정: useApi 401 핸들러가 모든 401을 /login으로 리다이렉트해서 가입 도중 OTP 잘못 입력하면 페이지 이동되던 문제 → `/auth/*` 호출의 401은 호출자가 처리하도록 분리. **NHN 자격증명 미등록**: 메일 실 발송 0 — 가입 흐름은 NHN_MOCK + NICE_MOCK secret 켜진 mock 모드로 통과.
 
 ---
 
@@ -209,3 +209,200 @@ ALTER TABLE TB_USER
 
 - **5-3C-3 비밀번호 재설정** — `email`로 lookup하면 단일 사용자 → 토큰 발급도 단순. OTP 인프라 재활용 → 2시간 이내 가능.
 - **5-3C-2 로그아웃 GNB 실 연결** — 정책 변경과 무관, 30분.
+
+---
+
+# §4. 휴대폰 SMS OTP + 로그인 401 처리 + 가입 완료 ID 노출 제거 + 토스트 가시성 (배포 #12 / #54~#58)
+
+## 한 줄
+
+이메일 OTP 인프라(`(어제) §5`) 후속 — **휴대폰 SMS OTP**를 같은 패턴으로 추가하여 signup.vue Step 4를 실 API로 일관 연결 + 가입 도중 발견된 4개 UX 이슈(401 자동 리다이렉트, 가입 완료 화면의 고객사 ID 노출, 토스트 위치, 토스트 크기) 정리. Workers 배포 #12(Version `84056c86...`), Pages 배포 #54~#58. 자체 SMS OTP는 단순 휴대폰 보유 검증으로 유지 — 본인 확인(이름·CI 등)은 §5 NICE로 분리.
+
+## 4.1 휴대폰 OTP 라우트 — 이메일과 동일 패턴
+
+`POST /auth/phone-code/send` + `POST /auth/phone-code/verify`:
+- `TB_VERIFICATION`에 `target_type='phone'` 적재 (이메일은 `'email'`)
+- SHA-256(target|purpose|code) 해시 — 평문 코드 저장 금지
+- TTL 10분 · 재발송 시 직전 코드 만료 · 5회 시도 제한 · 소비 후 재사용 차단
+- `purpose` enum 확장: `signup` / `reset_password` / `change_phone`
+- 휴대폰 번호 정규화: 입력값에서 숫자만 추출(`010-1234-5678` → `01012345678`) — 같은 사용자의 다른 표기를 같은 코드 한 건으로 매핑
+- SMS 발송은 NHN SMS 어댑터 (mock/real). `NHN_MOCK=1` 또는 자격증명 미설정 시 mock fallback. mock 모드면 응답에 `mockCode` 노출(개발 편의)
+- `OtpPurpose` 타입 확장 + `purposeLabel()` 4개 분기
+- `EMAIL_FROM` 외 `SMS_FROM` env var 추가 (기본 `01000000000`)
+
+OpenAPI 4지점 추가(2 paths + 2 schemas `PhoneCodeSendRequest`·`PhoneCodeSendResponse`·`PhoneCodeVerifyRequest`).
+
+라이브 e2e 5+1 시나리오 통과: 발송 mockCode 노출 / 잘못된 코드 401 / 올바른 코드 200 / 소비 후 재시도 401 / 하이픈 포함 입력 정규화 / 이메일 OTP도 같이 회복.
+
+## 4.2 프런트 signup.vue Step 4 — 실 API 연동 (NICE 도입 전 중간 단계)
+
+기존 화면 더미(`codeSent.value=true` 토스트만) → 실 호출:
+- `sendCode()` → `POST /auth/phone-code/send` async + `sendingPhone` 로딩 + `mockCode` 응답 시 토스트 노출 + 버튼 라벨 3-상태(`발송 중…` / `재발송` / `인증번호 받기`)
+- `confirmCode()` → `POST /auth/phone-code/verify` async + `verifyingPhone` 로딩 + 백엔드 한국어 에러 메시지 그대로 토스트
+- `fullPhoneE164` computed — 하이픈 제거(`01012345678`)
+
+이 작업은 §5 NICE 도입 시점에 **다시 통째로 교체됨**(NICE가 휴대폰 인증을 대신 수행). 백엔드 휴대폰 OTP 라우트는 비밀번호 재설정·휴대폰 번호 변경 등 후속 흐름에서 그대로 재활용.
+
+## 4.3 useApi.ts 401 처리 분리 — `/auth/*`는 호출자가 처리
+
+가입 중 이메일 OTP 잘못 입력 → 401 → useApi 핸들러가 `/login`으로 리다이렉트 → 사용자가 코드 재입력 못 함 → 가입 흐름 차단.
+
+수정 [app/composables/useApi.ts](../../app/composables/useApi.ts) `onResponseError`:
+```ts
+const url = typeof request === 'string' ? request : (request as { url?: string }).url ?? ''
+
+// /auth/* 라우트의 401은 정상적인 "잘못된 자격증명·OTP" → 호출자가 처리해야 함
+if (url.includes('/auth/')) return
+
+// 인증되지 않은 상태에서 보호 라우트 호출 → 의미 있는 리다이렉트 아님
+if (!useAuthToken().value) return
+
+// 인증된 상태 + 보호 라우트 401 → 토큰 만료 → /login
+```
+
+## 4.4 회원가입 완료 화면 — 고객사 ID 노출 제거
+
+§2~§3 이후 로그인 시 companyId 외울 필요 없음 → 가입 완료 화면 `발급된 고객사 ID: {id}` 라인 제거. 시안 정책상 내부 식별자는 외부 노출하지 않음.
+
+## 4.5 토스트 가시성 강화
+
+- **위치**: 좌하단 → 오른쪽 위 (`app.vue`의 `<UApp :toaster="{position:'top-right', expand:true, duration:5000}">` props로 직접 지정)
+- **크기**: 폭 380→440px, 본문 폰트 15→17px, 패딩 16/18→20/24px, 최소 높이 56→68px, 모서리 12px, 그림자 강화, 타이틀 17px/700, 아이콘 26px
+- Sonner 표준 셀렉터(`[data-sonner-toast]`) + Nuxt UI 내부 클래스 보강 셀렉터(`> div`·`p`·`span`)
+- `app.config.ts`의 `ui.toaster` 설정은 타입(슬롯/variant)이 달라 제거, UApp props로 단일화
+
+## 4.6 배포 + 검증
+
+- Workers #12 Version `84056c86-09ff-4d2f-a9cc-4c63365fc630`
+- Pages #54(`bf71cd8e`) · #55(`bfd64bcc` 401 처리) · #56(`eecef0a0` ID 제거) · #57(`4800d506` 토스트 1차) · #58(`683c5976` UApp props) — 누적 5번
+
+## 4.7 NHN_MOCK secret 임시 적용
+
+라이브 검증 + 실 사용자(`dotype@malgnsoft.com`) 가입을 위해 production에 NHN_MOCK secret을 일시 적용. mockCode가 응답에 노출되어 사용자가 메일 없이도 6자리 코드를 토스트로 확인 가능. 자격증명 등록 시 secret 영구 제거 예정.
+
+---
+
+# §5. NICE 통합인증(휴대폰 본인확인) 인프라 (배포 #13 / #60)
+
+## 한 줄
+
+§4에서 자체 SMS OTP로 가입 흐름을 통과시켰지만, 이는 "휴대폰 보유"만 검증하지 "본인 확인"이 아님. 사용자 요청으로 **NICE 통합인증(M=휴대폰 본인확인)** 인프라를 통째로 구축. 정본 문서 [doc/NICE_AUTH.md](../NICE_AUTH.md) 신규 작성 → 라이브 DDL 0004 적용(TB_NICE_AUTH + TB_USER에 ci/birthdate/gender/national_info/mobile_co + UNIQUE ci) → NICE 어댑터(mock/real, AES-256-GCM + PBKDF2 + HMAC) → 3 라우트(init/callback/status) → /auth/signup 확장(niceSession 검증·CI 중복 차단·NICE 결과로 이름·휴대폰·생년월일 덮어쓰기) → signup.vue Step 4 통째로 NICE 흐름으로 교체("본인 인증하기" 버튼 + 폴링 + 결과 표시) → NICE_MOCK secret 적용으로 자격증명 발급 전 mock 통과. Workers 배포 #13(Version `2ab47c1f...`), Pages 배포 #60 (alias `c9577894`). 라이브 e2e 6 시나리오 통과.
+
+## 5.1 결정 사항
+
+- **NICE 통합인증 휴대폰(M)** 만 1차 — 금융·공동·아이핀(F/U/I)은 후속 확장.
+- **자체 SMS OTP는 유지** — 비밀번호 재설정·이메일 변경 등 단순 검증 영역. 본인 확인은 NICE.
+- **mock 모드 우선** — NICE 자격증명 발급 전이라 외부 호출 없이 동작. 가짜 결과: `모의 사용자` / `19900101` / `01099998888` / CI는 `MOCK_CI_<requestNo>`로 결정적 생성(같은 세션 = 같은 CI → 중복 가입 차단 테스트 가능).
+- **CI 중복 가입 차단** — `TB_USER.ci UNIQUE` + signup 시 명시적 검사. "이미 가입된 사용자입니다" 안내 + 비밀번호 재설정 유도.
+- **NICE 결과 우선** — niceSession이 있으면 signup body의 `name`·`phone` 대신 NICE 검증값(`name`·`mobile_no`) 사용 + `birthdate`·`gender`·`national_info`·`ci`·`mobile_co` 적재.
+
+## 5.2 DDL 0004 (라이브 적용 완료)
+
+[src/db/migrations/0004_nice_auth.sql](../../../malgn-noti-api/src/db/migrations/0004_nice_auth.sql):
+
+§A `TB_NICE_AUTH` 신설 (17 컬럼):
+- 세션 키: `id` PK + `request_no` UNIQUE + `transaction_id` + `ticket` + `iterators` (복호화에 필요)
+- 상태: `state` (pending/completed/failed/expired/consumed)
+- 결과: `name`/`birthdate`/`gender`/`national_info`/`ci`/`di`/`mobile_co`/`mobile_no`
+- 시간: `expires_at`/`created_at`/`completed_at`
+- 인덱스: `(state, created_at)` · `(ci)`
+
+§B `TB_USER` 5 컬럼 추가:
+- `birthdate VARCHAR(8)` · `gender CHAR(1)` · `national_info CHAR(1)` · `ci VARCHAR(255)` · `mobile_co VARCHAR(10)`
+- `UNIQUE KEY uq_user_ci (ci)` — 중복 가입 차단
+
+라이브 적용 검증: `SHOW CREATE TABLE TB_NICE_AUTH` 정상, `TB_USER.ci`에 `uq_user_ci` 인덱스 단독.
+
+## 5.3 NICE 어댑터 — `src/adapters/nice/auth.ts`
+
+- `requestToken(creds, requestNo)` → POST `/auth/token` (Basic auth + `client_credentials`)
+- `requestAuthUrl(creds, accessToken, requestNo)` → POST `/auth/url` (`svc_types: ['M']` + `return_url` + `close_url`)
+- `requestResult(accessToken, webTxId, txId, requestNo)` → POST `/auth/result` (암호화된 `enc_data` + `integrity_value` 수신)
+- `deriveKeys(ticket, txId, iters)` — **PBKDF2-HMAC-SHA256** 64 bytes 유도 → 대칭키 32 bytes + HMAC키 32 bytes (offset 48)
+- `decryptResult(raw, ticket, txId, iters)` — Web Crypto `crypto.subtle.deriveBits` + `decrypt({name:'AES-GCM', iv, tagLength:128})` + HMAC-SHA256 무결성 검증
+- `mockNiceResult(requestNo)` — 결정적 가짜 결과 (`name='모의 사용자'`, `ci='MOCK_CI_<requestNo>'`, …)
+- Workers 표준 Web Crypto만 사용 — 외부 라이브러리 0
+
+## 5.4 라우트 — `src/routes/nice.ts`
+
+| 라우트 | 동작 |
+| --- | --- |
+| `POST /auth/nice/init` | mock: 즉시 `completed` 상태로 가짜 결과 적재 → `{sessionId, authUrl:null, mockMode:true}`. real: token + url 호출 후 `pending` 적재 → `{sessionId, authUrl, mockMode:false}` |
+| `POST /auth/nice/callback` | NICE의 form/json `web_transaction_id` 수신 → 가장 최근 `pending` 세션 → result 호출 + 복호화 + DB 업데이트 → HTML 응답(팝업 자동 닫기) |
+| `GET /auth/nice/status?session=…` | 프런트 폴링 — state 조회. `completed`면 name/birthdate/gender/national_info/mobile_co/mobile_no 노출 (ci는 서버에서만 보유) |
+
+## 5.5 `/auth/signup` 확장
+
+`signupB`에 `niceSession?: string` 추가. 있으면:
+1. `TB_NICE_AUTH`에서 `requestNo = niceSession` 단건 조회
+2. `state === 'completed'` 검증 (consumed/failed/expired면 401)
+3. `expires_at > now` 검증
+4. `ci` 중복 검사 — 있으면 409 "이미 가입된 사용자"
+5. signup 시 NICE 결과(`name`·`mobile_no`)로 입력값 덮어쓰기 + birthdate/gender/national_info/ci/mobile_co 적재
+6. signup 성공 후 `niceAuth.state = 'consumed'` 처리 → 재사용 차단
+7. catch 블록의 Duplicate entry 감지 — `uq_user_ci` 매치 시 별도 안내
+
+OpenAPI 4지점(2 paths + 4 schemas) + SignupRequest에 niceSession 필드.
+
+## 5.6 프런트 signup.vue Step 4 통째로 교체
+
+기존: 통신사 select + 이름 + 주민번호 + 내외국인 + 휴대폰 3분할 + 인증번호 입력 → 6개 필드
+신규: **"본인 인증하기" 큰 버튼 1개** + 상태 표시
+
+`startNiceAuth()`:
+1. `POST /auth/nice/init` → `{sessionId, authUrl, mockMode}`
+2. mockMode면 즉시 `pollNiceStatus()` 1회 호출 → `state='completed'` + 결과 표시
+3. real이면 `window.open(authUrl, ...)` + 5초마다 status 폴링 (최대 5분)
+4. 결과 표시: `<이름>님 본인 인증이 완료되었습니다. <휴대폰> · <통신사>` + `verified=true`
+
+`submitSignup()` 확장: `niceSession`을 signup body에 전달. NICE 결과의 name·휴대폰을 우선 사용. 409 응답 + `이미 가입된 사용자` 메시지 분기.
+
+`stores/auth.ts` `SignupPayload` 타입에 `niceSession?: string` 추가.
+
+기존 입력 필드(통신사·이름·주민번호·휴대폰)와 관련 ref/function들은 다른 곳에서 의존성 없어 UI에서 자연 제거됨(스크립트 ref는 leftover로 남아 있으나 미사용).
+
+## 5.7 라이브 e2e 검증 (6 시나리오)
+
+| # | 시나리오 | 결과 |
+| --- | --- | --- |
+| 1 | `/auth/nice/init` → mock 응답 `{sessionId, authUrl:null, mockMode:true}` | ✅ |
+| 2 | `/auth/nice/status?session=…` → `{state:'completed', name:'모의 사용자', mobile_no:'01099998888', …}` | ✅ |
+| 3 | `/auth/signup` with niceSession → 201 + DB에 `name='모의 사용자'`·`birthdate='19900101'`·`gender='1'`·`ci='MOCK_CI_…'`·`mobile_co='SKT'` 정확 매핑 | ✅ |
+| 4 | 같은 niceSession 재사용 → 401 `NICE 본인 인증이 완료되지 않았습니다` (consumed) | ✅ |
+| 5 | 새 niceSession (다른 mock CI) → 정상 가입 | ✅ |
+| 6 | DB: `TB_NICE_AUTH.state='consumed'`, `TB_USER.ci` UNIQUE 정상 동작 | ✅ |
+
+검증 데이터 cleanup 완료 (TB_USER · TB_COMPANY · TB_NICE_AUTH 0건 잔존).
+
+## 5.8 정본 문서 — `doc/NICE_AUTH.md`
+
+12 섹션 / ~14KB:
+1. 자체 SMS OTP vs NICE 비교
+2. 인증 수단 종류 (M/F/U/I — 우리는 M 우선)
+3. 전체 시퀀스 5단계 (ASCII 도식)
+4. 엔드포인트 3종
+5. 단계별 명세 + JSON 예시
+6. AES-256-GCM + PBKDF2 (Workers Web Crypto)
+7. 응답 데이터 (name·birthdate·gender·CI·DI·mobile_co·mobile_no)
+8. 우리 적용 계획
+9. **인프라 고려사항** — Workers 동적 IP vs NICE 화이트리스트 요구 (협상 또는 자체 프록시 EC2 필요)
+10. NICE 계약 절차 7단계 (1~4 사용자, 5~7 김도형)
+11. 알려진 한계 (외국인·법인 대표자·PASS·CI 중복 검사 등)
+12. 다음 단계
+
+## 5.9 산출물
+
+- API: `malgn-noti-api: b4d8f4b` — 7 files +922 -11. 신규: `nice/auth.ts`·`routes/nice.ts`·`0004_nice_auth.sql`. 수정: `schema.ts`·`auth.ts`·`openapi.ts`·`index.ts`
+- 사용자단: 5 파일 수정(`signup.vue`·`stores/auth.ts`·`useApi.ts`·`app.vue`·`app.config.ts`·`main.css`) + 1 신규(`doc/NICE_AUTH.md`)
+- Workers 배포 #13 Version `2ab47c1f-1d68-42d3-815c-117cab3fd71a`
+- Pages 배포 #60 alias `c9577894.malgn-noti.pages.dev`
+- WBS 5-3C-* 신규 항목: NICE 본인확인 인프라 ✅
+
+## 5.10 알려진 한계 / 다음 단계
+
+- **NICE 자격증명 미발급** — 사용자 영업 작업 선행. 발급 후 `wrangler secret put NICE_CLIENT_ID/SECRET/RETURN_URL` + `wrangler secret delete NICE_MOCK`로 real 모드 전환 가능.
+- **Workers 동적 outbound IP vs NICE 화이트리스트** — [NICE_AUTH.md §9](../NICE_AUTH.md) 참조. Cloudflare 대역 등록 협상 또는 자체 프록시 EC2 필요. NICE 계약 시점에 결정.
+- **콜백 시 세션 매칭** — 1차 구현은 "가장 최근 pending 세션" 휴리스틱. 동시 다중 가입은 드물지만 운영 단계에서 `state` 파라미터로 명시화 검토.
+- **모바일웹 popup 차단** — `window.open`이 모바일 Safari에서 차단될 수 있음. `redirect` 모드 옵션 검토.
+- **외국인 가입** — `national_info='1'` 분기 UI 후속.
+- **법인 대표자 본인 인증** — 정책 결정 후 적용.
