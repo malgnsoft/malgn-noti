@@ -1,6 +1,11 @@
 <script setup lang="ts">
 useHead({ title: '대시보드' })
 
+const auth = useAuthStore()
+const approvalState = computed(() => auth.tenant?.approvalState ?? 'approved')
+const isLocked = computed(() => approvalState.value !== 'approved')
+const rejectedReason = computed(() => auth.tenant?.rejectedReason ?? '')
+
 const credit = useState('credit-balance', () => 245800)
 
 const kpis = [
@@ -43,7 +48,43 @@ const recent = [
 </script>
 
 <template>
-  <div class="app-container page-body">
+  <!-- 사업자등록증 심사 미승인 — 안내 화면 (대시보드 콘텐츠 대체) -->
+  <div v-if="isLocked" class="app-container page-body">
+    <section class="approval-hero" :class="{ rejected: approvalState === 'rejected' }">
+      <span class="hero-icon">
+        <UIcon :name="approvalState === 'rejected' ? 'i-lucide-circle-x' : 'i-lucide-clock'" />
+      </span>
+      <h1 v-if="approvalState === 'pending'" class="hero-title">사업자등록증 심사 중입니다</h1>
+      <h1 v-else class="hero-title">사업자등록증 심사가 반려되었습니다</h1>
+
+      <p v-if="approvalState === 'pending'" class="hero-desc">
+        제출하신 사업자등록증을 검토 중입니다. 승인 완료까지 보통 영업일 기준 1~2일 소요됩니다.<br>
+        승인 후 메시지 발송·주소록·발신정보 등록 등 모든 서비스를 이용하실 수 있으며,<br>
+        결과는 등록하신 휴대폰·이메일로 안내됩니다.
+      </p>
+      <p v-else class="hero-desc">
+        제출하신 사업자등록증이 반려되었습니다.<br>
+        <strong class="reason">사유: {{ rejectedReason || '관리자에게 문의해 주세요.' }}</strong><br>
+        사업자등록증을 다시 제출하시거나, 문의를 남겨 주시면 빠르게 도와드리겠습니다.
+      </p>
+
+      <div class="hero-actions">
+        <NuxtLink to="/account/settings" class="btn btn-primary btn-lg">
+          {{ approvalState === 'rejected' ? '사업자등록증 다시 제출하기' : '회원 정보 확인하기' }}
+        </NuxtLink>
+        <NuxtLink to="/account/inquiry" class="btn btn-outline-dark btn-lg">
+          1:1 문의 작성
+        </NuxtLink>
+      </div>
+
+      <div class="hero-meta">
+        <span>현재 상태: <strong>{{ approvalState === 'pending' ? '심사 중' : '반려' }}</strong></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 정상 대시보드 -->
+  <div v-else class="app-container page-body">
     <!-- 헤더 -->
     <header class="home-head">
       <div>
@@ -249,6 +290,72 @@ const recent = [
 </template>
 
 <style scoped>
+/* 사업자등록증 심사 미승인 — 안내 화면 */
+.approval-hero {
+  max-width: 720px;
+  margin: 64px auto;
+  padding: 56px 40px;
+  background: #fff8e6;
+  border: 1px solid var(--warning);
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+.approval-hero.rejected {
+  background: #fef2f2;
+  border-color: var(--danger);
+}
+.hero-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  background: var(--white);
+  border: 1px solid var(--warning);
+  border-radius: 999px;
+  color: var(--warning-ink);
+  font-size: 36px;
+}
+.approval-hero.rejected .hero-icon {
+  border-color: var(--danger);
+  color: var(--danger-ink);
+}
+.hero-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin: 0 0 16px;
+}
+.hero-desc {
+  font-size: var(--fz-md);
+  color: var(--ink-700);
+  line-height: 1.7;
+  margin: 0 0 28px;
+}
+.hero-desc .reason {
+  display: inline-block;
+  margin: 4px 0;
+  color: var(--danger-ink);
+  font-weight: 600;
+}
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.hero-meta {
+  font-size: var(--fz-sm);
+  color: var(--ink-500);
+  padding-top: 20px;
+  border-top: 1px dashed var(--ink-200);
+}
+.hero-meta strong {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
 .home-head {
   display: flex;
   align-items: flex-end;

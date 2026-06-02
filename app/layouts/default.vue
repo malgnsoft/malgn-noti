@@ -1,5 +1,6 @@
 <template>
   <div class="layout-default">
+    <AppApprovalBanner />
     <AppGnb />
     <main class="layout-main">
       <slot />

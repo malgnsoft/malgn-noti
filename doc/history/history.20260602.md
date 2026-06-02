@@ -680,3 +680,94 @@ done
 - **GNB 글로벌 안내 띠** (4번) — `auth.tenant.approvalState`를 GNB·셸 컴포넌트에서 구독해 모든 페이지 상단에 노출.
 - **요청당 DB SELECT 1회** — Hyperdrive 캐시로 빠르지만, 트래픽 증가 시 JWT claim에 `approvalState`를 넣어 단축 가능. 단 승인 후 사용자가 재로그인하기 전엔 갱신 안 됨 → 단기적으로 미적용 권장.
 - **`/inquiries` 외 예외** — 추후 운영자단에서 첨부 파일 업로드(R2)·결제(PG 콜백) 등 필요 시 케이스별 검토.
+
+---
+
+# §9. 사용자단 승인 게이트 UI 일관화 — 글로벌 띠 + 라우트 가드 + `/home` 안내 (배포 #65)
+
+## 한 줄
+
+§7·§8에서 백엔드(DB + 18 라우트 차단)로 정책 인프라화 완료. 사용자단도 일관 — **글로벌 띠** `AppApprovalBanner`(layout 최상단·GNB 위)로 모든 페이지에 승인 상태 알림 + **글로벌 라우트 가드** `middleware/approval.global.ts`로 차단 페이지 접근 시 `/account/settings`로 자동 리다이렉트 + **`/home` 페이지**는 미승인 시 KPI/채널/통계 카드 대신 전체 화면 큰 안내(`approval-hero`)로 교체. Pages 배포 #65 (alias `2eec9e0b.malgn-noti.pages.dev`).
+
+## 9.1 글로벌 띠 — `AppApprovalBanner.vue`
+
+[app/components/AppApprovalBanner.vue](../../app/components/AppApprovalBanner.vue) 신규:
+
+- `auth.tenant.approvalState`를 구독 → `pending`/`rejected`일 때만 노출
+- pending: 노란색 띠(`#fff8e6` + warning border) + 시계 아이콘
+- rejected: 빨간색 띠(`#fef2f2` + danger border) + X 아이콘 + 반려 사유 인용
+- 우측 버튼 — pending이면 "회원 정보", rejected면 "다시 제출하기" → `/account/settings`로 이동
+- 반응형(720px 미만 wrap)
+
+[app/layouts/default.vue](../../app/layouts/default.vue)에 마운트 — `AppGnb` 위, layout 최상단:
+```vue
+<AppApprovalBanner />
+<AppGnb />
+<main><slot /></main>
+<AppFooter />
+```
+
+→ 모든 인증 페이지에서 자동 노출.
+
+## 9.2 글로벌 라우트 가드 — `middleware/approval.global.ts`
+
+[app/middleware/approval.global.ts](../../app/middleware/approval.global.ts) 신규:
+
+```ts
+const ALLOWED_PREFIXES = ['/account', '/home', '/help', '/guide', '/wbs', '/inquiry']
+
+export default defineNuxtRouteMiddleware((to) => {
+  if (to.meta.auth === false) return
+  const state = useAuthStore().tenant?.approvalState
+  if (!state || state === 'approved') return  // 미hydrate면 통과
+  if (ALLOWED_PREFIXES.some(p => to.path === p || to.path.startsWith(`${p}/`))) return
+  return navigateTo('/account/settings')
+})
+```
+
+허용 경로:
+- `/account/*` — 회원 정보·승인 안내·재제출
+- `/home` — 큰 안내 카드(다음 절)
+- `/help`·`/guide`·`/wbs` — 정적 문서
+- `/inquiry`·`/account/inquiry` — 1:1 문의 (백엔드도 §8에서 예외)
+
+차단 경로(자동 리다이렉트 → `/account/settings`):
+- `/send/*` · `/history/*` · `/contacts/*` · `/sender/*` · `/manage/*` · `/campaign*` · `/charge*`
+
+SSR 안전: store 미hydrate(`state === undefined`)면 통과. 클라이언트 부트스트랩이 `fetchMe()`로 hydrate한 다음 재진입 시 작동.
+
+## 9.3 `/home` 페이지 미승인 분기
+
+[app/pages/home.vue](../../app/pages/home.vue) — `v-if="isLocked"`로 두 화면 분기:
+
+미승인 화면(`approval-hero`):
+- 중앙 정렬 큰 카드 (max-width 720px)
+- 72px 시계/X 아이콘 + 24px 제목
+- 본문(pending: "심사 중, 보통 영업일 1~2일" / rejected: 사유 인용)
+- CTA 2개: "회원 정보 확인하기/다시 제출하기" + "1:1 문의 작성"
+- 하단 현재 상태 메타
+
+승인 상태(기본):
+- 기존 KPI·채널·통계 카드 그대로 (변경 없음)
+
+## 9.4 흐름 정리 — 가입 후 미승인 사용자가 경험하는 UX
+
+1. **회원가입 완료** → 자동 로그인 → `/home`으로 이동
+2. **`/home`**: 큰 안내 카드 "사업자등록증 심사 중입니다 … 보통 영업일 1~2일" + CTA "회원 정보 확인하기"
+3. **상단 글로벌 띠**: 모든 페이지에 항상 노출 (회원 정보·문의 등 허용 페이지에서도)
+4. **차단 페이지 시도**: `/send/sms` 등 클릭 시 미들웨어가 즉시 `/account/settings`로 리다이렉트
+5. **`/account/settings`**: 가입 정보 상단 배너(§7) + 모든 입력 disabled
+6. **승인 완료 후**: store 갱신 시점부터 띠 사라짐 + 모든 페이지 정상 접근 가능
+
+## 9.5 산출물
+
+- 사용자단: `app/components/AppApprovalBanner.vue` 신규 + `app/layouts/default.vue` 마운트 + `app/middleware/approval.global.ts` 신규 + `app/pages/home.vue` 미승인 분기
+- Pages 배포 #65 alias `2eec9e0b.malgn-noti.pages.dev`
+
+## 9.6 알려진 한계 / 다음 작업
+
+- **GNB 메뉴 항목 disabled** — 현재 미들웨어가 리다이렉트로 처리하지만, 시각적으로 GNB 메뉴는 그대로 활성 표시. 메뉴 항목별 `disabled` 클래스 + 호버 시 사유 툴팁이 더 친절. 후속.
+- **승인 완료 후 자동 새로고침** — 현재는 사용자가 직접 새로고침해야 새 상태 반영. WebSocket 또는 폴링으로 자동 갱신 검토.
+- **`/account/inquiry`도 허용** — 1:1 문의 작성은 미승인 시에도 가능해야 함. 현재 `/inquiry`·`/account/inquiry` 두 경로 모두 허용 처리 — 라우트 구조 확정 후 정리.
+- **모바일 띠 줄바꿈** — 720px 미만에서 텍스트 wrap. 실제 모바일에서 가독성 점검 필요.
+- **`/account/contract` 분기** — pending 상태에서 계약서 화면이 어떻게 보일지 정책 결정 필요.
