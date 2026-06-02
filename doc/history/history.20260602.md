@@ -936,3 +936,114 @@ E2E 데이터 cleanup 완료 (TB_CONTRACT_FILE 0 / TB_CONTRACT 0 / TB_USER e2e_%
 - **사업자등록증 OCR 자동 검증** — 향후 운영자 부담 경감 검토. 현재는 운영자 수동 심사.
 - **계약 갱신 트리거** — 만료 1개월 전 자동 'renew' 계약 row 생성 cron 필요(아직 없음). signed_at + 2y가 가까워지면 `expiresAt`만으로 판단해 화면에서 경고는 가능.
 
+---
+
+# §12. 사업자등록증 첨부 시 회사 승인 상태 'reviewing' 자동 전이 (배포 #18·#19 / Pages alias d9a82bfa)
+
+## 한 줄
+
+§11의 후속 — 사용자가 "사업자등록증을 첨부하면 심사 중으로 변경해 달라"고 요청. `approval_state` enum에 **`reviewing`** 추가(`pending → reviewing → approved | rejected` 4단계). DDL 변경은 없음(`VARCHAR(20)`이라 자동 흡수). **(a)** 백엔드 `POST /contracts/files`에서 `kind=biz` 업로드 후 회사 상태가 `pending` 또는 `rejected`이면 `reviewing`으로 UPDATE. `rejected_reason`은 그대로 둠(운영자가 결정). **(b)** `requireApproved` 미들웨어 + `me.ts` PATCH 차단 메시지에 `reviewing` 분기 추가("사업자등록증 심사가 진행 중입니다. 승인 완료 후 …"). **(c)** 사용자단 `AuthCompany.approvalState` 타입 확장(`'reviewing'` 추가) + `AppApprovalBanner`·`AppMemberInfoPanel` 안내문구 3분기 + `AppContractPanel` 패널 상단에 승인 상태 카드(pending=warning · reviewing=info · rejected=danger) 신규. **(d)** `pickFile` 성공 후 `kind=biz`면 `auth.fetchMe()` 호출 → store 즉시 갱신 → 글로벌 띠·페이지 배너가 즉시 "심사 중"으로 전환(새로고침 불필요). Workers 배포 #19(Version `f6877b91-4b2c-429e-951f-9185bcf69c4a`), Pages 배포 alias `d9a82bfa.malgn-noti.pages.dev`. 라이브 e2e 통과(corp 가입 직후 pending → biz 업로드 → reviewing 자동 전이 + PATCH /me 시도 시 새 메시지 노출).
+
+## 12.1 정책 — `approval_state` 4단계로 확장
+
+| 상태 | 의미 | 진입 트리거 | 사용자 액션 |
+| --- | --- | --- | --- |
+| `pending` | 사업자등록증 미제출 | corp/sole signup | 계약 관리에서 사업자등록증 업로드 |
+| `reviewing` | 운영자 심사 대기 | biz 첨부 완료 시 자동(pending/rejected에서만) | 대기 — 결과 안내 메일/SMS |
+| `approved` | 승인 | 운영자(BackOffice) | 모든 기능 이용 |
+| `rejected` | 반려 | 운영자(BackOffice) — 사유 입력 | 사업자등록증 재첨부 → reviewing으로 자동 전이 |
+
+- `personal`은 처음부터 `approved` — 영향 없음
+- `requireApproved` 미들웨어는 여전히 `state !== 'approved'` 차단 — `reviewing`도 차단 대상(메시지만 분기)
+- DDL 변경 없음 (`approval_state VARCHAR(20)`). 추후 `idx_company_approval`은 4 상태 모두 같은 컬럼이라 그대로 효율적
+
+## 12.2 백엔드 — 상태 전이 + 메시지
+
+### POST /contracts/files (`kind=biz`만 발동)
+
+```ts
+if (kind === 'biz') {
+  const cs = await db.select({ state: company.approvalState })...
+  if (cs[0]?.state === 'pending' || cs[0]?.state === 'rejected') {
+    await db.update(company).set({ approvalState: 'reviewing' })
+      .where(eq(company.id, companyId))
+  }
+}
+```
+
+- 첫 첨부 시: `pending → reviewing`
+- 반려 후 재첨부 시: `rejected → reviewing` (사유는 그대로 둠 → 운영자가 새 심사에서 덮어쓰거나 NULL로 설정)
+- 이미 `reviewing`이거나 `approved`면 변동 없음(idempotent)
+- `kind=loan` / `kind=insurance`는 트리거 안 함 — 보조 서류
+
+### 메시지 분기 — 2 곳
+
+[src/middleware/approval.ts](../../../malgn-noti-api/src/middleware/approval.ts):
+```ts
+state === 'rejected' ? '심사가 반려되어 이용할 수 없습니다. 사유: …'
+: state === 'reviewing' ? '사업자등록증 심사가 진행 중입니다. 승인 완료 후 이용할 수 있습니다.'
+: '사업자등록증을 등록한 후 이용할 수 있습니다.'
+```
+
+[src/routes/me.ts](../../../malgn-noti-api/src/routes/me.ts) — `PATCH /me`·`PATCH /me/company` 두 핸들러 모두 동일 분기 추가("정보를 수정할 수 있습니다" 변형).
+
+## 12.3 사용자단 — 타입·배너·카드·store 갱신
+
+### 타입 확장
+[app/stores/auth.ts](../../app/stores/auth.ts) — `AuthCompany.approvalState` 에 `'reviewing'` 추가. 타입 좁힘이 풀려 모든 화면의 컴파일 에러가 한 번에 해소됨.
+
+### AppApprovalBanner — 글로벌 띠
+[app/components/AppApprovalBanner.vue](../../app/components/AppApprovalBanner.vue) — `visible`을 `state !== 'approved'`로 단순화(이전엔 pending/rejected만 명시). 본문 3분기:
+- pending: "사업자등록증을 등록해 주세요"
+- reviewing: "사업자등록증 심사 중입니다 — 영업일 1~2일 내 안내"
+- rejected: "사업자등록증 심사 반려 — 사유: …"
+
+CTA 라벨: rejected="다시 제출하기" / reviewing="진행 상태 보기" / pending="사업자등록증 등록". 클래스는 `:class="state"`로 단순화(`approval-banner.reviewing`은 별도 톤 없이 pending과 같은 warning 톤 유지).
+
+### AppMemberInfoPanel — 페이지 배너
+[app/components/AppMemberInfoPanel.vue](../../app/components/AppMemberInfoPanel.vue) — 같은 패턴(3분기 strong + p). 클래스는 `:class="approvalState"`.
+
+### AppContractPanel — 패널 상단 상태 카드
+[app/components/AppContractPanel.vue](../../app/components/AppContractPanel.vue) — `<div class="state-card" :class="approvalState">` 신규(`isLocked` 화면에서만 노출):
+- pending: warning 톤 + 시계 아이콘 + "사업자등록증을 등록해 주세요" + "PDF, 최대 10MB" 안내
+- reviewing: info 톤 + 로딩 아이콘 + "사업자등록증 심사 중입니다" + 영업일 안내
+- rejected: danger 톤 + X 아이콘 + 반려 사유 + "다시 첨부 시 재심사" 안내
+
+CSS 토큰만 사용(`--warning-line`·`--info-soft`·`--danger`).
+
+### pickFile 성공 후 store 즉시 갱신
+```ts
+await api('/contracts/files', { method: 'POST', body: form })
+await loadFiles()
+if (target === 'biz') await auth.fetchMe()
+toast.add({ title: target === 'biz' && approvalState.value === 'reviewing'
+  ? '사업자등록증이 제출되었습니다. 심사가 진행됩니다.'
+  : '서류가 첨부되었습니다.', ... })
+```
+
+`fetchMe()`로 store가 갱신되면 — 글로벌 띠(`AppApprovalBanner`)·페이지 배너(`AppMemberInfoPanel` 진입 시)·이 패널 상태 카드(`approvalState` computed) 모두 같은 store를 구독하므로 즉시 "심사 중"으로 전환됨.
+
+## 12.4 라이브 e2e 검증
+
+| # | 호출 | 결과 |
+| --- | --- | --- |
+| 1 | corp signup (mock NICE) | ✅ `/me` → `approvalState='pending'` |
+| 2 | `GET /contracts` | ✅ `'initial'` 1건 자동 생성됨 |
+| 3 | `POST /contracts/files` (kind=biz) | ✅ 201 |
+| 4 | `GET /me` 재호출 | ✅ `approvalState='reviewing'` |
+| 5 | `PATCH /me {name}` | ✅ 403 "사업자등록증 심사가 진행 중입니다. 승인 완료 후 정보를 수정할 수 있습니다." |
+
+테스트 데이터 cleanup(R2 객체 1 + DB rows) 완료.
+
+## 12.5 산출물
+
+- API: `malgn-noti-api: 66dab21` — 3 파일 수정(`routes/contracts.ts`·`middleware/approval.ts`·`routes/me.ts`). Workers 배포 Version `f6877b91-4b2c-429e-951f-9185bcf69c4a`
+- 사용자단: `malgn-noti: 5d530d9` — 4 파일 수정(`AppApprovalBanner.vue`·`AppMemberInfoPanel.vue`·`AppContractPanel.vue`·`stores/auth.ts`). Pages 배포 alias `d9a82bfa.malgn-noti.pages.dev`
+
+## 12.6 알려진 한계 / 후속 작업
+
+- **운영자단 심사 화면 미구현** (§7.7부터 누적) — `reviewing`까지 자동 진행되지만 승인/반려는 여전히 DB 직접 UPDATE. 운영자단 BackOffice 화면(`/admin/...`) 필요.
+- **알림 미발송** — `pending → reviewing` 전이 시 사용자에게 알림 메일/SMS 없음. NHN 자격증명 발급 후 trigger.
+- **반려 후 재첨부 시 사유 처리** — 현재는 `rejected_reason`을 그대로 둔 채 `reviewing`으로 전이. 운영자가 새 심사에서 결정하도록 위임. 정책상 더 명확히 하려면 재첨부 시 `rejected_reason=NULL`로 정리도 가능 — 향후 결정.
+- **사업자등록증 외 보조 서류 정책** — 대부업등록증·보험증권은 첨부해도 상태 전이 없음. 운영자가 별도로 확인. 후속 정책 검토 시 변경 가능.
+
