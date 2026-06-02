@@ -454,7 +454,14 @@ async function submitSignup() {
 
 /* Step 5에서 호출 — 이미 자동 로그인된 상태 */
 function finish() {
-  navigateTo('/home')
+  // 사업자(corp/sole)는 가입 직후 'pending' → 계약 관리(사업자등록증 제출)로
+  // 개인(personal)은 'approved' → 대시보드로
+  if (isBusiness.value) {
+    navigateTo('/account/contract')
+  }
+  else {
+    navigateTo('/home')
+  }
 }
 </script>
 
@@ -763,7 +770,7 @@ function finish() {
         class="btn btn-primary nav-btn"
         @click="finish"
       >
-        대시보드로 이동
+        {{ isBusiness ? '계약 관리로 이동' : '대시보드로 이동' }}
       </button>
     </div>
 

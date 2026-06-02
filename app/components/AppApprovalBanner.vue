@@ -4,8 +4,8 @@ const state = computed(() => auth.tenant?.approvalState ?? 'approved')
 const visible = computed(() => state.value === 'pending' || state.value === 'rejected')
 const reason = computed(() => auth.tenant?.rejectedReason ?? '')
 
-function goToSettings() {
-  navigateTo('/account/settings')
+function goToContract() {
+  navigateTo('/account/contract')
 }
 </script>
 
@@ -21,8 +21,8 @@ function goToSettings() {
           <strong>사업자등록증 심사 반려</strong> — 사유: <em>{{ reason || '관리자에게 문의해 주세요.' }}</em>. 사업자등록증을 다시 제출해 주세요.
         </template>
       </div>
-      <button type="button" class="btn-action" @click="goToSettings">
-        {{ state === 'rejected' ? '다시 제출하기' : '회원 정보' }}
+      <button type="button" class="btn-action" @click="goToContract">
+        {{ state === 'rejected' ? '다시 제출하기' : '계약 관리' }}
       </button>
     </div>
   </div>
