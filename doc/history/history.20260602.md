@@ -406,3 +406,97 @@ OpenAPI 4지점(2 paths + 4 schemas) + SignupRequest에 niceSession 필드.
 - **모바일웹 popup 차단** — `window.open`이 모바일 Safari에서 차단될 수 있음. `redirect` 모드 옵션 검토.
 - **외국인 가입** — `national_info='1'` 분기 UI 후속.
 - **법인 대표자 본인 인증** — 정책 결정 후 적용.
+
+---
+
+# §6. /account/settings 실 API 연동 — `PATCH /me` + `PATCH /me/company` (배포 #14 / #61)
+
+## 한 줄
+
+WBS 5-3C-7 (PATCH /me + /account/settings) 작업. 기존 백엔드 `/me`는 GET만 있었고 응답도 최소(8 필드)였는데, **GET /me 응답을 TB_USER 13 + TB_COMPANY 14 컬럼 풀로 확장** + **PATCH /me**(사용자 본인 — name·phone) + **PATCH /me/company**(회사 — companyPhone·billingEmail·adReceive, owner/admin 권한) 신설. 프런트 [AppMemberInfoPanel.vue](../../app/components/AppMemberInfoPanel.vue)는 전체 목업 데이터(`account.email='service@malgnsoft.com'` 등)를 제거하고 `useAuthStore()` 기반으로 모두 실 데이터로 교체 — 가입 정보 행은 회사 정보 자동 매핑, 광고성 메일 수신 토글은 즉시 PATCH(컨펌 모달 후), 저장하기는 변경된 필드만 한 번에 PATCH. 라이브 e2e 5건 통과. Workers 배포 #14(Version `22368d14...`), Pages 배포 #61 (alias `ea35651d.malgn-noti.pages.dev`).
+
+## 6.1 백엔드 변경
+
+[src/routes/me.ts](../../../malgn-noti-api/src/routes/me.ts) — `readContext()` 헬퍼로 GET·PATCH 공통 JOIN 쿼리 추출:
+
+```ts
+me.use('*', requireAuth())
+me.get('/', ...)                          // 기존 + 풀 컬럼
+me.patch('/', zValidator(json, patchMeB), ...)        // name·phone
+me.patch('/company', zValidator(json, patchCompanyB), ...)  // companyPhone·billingEmail·adReceive
+```
+
+- 빈 PATCH(`{}`) → 400 `validation_failed` (변경할 필드가 없습니다)
+- `/company` PATCH는 `role !== 'owner' && role !== 'admin'` → 403 forbidden
+- 응답은 모두 동일 형식(`{data: {user, company, ctxRole}}`)으로 통일 → 프런트가 변경 후 store 그대로 hydrate 가능
+
+OpenAPI: `Me` schema 확장 + `PatchMeRequest`·`PatchCompanyRequest` 신규. paths 2 추가.
+
+## 6.2 stores/auth.ts 확장
+
+```ts
+interface AuthUser {  // +birthdate, gender, nationalInfo, mobileCo, memberType
+  ...
+}
+interface AuthCompany {  // +bizNo, bizType, ceoName, upTae, upJong, address, companyPhone, billingEmail, adReceive
+  ...
+}
+
+actions: {
+  async updateMe(patch: {name?, phone?}) { ... }
+  async updateCompany(patch: {companyPhone?, billingEmail?, adReceive?}) { ... }
+}
+```
+
+## 6.3 AppMemberInfoPanel.vue 전면 교체
+
+| 영역 | 기존 (목업) | 신규 (실 데이터) |
+| --- | --- | --- |
+| 데이터 로드 | 하드코딩 `account = {email: 'service@malgnsoft.com', ...}` | `onMounted(auth.fetchMe)` + `computed u/c` |
+| 가입 정보 8행 | `INFO_ROWS` 고정 | `c.value`의 bizNo/bizType/ceoName/upTae/upJong/address 자동 매핑, `BIZ_TYPE_LABEL`로 한국어 표시 |
+| 사업자등록증 변경 버튼 | 항상 노출 | `c.bizType !== 'personal'` 일 때만 (개인 유형은 노출 X) |
+| 광고성 메일 수신 토글 | 로컬 ref 토글 + 토스트만 | 컨펌 모달 → `auth.updateCompany({adReceive})` 즉시 호출 + 토스트 |
+| 서비스 담당자 이름 | 하드코딩 `'홍길동'` | `u.value.name` (NICE 검증 결과) |
+| 회사 전화번호 입력 | 로컬 ref | `companyPhoneInput` ref, watchEffect로 store에서 초기화 |
+| 휴대전화번호 3분할 | 로컬 ref | `watchEffect`가 `u.value.phone`에서 010/3~4자리/4자리로 자동 split |
+| 결제 이메일 변경 | 로컬 ref 변경 + 토스트 | 다이얼로그 → `auth.updateCompany({billingEmail})` |
+| 서비스 담당자 이메일 변경 | 로컬 ref 변경 | "곧 지원됩니다" 안내 — OTP 검증 흐름은 후속 |
+| 휴대폰 본인 인증 | NICE 미연결 더미 | 그대로 더미 — NICE Step 4와 별개로 후속 |
+| 회원 탈퇴 | 로컬 토스트 | "곧 지원됩니다" 안내 — 후속 라우트 필요 |
+| **저장하기** | 토스트만 | `companyPhone`·`fullPhone` 변경 감지 → `updateMe`·`updateCompany` 병렬 호출 |
+
+저장 로직:
+```ts
+const tasks = []
+if (fullPhone !== u.phone) tasks.push(updateMe({phone: fullPhone}))
+if (companyPhoneInput !== c.companyPhone) tasks.push(updateCompany({companyPhone: companyPhoneInput}))
+if (tasks.length === 0) toast(변경 없음)
+else await Promise.all(tasks) → 성공 토스트
+```
+
+`.seg` 스타일도 추가 (광고성 메일 수신 라디오 토글 — 기존 누락).
+
+## 6.4 라이브 e2e (Production)
+
+| # | 호출 | 결과 |
+| --- | --- | --- |
+| 1 | `GET /me` (Bearer) | 200 + 풀 컨텍스트 (TB_USER 13 + TB_COMPANY 14 컬럼) |
+| 2 | `PATCH /me {name:'김도형', phone:'010-1111-2222'}` | 200 + 갱신된 user 응답 |
+| 3 | `PATCH /me/company {companyPhone, billingEmail, adReceive:'reject'}` | 200 + 갱신된 company 응답 |
+| 4 | `GET /me` 재호출 | name/phone/companyPhone/billingEmail/adReceive 모두 정확 반영 |
+| 5 | 빈 PATCH `{}` | 400 `validation_failed`: 변경할 필드가 없습니다 |
+
+테스트 사용자(`mep-test-…`) cleanup 완료.
+
+## 6.5 산출물
+
+- API: `malgn-noti-api: c8c…` — `src/routes/me.ts` 전면 개편(+150) · `src/openapi.ts` 갱신. Workers 배포 #14 Version `22368d14-f0c8-4788-8b52-5cb4f6442cf3`
+- 사용자단: `app/stores/auth.ts` 타입 확장 + 2 액션 / `app/components/AppMemberInfoPanel.vue` 전면 교체. Pages 배포 #61 alias `ea35651d.malgn-noti.pages.dev`
+- WBS 5-3C-7 ⚪ → 🟢 (회원 정보 변경 — 저장하기·광고수신 즉시 변경·결제이메일 변경은 실 API, 서비스 담당자 이메일·휴대폰 본인 인증 변경은 후속)
+
+## 6.6 알려진 한계 / 후속 작업
+
+- **서비스 담당자 이메일 변경** — OTP 검증 흐름 필요. 백엔드 `POST /me/email-change/{request,confirm}` 신설 후 다이얼로그 연결.
+- **휴대폰 본인 인증 변경** — NICE 재인증 흐름 또는 SMS OTP. signup의 NICE Step 4와 유사한 패턴 재사용 가능.
+- **회원 탈퇴** — `DELETE /me` 또는 `POST /me/withdraw` 신설 + soft-delete (`TB_USER.status = -1`) + 관련 데이터 정책 결정.
+- **`canEditCompany` 권한 UX** — 현재는 PATCH 호출 후 403 에러로 안내. 사전에 role 기반으로 UI 비활성화 검토.

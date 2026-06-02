@@ -196,7 +196,7 @@ const STAGES: Stage[] = [
       { id: '5-3C-4', group: '사용자단 ↔ API 연동', title: 'POST /auth/login-by-email — companyId UX 개선 (P0)', status: 'done', owner: '김도형', note: '6/2 §7. 로그인 폼에서 고객사 ID 필드 제거. 같은 이메일이 여러 회사면 회사 선택 UI 노출', targetDate: '6/2', completionDate: '6/2' },
       { id: '5-3C-5', group: '사용자단 ↔ API 연동', title: '약관 동의 적재 (POST /auth/agree-terms) (P1)', status: 'pending', owner: '김도형', note: 'TB_TERMS_AGREEMENT 적재' },
       { id: '5-3C-6', group: '사용자단 ↔ API 연동', title: 'companyType 전달·저장 + 화면 분기 (P1)', status: 'pending', owner: '김도형', note: 'TB_COMPANY.company_type + signup 스키마 확장 + 개인 유형 화면 미노출' },
-      { id: '5-3C-7', group: '사용자단 ↔ API 연동', title: 'PATCH /me + /account/settings (P2)', status: 'pending', owner: '김도형' },
+      { id: '5-3C-7', group: '사용자단 ↔ API 연동', title: 'PATCH /me + /account/settings', status: 'in_progress', owner: '김도형', note: '6/2 §6. GET /me 풀 컬럼 + PATCH /me(name·phone) + PATCH /me/company(companyPhone·billingEmail·adReceive). 서비스 담당자 이메일·휴대폰 변경은 후속(OTP/NICE)', targetDate: '6/2', completionDate: '6/2' },
       { id: '5-3C-8', group: '사용자단 ↔ API 연동', title: 'POST /auth/password + /account/password (P2)', status: 'pending', owner: '김도형' },
       { id: '5-3C-9', group: '사용자단 ↔ API 연동', title: '/account/security (2FA) + PATCH /me/security (P2)', status: 'pending', owner: '김도형', note: 'TB_VERIFICATION 재사용' },
       { id: '5-3C-10', group: '사용자단 ↔ API 연동', title: '/account/multi + /manager-invites (P2)', status: 'pending', owner: '김도형' },

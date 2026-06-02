@@ -12,7 +12,12 @@ export interface AuthUser {
   email: string | null
   name: string | null
   phone: string | null
+  birthdate?: string | null
+  gender?: string | null
+  nationalInfo?: string | null
+  mobileCo?: string | null
   role: 'owner' | 'admin' | 'member'
+  memberType?: string | null
   joinState: string
   status: number
 }
@@ -20,7 +25,16 @@ export interface AuthUser {
 export interface AuthCompany {
   id: number
   name: string
+  bizNo?: string | null
+  bizType?: string | null
+  ceoName?: string | null
+  upTae?: string | null
+  upJong?: string | null
+  address?: string | null
+  companyPhone?: string | null
+  billingEmail?: string | null
   creditBalance: number | string
+  adReceive?: 'agree' | 'reject'
   status: number
 }
 
@@ -145,6 +159,22 @@ export const useAuthStore = defineStore('auth', {
         this.tenant = null
         return false
       }
+    },
+
+    /** 사용자 본인 정보 변경 (name, phone). 성공 시 user/tenant 갱신. */
+    async updateMe(patch: { name?: string, phone?: string }) {
+      const api = useApi()
+      const res = await api<MeResponse>('/me', { method: 'PATCH', body: patch })
+      this.user = res.data.user
+      this.tenant = res.data.company
+    },
+
+    /** 회사 정보 변경 (companyPhone, billingEmail, adReceive). owner/admin만. */
+    async updateCompany(patch: { companyPhone?: string, billingEmail?: string, adReceive?: 'agree' | 'reject' }) {
+      const api = useApi()
+      const res = await api<MeResponse>('/me/company', { method: 'PATCH', body: patch })
+      this.user = res.data.user
+      this.tenant = res.data.company
     },
 
     /** 로그아웃 — 토큰 삭제 + 메모리 클리어 + /login 이동. */
