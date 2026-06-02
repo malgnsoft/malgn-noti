@@ -144,7 +144,16 @@ async function loadFiles() {
   insuranceFiles.value = insurance
 }
 
-await Promise.all([loadContracts(), loadFiles()])
+// SSR에서 실패해도 페이지가 죽지 않도록 swallow — 실패하면 빈 목록으로 시작.
+// client mount 시 한 번 더 재시도.
+try { await Promise.all([loadContracts(), loadFiles()]) }
+catch { /* ignore — onMounted에서 재시도 */ }
+onMounted(async () => {
+  if (contracts.value.length === 0 && bizFiles.value.length === 0) {
+    try { await Promise.all([loadContracts(), loadFiles()]) }
+    catch { /* ignore */ }
+  }
+})
 
 /* 해당 여부 체크박스 — 첨부가 있으면 자동 활성화 */
 const loanApplicable = ref(loanFiles.value.length > 0)
