@@ -597,3 +597,86 @@ ALTER TABLE TB_COMPANY
 - **GNB·홈 글로벌 안내** — 현재는 `/account/settings`에만 배너. 모든 화면 상단(GNB)에 글로벌 안내 띠 검토.
 - **`requireApproved()` 미들웨어 추출** — 현재는 핸들러 내부 인라인. 도메인 라우트 전부 적용 시점에 별도 헬퍼로 분리.
 - **이메일·SMS 자동 안내** — 승인/반려 처리 시 사용자에게 자동 발송. NHN 자격증명 등록 후 trigger.
+
+---
+
+# §8. 승인 게이트 전 도메인 일관 적용 — `requireApproved()` 미들웨어 (배포 #16)
+
+## 한 줄
+
+§7에서 `PATCH /me`·`PATCH /me/company`에만 인라인 차단했던 승인 게이트를 **공용 미들웨어 `requireApproved()`로 추출**하고 **18개 도메인 라우트에 일괄 적용**. 정책은 `mutate-only` — POST/PATCH/PUT/DELETE만 차단(GET 조회는 통과). `/inquiries`만 예외 — 승인 관련 문의는 미승인 상태에서도 작성 가능. 자동화 스크립트로 18 라우트의 import + use 라인을 일관 갱신, typecheck 통과, Workers 배포 #16(Version `798bf6f5-bac2-4912-abdd-4af9718c1a93`). 라이브 e2e 6 시나리오 통과(GET 통과 / POST 4건 403 / 개인 가입은 정상 생성 / 문의 작성은 차단 안 됨).
+
+## 8.1 미들웨어 — `src/middleware/approval.ts`
+
+[src/middleware/approval.ts](../../../malgn-noti-api/src/middleware/approval.ts) 신규:
+
+```ts
+const MUTATE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE'])
+
+export function requireApproved(opts: { method?: 'mutate-only' | 'all' } = {}): MiddlewareHandler<AuthEnv> {
+  const mode = opts.method ?? 'mutate-only'
+  return async (c, next) => {
+    if (mode === 'mutate-only' && !MUTATE_METHODS.has(c.req.method)) return next()
+    const { companyId } = authCtx(c)
+    const db = await getDb(c.env, c.executionCtx)
+    const rows = await db.select({...}).from(company).where(eq(company.id, companyId)).limit(1)
+    const row = rows[0]
+    if (!row) throw errors.notFound('company')
+    if (row.approvalState !== 'approved') {
+      throw errors.forbidden(/* pending / rejected 별 메시지 */)
+    }
+    await next()
+  }
+}
+```
+
+- 기본 `mutate-only` — GET·HEAD·OPTIONS는 통과 (조회 허용)
+- `'all'` 옵션 — 조회까지 차단 (필요 시)
+- `requireAuth()` 다음 체인 — `authCtx`로 companyId 획득
+- 매 요청 1회 SELECT (Hyperdrive 캐시 효과 기대)
+
+## 8.2 18 라우트 일괄 적용
+
+대상:
+| 라우트 | 변수명 | 비고 |
+| --- | --- | --- |
+| send · contacts · contact-groups · optout-entries · sender-phones · rcs-brands · email-domains · push-certs · kakao-sender-profiles · kakao-profile-groups · optout-080-numbers · templates · template-categories · landing-pages · flow-definitions · export-jobs · payment-methods · company-settings | `app` 또는 도메인별(`contacts`·`groups`·`phones`) | 18종 |
+| **예외**: inquiries | — | 승인 관련 문의 가능해야 함 |
+| **이미 §7**: me | — | 인라인 차단 |
+| **읽기 전용**: dispatch-history · credit-ledger | — | GET만 정의, 차단 무영향 |
+
+자동화 — 변수명을 grep으로 식별 후 perl로 import + use 2 군데 일괄 갱신:
+
+```bash
+for f in "${TARGETS[@]}"; do
+  varname=$(grep -oE "[a-zA-Z]+\.use\('\\*', requireAuth\(\)\)" "src/routes/$f.ts" | head -1 | cut -d. -f1)
+  perl -i -pe "..."  # import 라인 + use 라인 갱신
+done
+```
+
+각 파일에 `requireApproved` 2번 등장(import + use) 확인 — 18 파일 × 2 = 36 매치.
+
+## 8.3 라이브 e2e (Production)
+
+| # | 시나리오 | 결과 |
+| --- | --- | --- |
+| 1 | 미승인 사업자(corp) **GET /contacts** | ✅ 200 — 조회 허용 |
+| 2 | 미승인 사업자 **POST /contacts** | ✅ 403 "사업자등록증 심사 승인 후 이용할 수 있습니다." |
+| 3 | 미승인 사업자 **POST /sender-phones** | ✅ 403 동일 메시지 |
+| 4 | 미승인 사업자 **POST /send/sms** | ✅ 403 — 발송 차단 |
+| 5 | 개인(approved) **POST /contacts** | ✅ 201 정상 생성 |
+| 6 | 미승인 사업자 **POST /inquiries** | ✅ 차단 안 됨(400은 body validation) — 예외 정상 |
+
+검증 데이터 cleanup 완료.
+
+## 8.4 산출물
+
+- `malgn-noti-api: ?` — 19 파일 변경(1 신규 + 18 라우트). Workers 배포 #16 Version `798bf6f5-bac2-4912-abdd-4af9718c1a93`
+- WBS 5-3C-17은 이미 ✅, 추가 갱신은 없음(같은 정책의 확장 적용)
+
+## 8.5 알려진 한계 / 다음 작업
+
+- **사용자단 다른 화면 disabled** (3번) — 발송·이력·주소록 등 페이지에 접근 시 안내 배너 또는 기능 락 UI. 아직 페이지가 모두 목업 데이터 기반이라 백엔드 차단이 화면에 즉시 반영 안 됨 — 추후 페이지별 백엔드 연동 시 일관 처리 또는 별도 글로벌 안내 띠.
+- **GNB 글로벌 안내 띠** (4번) — `auth.tenant.approvalState`를 GNB·셸 컴포넌트에서 구독해 모든 페이지 상단에 노출.
+- **요청당 DB SELECT 1회** — Hyperdrive 캐시로 빠르지만, 트래픽 증가 시 JWT claim에 `approvalState`를 넣어 단축 가능. 단 승인 후 사용자가 재로그인하기 전엔 갱신 안 됨 → 단기적으로 미적용 권장.
+- **`/inquiries` 외 예외** — 추후 운영자단에서 첨부 파일 업로드(R2)·결제(PG 콜백) 등 필요 시 케이스별 검토.
