@@ -16,9 +16,9 @@
 | **Step 2 · 주요 서비스 정책 이슈 정리** | 15% | **55%** | 회원 구조·결제·메시지 채널·주소록 정책 90% 합의. 후불결제·캠페인 AB 테스트 미정 |
 | **Step 3 · 서비스 기획 (화면설계)** | 20% | **35%** | BackOffice 1차 5종 70%. 2차·통계·운영가이드 미진 |
 | **Step 4 · 디자인 / 퍼블리싱** | 10% | **20%** | 사용자단 Relay-inspired DS 정본·디자인 가이드(/guide) 살아있는 카탈로그로 대체 운영. 정식 스타일 가이드·MD 산출물은 미작성 |
-| **Step 5 · 서비스 개발** | 45% | **55%** | 사용자단 5채널 + 캠페인/이력/주소록/발신정보/템플릿/문의/나의페이지 화면 완료. API 5채널 발송·NHN 어댑터·Queues·인증·OpenAPI 완료. 관리자단은 셸·기획만 |
+| **Step 5 · 서비스 개발** | 45% | **40%** | **3 트랙 분리 후 재산정** (5-3M 매트릭스): UI(5-3A) 거의 완료(13✅+1🟢) / API(5-2) 약 60%(9✅+3🟢+4⚪) / **연동(5-3C) 약 7%(1✅+15⚪)** / 관리자단(5-4) 셸·기획만 / 통합·배포(5-5) ✅ 3+⛔ 0+⚪ 4. 가중평균 약 40%. |
 
-**전체 가중평균: 약 45%** (`0.10×55 + 0.15×55 + 0.20×35 + 0.10×20 + 0.45×55 ≈ 44.5`)
+**전체 가중평균: 약 38%** (`0.10×55 + 0.15×55 + 0.20×35 + 0.10×20 + 0.45×40 ≈ 37.75`)
 
 **상태 범례**: ✅ 완료 · 🟢 진행 중 · ⚪ 대기 · ⛔ 보류
 
@@ -227,25 +227,93 @@
 | 5-2-15 | AI 템플릿 게이트웨이 (LLM) | ⚪ | 김도형 | 제공자 미정 (Anthropic / OpenAI) | — | — |
 | 5-2-16 | NHN 실 모드 전환 + envelope 암호화 | ⚪ | 김도형 | 현재 `NHN_MOCK=1`. 채널별 appKey 등록 + 자격증명 envelope 복호화 | — | — |
 
-## 5-3. 사용자단 (`malgn-noti`) 화면 개발
+## 5-3. 사용자단 (`malgn-noti`) — **3 트랙으로 분리**
+
+> ⚠️ 2026-06-02 재구성. 그동안 5-3은 **화면(UI)만 완료된 상태도 ✅로 표기**되어 "실제로는 안 했는데 완료처럼 보이는" 문제가 있었다. 이를 명확히 하기 위해 한 도메인을 세 트랙으로 나눈다:
+>
+> - **A. 화면 UI 구성** (목업 데이터로 페이지 그리기) — `5-3A-*`
+> - **B. 백엔드 API 엔드포인트** — `5-2-*`에 이미 정의됨 (5-2를 도메인 단위로 재정렬한 결과는 5-3M 매트릭스 참조)
+> - **C. 화면 ↔ API 연동** (실 데이터 흐름 + 상태 관리 + 에러 처리) — `5-3C-*`
+>
+> ✅의 의미가 트랙마다 다르다는 점에 주의. 5-3A의 ✅는 "UI 화면이 목업으로 그려짐" 단계까지를 의미.
+
+### 5-3A. 화면 UI 구성 (목업 데이터 기준)
+
+| ID | 작업 | UI | 담당 | 산출물 / 메모 |
+| --- | --- | --- | --- | --- |
+| 5-3A-1 | 인증·계정 — 로그인 / 회원가입 5단계 / 비번 재설정 / 보안 인증 | ✅ | 김도형 | `/login` `/login/security` `/reset-password` `/reset-password/new` `/signup` |
+| 5-3A-2 | 발송 — 6채널 (SMS/RCS/Kakao/Email/Push/Flow) | ✅ | 김도형 | `/send/*` + PU 풀세트 |
+| 5-3A-3 | 이력 / 통계 (5채널 + 대시보드) | ✅ | 김도형 | `/history/{sms,rcs,kakao,email,push,stats}` + 비동기 다운로드 요청 UI |
+| 5-3A-4 | 주소록 — 연락처 / 그룹 / 수신거부 | ✅ | 김도형 | `/contacts/{list,groups,optout}` |
+| 5-3A-5 | 발신 정보 — 6종 | ✅ | 김도형 | `/sender/{numbers,brands,domains,push-cert,profiles,optout-080}` + 등록 마법사 |
+| 5-3A-6 | 템플릿 관리 — 5채널 + 발송 상세 설정 | ✅ | 김도형 | `/manage/{sms,rcs,kakao,email,push,settings}` |
+| 5-3A-7 | 캠페인 — 본안 + 변형 v3 | ✅ | 김도형 | `/campaign` `/campaign3` |
+| 5-3A-8 | 크레딧 / 결제 — 충전·결과·내역·영수증·카드 | ✅ | 김도형 | `/charge` `/charge/result` `/account/{credit,cards}` |
+| 5-3A-9 | 문의 — 작성 / 완료 / 내 문의 / 상세 | ✅ | 김도형 | `/inquiry` `/inquiry/complete` `/account/inquiries(/detail)` |
+| 5-3A-10 | 나의 페이지 — 9 라우트 | ✅ | 김도형 | `/account/*` 9종 + `AppMyPageShell` |
+| 5-3A-11 | 메시지 관리 랜딩페이지 | ✅ | 김도형 | 목록 · 기본형/확장형 등록 폼 · 미리보기 |
+| 5-3A-12 | 공개 랜딩페이지 + 운영 가이드 | ✅ | 김도형 | `/`(공개) + `/help` |
+| 5-3A-13 | 디자인 가이드 (라이브 카탈로그) | ✅ | 김도형 | `/guide` — 18+ 섹션 |
+| 5-3A-14 | 시스템 페이지 — 404 / system error | 🟢 | 김도형 | 단독 일부 라이브. 점검 / 네트워크 / 인증 메일 템플릿 미 |
+
+### 5-3M. 화면 ↔ API 연동 매트릭스 (3 트랙 한눈에)
+
+> 각 도메인의 진척을 **UI / API / 연동** 3 트랙으로 분리해 한 행에. ✅=완료, 🟢=진행 중·부분, ⚪=미.
+
+| 도메인 | UI (5-3A) | API 엔드포인트 (5-2) | **연동** (5-3C) | 비고 |
+| --- | --- | --- | --- | --- |
+| **인증·계정** (로그인/가입/me) | ✅ | ✅ (`/auth/signup`·`/auth/login`·`/me`·`/auth/email-code/*`) | ✅ | 6/1 §4·§5 완료. JWT 쿠키 + 부트스트랩 플러그인. signup OTP 인증 실 API 연동. |
+| **발송 SMS/LMS/MMS** | ✅ | ✅ (`POST /send/sms`) | ⚪ | producer 라이브, 실 NHN 자격증명 미 → mock fallback |
+| **발송 RCS** | ✅ | ✅ (`POST /send/rcs`) | ⚪ | |
+| **발송 알림톡/친구톡** | ✅ | ✅ (`POST /send/kakao`) | ⚪ | |
+| **발송 Email** | ✅ | ✅ (`POST /send/email`) | ⚪ | |
+| **발송 Push** | ✅ | ✅ (`POST /send/push`) | ⚪ | |
+| **발송 Flow** | ✅ | 🟢 (`POST /flow-definitions` CRUD ✅, `POST /send/flow` 실행 엔진 미) | ⚪ | |
+| **이력/통계** | ✅ | 🟢 (목록 라우트 부분, 통계 라우트 미) | ⚪ | |
+| **다운로드 요청 (Export)** | ✅ | 🟢 (`/export-jobs` CRUD ✅, 처리 worker + R2 미) | ⚪ | |
+| **주소록** (연락처/그룹/수신거부) | ✅ | ✅ (`/contacts`·`/contact-groups`·`/optout-entries`) | ⚪ | |
+| **발신 정보** (6종) | ✅ | ✅ (`/sender-phones`·`/rcs-brands`·`/email-domains`·`/push-certs`·`/kakao-sender-profiles`·`/optout-080-numbers`) | ⚪ | |
+| **템플릿** (5채널 + settings) | ✅ | ✅ (`/templates`·`/company-settings`) | ⚪ | |
+| **캠페인** | ✅ | ⚪ (스케줄러·시뮬레이션·테스트) | ⚪ | |
+| **크레딧·결제** | ✅ | 🟢 (`/credit-ledger` 읽기, `/payment-methods` 일부, PG 어댑터 미) | ⚪ | |
+| **문의** | ✅ | ✅ (`/inquiries`) | ⚪ | |
+| **나의 페이지** — 회원 정보 변경 | ✅ | ⚪ (`PATCH /me`) | ⚪ | |
+| **나의 페이지** — 비밀번호 변경 | ✅ | ⚪ (`POST /auth/password`) | ⚪ | |
+| **나의 페이지** — 보안로그인 (2FA) | ✅ | ⚪ (`PATCH /me/security`) | ⚪ | TB_VERIFICATION 재사용 |
+| **나의 페이지** — 멀티 계정 (담당자 초대) | ✅ | ⚪ (`/manager-invites`) | ⚪ | |
+| **나의 페이지** — 계약 관리 | ✅ | ⚪ (`/contracts`·`/contracts/*/files`) | ⚪ | R2 업로드 필요 |
+| **비밀번호 재설정** | ✅ | ⚪ (`POST /auth/password/reset` — OTP 인프라 재활용) | ⚪ | |
+| **로그아웃** | (GNB 데모 토글) | (클라이언트 쿠키 삭제만, `TB_SESSION` 미) | ⚪ | GNB 미연동 |
+| **약관 동의 적재** | (Step 3 화면용 체크박스) | ⚪ (`POST /auth/agree-terms`) | ⚪ | TB_TERMS·TB_TERMS_AGREEMENT |
+| **메시지 관리 랜딩페이지** | ✅ | ⚪ (`/landing-pages` 부분) | ⚪ | |
+| **시스템 페이지** | 🟢 | (정적) | — | |
+
+**진척 합계** (트랙별):
+- UI(5-3A) — 13 ✅ + 1 🟢 = **거의 완료**
+- API(5-2) — 9 ✅ + 3 🟢 + 4 ⚪ = **약 60%**
+- **연동(5-3C) — 1 ✅ + 0 🟢 + 13 ⚪ = 약 7%** ← 이번주 본격 작업
+
+### 5-3C. 화면 ↔ API 연동 (개별 작업 항목, 진행 중)
 
 | ID | 작업 | 상태 | 담당 | 산출물 / 메모 |
 | --- | --- | --- | --- | --- |
-| 5-3-1 | 인증·계정 — 로그인 / 회원가입 5단계 마법사 / 비밀번호 재설정 / 보안 인증 | ✅ | 김도형 | `/login` `/login/security` `/reset-password` `/reset-password/new` `/signup` |
-| 5-3-2 | 발송 — 6채널 (SMS/RCS/Kakao/Email/Push/Flow) | ✅ | 김도형 | `/send/{sms,rcs,kakao,email,push,flow}` + PU 풀세트(수신자·주소록·광고수신·컨펌·초기화) |
-| 5-3-3 | 이력 / 통계 (5채널 + 통계 대시보드) | ✅ | 김도형 | `/history/{sms,rcs,kakao,email,push,stats}` + 비동기 다운로드 요청 |
-| 5-3-4 | 주소록 — 연락처 / 그룹 / 수신거부 | ✅ | 김도형 | `/contacts/{list,groups,optout}` |
-| 5-3-5 | 발신 정보 — 6종 | ✅ | 김도형 | `/sender/{numbers,brands,domains,push-cert,profiles,optout-080}` + 발신번호 등록 마법사 |
-| 5-3-6 | 템플릿 관리 — 5채널 + 발송 상세 설정 | ✅ | 김도형 | `/manage/{sms,rcs,kakao,email,push,settings}` |
-| 5-3-7 | 캠페인 — 본안 + 변형(v3) | ✅ | 김도형 | `/campaign` `/campaign3` |
-| 5-3-8 | 크레딧 / 결제 — 충전·결과·내역·영수증·카드 관리 | ✅ | 김도형 | `/charge` `/charge/result` `/account/credit` `/account/cards` |
-| 5-3-9 | 문의 — 작성 / 완료 / 내 문의 / 상세 | ✅ | 김도형 | `/inquiry` `/inquiry/complete` `/account/inquiry` `/account/inquiries` `/account/inquiries/detail` |
-| 5-3-10 | 나의 페이지 — 9 라우트 | ✅ | 김도형 | `/account/{settings,cards,password,security,multi,contract,credit,billing,inquiries}` + `AppMyPageShell` 공용 셸 |
-| 5-3-11 | 메시지 관리 랜딩페이지 | ✅ | 김도형 | 목록 · 기본형/확장형 등록 폼 · 미리보기 |
-| 5-3-12 | 공개 랜딩페이지 + 운영 가이드 | ✅ | 김도형 | [/](https://malgn-noti.pages.dev/) (히어로·5채널·장점·단가 비교·CTA) + [/help](https://malgn-noti.pages.dev/help) |
-| 5-3-13 | 디자인 가이드 (살아있는 카탈로그) | ✅ | 김도형 | [/guide](https://malgn-noti.pages.dev/guide) — 18+ 섹션 |
-| 5-3-14 | 시스템 페이지 — 404 / system error | 🟢 | 김도형 | 단독 페이지 일부 라이브. 점검(긴급/정기) · 네트워크 에러 · 인증 메일 템플릿 미 |
-| 5-3-15 | 백엔드 연동 — 인증·발송·CRUD 실 API 호출 | 🟢 | 김도형 | 인증·계정(`/auth/signup` · `/auth/login` · `/me`) 실 API 연동 ✅ (JWT 쿠키·가드 미들웨어·클라이언트 부트스트랩 플러그인 + e2e 검증). 발송·이력·주소록 등 나머지 화면 점진 교체 |
+| 5-3C-1 | 인증·계정 (`/auth/*` + `/me`) | ✅ | 김도형 | 6/1 §4 완료. JWT 쿠키 + 부트스트랩 플러그인 + `last-company-id` |
+| 5-3C-1a | 이메일 OTP (`/auth/email-code/*`) | ✅ | 김도형 | 6/1 §5 완료. `signup.vue` Step 3에서 실 API 호출 |
+| 5-3C-2 | 로그아웃 — GNB 실 연결 | ⚪ | 김도형 | `useAuthStore().logout()` 호출로 GNB 데모 토글 교체 |
+| 5-3C-3 | 비밀번호 재설정 — OTP 인프라 재활용 | ⚪ | 김도형 | `purpose='reset_password'` + `POST /auth/password/reset` 신설 |
+| 5-3C-4 | `POST /auth/login-by-email` — companyId UX 개선 | ⚪ | 김도형 | 이메일로 회사 lookup |
+| 5-3C-5 | 약관 동의 적재 (`POST /auth/agree-terms`) | ⚪ | 김도형 | TB_TERMS_AGREEMENT |
+| 5-3C-6 | `companyType` 전달·저장 + 화면 분기 | ⚪ | 김도형 | TB_COMPANY.company_type + signup 스키마 + 개인 화면 미노출 |
+| 5-3C-7 | `PATCH /me` + `/account/settings` (회원 정보 변경) | ⚪ | 김도형 | |
+| 5-3C-8 | `POST /auth/password` + `/account/password` (비밀번호 변경) | ⚪ | 김도형 | |
+| 5-3C-9 | `/account/security` (2FA) + `PATCH /me/security` | ⚪ | 김도형 | TB_VERIFICATION 재사용 |
+| 5-3C-10 | `/account/multi` + `/manager-invites` | ⚪ | 김도형 | 초대 토큰·수락 흐름 |
+| 5-3C-11 | `/account/contract` + `/contracts/*/files` (R2 업로드) | ⚪ | 김도형 | |
+| 5-3C-12 | 발송 6채널 — UI에 실 API 호출 (Idempotency-Key 헤더 포함) | ⚪ | 김도형 | NHN 자격증명 등록 전까지는 mock 응답 |
+| 5-3C-13 | 이력/통계 — 목록·통계 라우트 연동 | ⚪ | 김도형 | API 일부 미구현이라 5-2 동시 진행 필요 |
+| 5-3C-14 | 주소록·발신 정보·템플릿 — CRUD 연동 (API 모두 ✅이므로 프런트 작업) | ⚪ | 김도형 | |
+| 5-3C-15 | 크레딧·결제 — 충전 흐름은 PG 어댑터 미정 (블로커) | ⚪ | 김도형 | |
+| 5-3C-16 | 문의 — `/inquiries` 연동 | ⚪ | 김도형 | |
 
 ## 5-4. 관리자단 (`malgn-noti-admin`) 화면 개발
 
