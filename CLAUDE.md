@@ -213,6 +213,15 @@ pnpm test
 - **같은 날 추가 작업은 그날 파일에 `§N` 추가**(새 파일 만들지 않음), 한 줄 요약·산출물 갱신, `doc/history/README.md` 인덱스 표 갱신.
 - 큰 마일스톤·배포 직후 기록. 형식 상세는 [`doc/history/README.md`](./doc/history/README.md).
 
+**페이지 정본 (`doc/pages/`)**
+
+- 사용자단 페이지의 **기획·로직·플로우 정본**은 `doc/pages/<UPPER_CASE>.md` (한 페이지/도메인 한 파일).
+- 파일명: 페이지의 핵심 도메인을 대문자 ASCII로 (예: `SIGNUP.md`·`CONTRACT.md`). 라우트 그대로 옮기지 말 것 (`account/contract.md` ❌).
+- 권장 구조: ① 페이지 개요 (라우트·메인 컴포넌트·셸·권한) → ② 진입 경로 → ③ 화면 구성 → ④ 사용자 액션 매트릭스 → ⑤ 상태 모델·전이 → ⑥ 정책 결정 사항 → ⑦ API 엔드포인트 → ⑧ DB 테이블 → ⑨ 현재 구현 상태 → ⑩ 알려진 한계·후속 작업.
+- **링크 위생**: 같은 폴더의 다른 페이지 정본은 `./PAGE.md`, 상위는 `../MEMBERSHIP.md`·`../WBS.md`, 코드는 `../../app/...` / `../../../malgn-noti-api/...`.
+- 도메인 통합 인덱스([`doc/MEMBERSHIP.md`](./doc/MEMBERSHIP.md) 등)는 `doc/` 루트에 두고, 그 안에서 페이지 정본을 `./pages/<NAME>.md`로 링크.
+- 새 페이지를 본격 개발하거나 큰 정책 변경이 있을 때 함께 갱신.
+
 ---
 
 ## 8. 코드 규칙
