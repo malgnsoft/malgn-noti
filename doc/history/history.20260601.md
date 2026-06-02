@@ -527,3 +527,90 @@ OpenAPI: 신규 path 1 + 신규 schema 2(`LoginByEmailRequest`, `MultipleCompani
 
 - **`last-company-id` 쿠키 잔존**: 더 이상 로그인 폼에서 사용하지 않으나, `hydrateFromAuth`에서 여전히 갱신. 후속에서 제거 또는 다른 용도로 활용 검토.
 - **회원가입에서 loginid ≠ email로 가입한 사용자**: 현재 마법사 외 경로(예: 운영자단 강제 가입)로 만들어진 사용자는 이메일이 비어 있을 수 있어 login-by-email로 로그인 불가. 운영자단 흐름이 생기면 정책 정의 필요.
+
+---
+
+# §8. `TB_USER.loginid` 전역 UNIQUE — 정책 정합화 (배포 #11·#53)
+
+## 한 줄
+
+§7에서 도입한 `login-by-email`의 "복수 매치" 경로는 사실 `UNIQUE (company_id, loginid)` 복합 제약 때문에 같은 loginid가 회사별로 따로 존재할 수 있다는 가정에서 나왔는데, 사용자 정책 결정으로 **loginid는 회사와 무관하게 전체 시스템에서 유일해야 함**으로 정리. DDL 마이그레이션 `0003_user_loginid_global_unique.sql` 라이브 적용(`uq_user_company_loginid` DROP → `uq_user_loginid` ADD), schema.ts에 `.unique('uq_user_loginid')` 명시, 백엔드 `/auth/login-by-email`의 복수 매치 분기 제거, OpenAPI에서 `MultipleCompaniesResponse` 스키마 삭제, 프런트 `stores/auth.ts.loginByEmail()` 반환 타입 단순화 + `login/index.vue`에서 회사 선택 카드 UI 80여 라인 제거. 라이브 e2e 4 시나리오 통과(signup 정상 / 같은 loginid 재시도 409 / login-by-email 단일 토큰 / multipleCompanies 응답 사라짐). 사전 테스트 데이터 cleanup 8개 회사 + 12개 사용자(어제 검증용 임시 계정).
+
+## 8.1 정책 변경
+
+| 항목 | 변경 전 | 변경 후 |
+| --- | --- | --- |
+| TB_USER UNIQUE | `(company_id, loginid)` 복합 | `(loginid)` 단독 |
+| 같은 이메일로 여러 회사 가입 | 가능 | **불가** — signup 시 409 conflict |
+| `login-by-email` 응답 분기 | 단일/복수 | **단일만** |
+| 회사 선택 UI | 복수 매치 시 카드 리스트 | **삭제** |
+
+이로써 "한 이메일 = 한 회사 = 한 로그인"이 보장됨. 멀티 계정(주계정·보조계정)은 같은 회사 내 다른 loginid로 처리.
+
+## 8.2 DDL 마이그레이션 (라이브 적용 완료)
+
+[src/db/migrations/0003_user_loginid_global_unique.sql](../../../malgn-noti-api/src/db/migrations/0003_user_loginid_global_unique.sql):
+```sql
+ALTER TABLE TB_USER
+  DROP INDEX uq_user_company_loginid,
+  ADD UNIQUE KEY uq_user_loginid (loginid);
+```
+
+### 적용 순서 (SG 열린 짧은 윈도우 활용)
+
+1. **사전 cleanup** — 어제부터 누적된 검증용 임시 계정 정리:
+   - `TB_USER` 6 → 4 (lbe 중복 2건 + hd-check + ddl 등)
+   - `TB_COMPANY` 그에 맞춰 정리
+   - `TB_VERIFICATION` 0건
+2. **DDL 적용** — mysql CLI 직결로 ALTER 실행, exit=0
+3. **사후 검증**:
+   - 인덱스 확인: `uq_user_loginid (loginid)` 단독 노출
+   - 중복 INSERT 시도: `Duplicate entry … for key 'TB_USER.uq_user_loginid'` 1062 에러 → ✅ 동작
+
+## 8.3 코드 변경 (백엔드)
+
+| 파일 | 변경 |
+| --- | --- |
+| [src/db/schema.ts](../../../malgn-noti-api/src/db/schema.ts) | TB_USER 정의에 `loginid: varchar(...).notNull().unique('uq_user_loginid')` 추가 + 헤더 코멘트 |
+| [src/routes/auth.ts](../../../malgn-noti-api/src/routes/auth.ts) | `/login-by-email` 단순화 — `for of` 다중 verify 루프 → `.limit(1)` 단일 select + 단일 password check. 복수 매치 분기 + multipleCompanies 응답 코드 삭제 |
+| [src/openapi.ts](../../../malgn-noti-api/src/openapi.ts) | `MultipleCompaniesResponse` 스키마 삭제. `/login-by-email` 응답 `oneOf` → 단일 `AuthResponse`로 단순화. 설명 갱신("loginid 전역 UNIQUE — 최대 1건 매치"). |
+
+## 8.4 코드 변경 (프런트)
+
+| 파일 | 변경 |
+| --- | --- |
+| [app/stores/auth.ts](../../app/stores/auth.ts) | `loginByEmail()` 반환 타입 `Promise<Company[] | null>` → `Promise<void>`. union 타입 분기 제거. |
+| [app/pages/login/index.vue](../../app/pages/login/index.vue) | `companyChoices` ref / `showCompanyPicker` computed / `chooseCompany()` / `cancelCompanyPick()` 함수 + 회사 선택 카드 템플릿 + 관련 스타일 (`.picker-desc`·`.company-list`·`.company-card`·`.company-name`·`.company-id`·`.company-arrow`) 모두 삭제. 화면은 단일 폼만. |
+
+## 8.5 라이브 e2e (Production)
+
+| # | 시나리오 | 결과 |
+| --- | --- | --- |
+| 1 | signup → `{user, company, token}` 정상 (company.id=14, user.id=16) | ✅ |
+| 2 | 같은 loginid로 두 번째 signup → 409 `conflict` "loginid \"…\" 이미 사용 중" | ✅ |
+| 3 | login-by-email 정상 매치 → 200 + 단일 토큰. 응답에 `multipleCompanies` 키 없음 | ✅ |
+| 4 | cleanup 후 인덱스 확인 — UNIQUE 인덱스 `uq_user_loginid (loginid)` 단독 | ✅ |
+
+## 8.6 산출물
+
+- **DDL**: `malgn-noti-api/src/db/migrations/0003_user_loginid_global_unique.sql` 신규 + 라이브 적용
+- **API**: 3 파일 수정 — schema.ts · auth.ts · openapi.ts. Workers 배포 #11 Version `f7f42855-1d40-4397-9405-df8bfa8124ee`
+- **사용자단**: 2 파일 수정 — stores/auth.ts(-25) · login/index.vue(-80). Pages 배포 #53 alias `f150ea0a.malgn-noti.pages.dev`
+- **데이터 정리**: 어제~오늘 누적된 검증용 임시 회사 8 + 사용자 12 + verification 미소비분 cleanup
+
+## 8.7 영향 분석 — 다른 코드에 미치는 영향
+
+| 항목 | 영향 |
+| --- | --- |
+| 기존 `/auth/login` (companyId+loginid) | 그대로 동작 — companyId가 제약을 더 좁히지만 결과는 같음 |
+| `/auth/signup` | catch 블록의 "Duplicate entry" 메시지 매핑 그대로 (에러 메시지 자체가 회사·loginid 어느 키든 같은 형태) |
+| 멀티계정(주·보조 사용자) | 같은 회사 내에서 서로 다른 loginid를 사용 — 영향 없음 |
+| 운영자단 강제 가입 | 미구현 — 정책 정의 시 전역 UNIQUE 전제로 시작 |
+| OTP / 비밀번호 재설정 | email/loginid 기반 lookup — 단일 매치 보장으로 단순화 가능 (후속) |
+
+## 8.8 다음 단계
+
+지금 정책이 정리됐으니 다음 P0 항목들이 한층 단순해집니다:
+
+- **5-3C-3 비밀번호 재설정** — `email`로 lookup하면 단일 사용자 → 토큰 발급도 단순. OTP 인프라 재활용 → 2시간 이내 가능.
+- **5-3C-2 로그아웃 GNB 실 연결** — 정책 변경과 무관, 30분.

@@ -113,24 +113,17 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * 이메일·아이디로 직접 로그인 — companyId UX 개선.
-     *
-     * 반환:
-     *   - `null`: 단일 매치, 로그인 완료(토큰 저장 + /me 페치 끝)
-     *   - `Company[]`: 복수 매치, 호출자가 회사 선택 → login() 재호출 필요
+     * 이메일·아이디로 직접 로그인.
+     * `loginid`가 전역 UNIQUE이므로 항상 단일 매치 → 토큰 발급 + /me 페치.
      */
-    async loginByEmail(payload: { email: string, password: string }): Promise<{ id: number, name: string }[] | null> {
+    async loginByEmail(payload: { email: string, password: string }) {
       const api = useApi()
-      const res = await api<{ data: AuthResponse['data'] | { multipleCompanies: true, companies: { id: number, name: string }[] } }>(
-        '/auth/login-by-email',
-        { method: 'POST', body: payload },
-      )
-      if ('multipleCompanies' in res.data && res.data.multipleCompanies) {
-        return res.data.companies
-      }
-      hydrateFromAuth(this.$state, res as AuthResponse)
+      const res = await api<AuthResponse>('/auth/login-by-email', {
+        method: 'POST',
+        body: payload,
+      })
+      hydrateFromAuth(this.$state, res)
       await this.fetchMe()
-      return null
     },
 
     /** 토큰 쿠키가 있을 때 사용자/고객사 풀 컨텍스트 페치. */
