@@ -500,3 +500,100 @@ else await Promise.all(tasks) → 성공 토스트
 - **휴대폰 본인 인증 변경** — NICE 재인증 흐름 또는 SMS OTP. signup의 NICE Step 4와 유사한 패턴 재사용 가능.
 - **회원 탈퇴** — `DELETE /me` 또는 `POST /me/withdraw` 신설 + soft-delete (`TB_USER.status = -1`) + 관련 데이터 정책 결정.
 - **`canEditCompany` 권한 UX** — 현재는 PATCH 호출 후 403 에러로 안내. 사전에 role 기반으로 UI 비활성화 검토.
+
+---
+
+# §7. 사업자등록증 심사 승인 게이트 — 정책 정합화 (배포 #15 / #64)
+
+## 한 줄
+
+새 정책: **법인 사업자(corp) / 개인 사업자(sole)는 가입 후 사업자등록증 심사 승인을 받아야 서비스 이용 및 가입 정보 수정 가능**, **개인(personal)은 즉시 사용 가능**. 그동안은 모든 가입자가 `joinState='joined'` 즉시 통과였는데, `TB_COMPANY.approval_state` 컬럼 + signup 자동 분기 + `PATCH /me`·`PATCH /me/company` 차단 + 프런트 배너·입력 disabled + 가입 완료 화면 분기로 인프라화. 0005 라이브 적용, 기존 5개 회사는 'approved' 기본값으로 호환성 유지. Workers 배포 #15(Version `6e47d50b...`), Pages 배포 #64 (alias `56e94e5b.malgn-noti.pages.dev`). 라이브 e2e 8 시나리오 통과(법인 가입 pending / 수정 시도 403 / 개인 가입 approved / 개인 수정 통과 / 운영자 승인 후 수정 통과 / 반려 시뮬레이션 → 사유 노출 403 …).
+
+## 7.1 정책 (사용자 결정)
+
+| 회사 유형 | 가입 직후 상태 | 서비스 이용 | 정보 수정 |
+| --- | --- | --- | --- |
+| `corp` 법인사업자 | `approval_state='pending'` | ❌ | ❌ |
+| `sole` 개인사업자 | `approval_state='pending'` | ❌ | ❌ |
+| `personal` 개인 | `approval_state='approved'` | ✅ | ✅ |
+
+운영자가 BackOffice에서 사업자등록증을 심사 → **승인(`approved`)** 또는 **반려(`rejected` + 사유)** 처리. 1차에서는 운영자 화면 미구현이라 라이브 DB 직접 UPDATE로 검증(후속에서 운영자단 화면 신설 예정).
+
+## 7.2 DDL 0005 (라이브 적용 완료)
+
+[src/db/migrations/0005_company_approval.sql](../../../malgn-noti-api/src/db/migrations/0005_company_approval.sql):
+
+```sql
+ALTER TABLE TB_COMPANY
+  ADD COLUMN company_type    VARCHAR(20) NULL  COMMENT 'corp/sole/personal' AFTER name,
+  ADD COLUMN approval_state  VARCHAR(20) NOT NULL DEFAULT 'approved'        AFTER company_type,
+  ADD COLUMN rejected_reason VARCHAR(255) NULL                              AFTER approval_state,
+  ADD KEY idx_company_approval (approval_state, created_at);
+```
+
+기존 5행 모두 자동으로 `approved` — 운영 데이터 호환성 유지.
+
+## 7.3 백엔드 변경
+
+### signup 확장
+- `signupB`에 `companyType: enum(corp/sole/personal).optional()` 추가
+- 사업자(corp/sole) → `approvalState='pending'`, 그 외 → `'approved'` 자동 분기
+- 회사 row INSERT 시 `companyType`·`approvalState` 함께 적재
+
+### /me 응답에 승인 정보 노출
+- GET / PATCH 응답의 `company` 객체에 `companyType` · `approvalState` · `rejectedReason` 추가 (3 군데 응답 빌더 모두)
+
+### PATCH 차단
+- `PATCH /me`·`PATCH /me/company` 둘 다 핸들러 시작부에서 `readContext()` 호출 → `approvalState !== 'approved'`면 403 + 상황별 메시지:
+  - `pending` → "사업자등록증 심사 승인 후 정보를 수정할 수 있습니다."
+  - `rejected` → "심사가 반려되어 정보를 수정할 수 없습니다. 사유: …"
+- 발송·이력 등 다른 도메인 라우트 차단은 후속 (별도 미들웨어 `requireApproved()`로 일관화 검토)
+
+## 7.4 사용자단 변경
+
+### stores/auth.ts
+- `AuthCompany`에 `companyType?` · `approvalState?` · `rejectedReason?` 추가
+- `SignupPayload`에 `companyType?` 추가
+
+### signup.vue
+- `auth.signup({...})` 호출 시 `companyType: userType.value || undefined` 전달
+- Step 5(가입 완료) 화면 분기:
+  - 사업자: "사업자등록증 심사가 진행됩니다. 승인 완료 전에는 서비스 이용 및 정보 수정이 제한되며, 결과는 등록하신 휴대폰·이메일로 안내됩니다."
+  - 개인: "지금부터 바로 서비스를 이용하실 수 있습니다."
+
+### AppMemberInfoPanel.vue
+- 상단 **승인 상태 배너** (pending=warning, rejected=danger). pending이면 "사업자등록증 심사 중입니다 — 승인 완료 전까지 서비스 이용 및 회원 정보 수정이 제한됩니다." rejected면 반려 사유 + "사업자등록증을 다시 제출해 주세요."
+- `isLocked` computed (`approvalState !== 'approved'`)
+- 광고성 메일 수신 토글 2개 · 회사 전화번호 입력 · 휴대전화 select+input 2개 · 이메일 변경 버튼 2개(서비스 담당자·결제) · 휴대폰 인증 버튼 · 저장하기 버튼 — **모두 `:disabled="isLocked"`**
+- `c.bizType !== 'personal'` → `c.companyType !== 'personal'`로 조건 수정 (이전엔 bizType 사용)
+- 배너 스타일: 좌측 24px 아이콘 + 우측 굵은 헤더 + 본문, warning/danger 색상 변형
+
+## 7.5 라이브 e2e 검증 (8 시나리오)
+
+| # | 시나리오 | 결과 |
+| --- | --- | --- |
+| 1 | 법인 가입 → `/me` → `companyType='corp', approvalState='pending'` | ✅ |
+| 2 | `PATCH /me {name}` → 403 + "사업자등록증 심사 승인 후 …" | ✅ |
+| 3 | `PATCH /me/company {adReceive}` → 403 + 동일 메시지 | ✅ |
+| 4 | 개인 가입 → `/me` → `companyType='personal', approvalState='approved'` | ✅ |
+| 5 | 개인 `PATCH /me {name}` → 200 + 변경 반영 | ✅ |
+| 6 | 운영자 DB 직접 UPDATE → `approval_state='approved'` (BackOffice 승인 시뮬레이션) | ✅ |
+| 7 | 승인 후 법인 `PATCH /me` 재시도 → 200 + 변경 반영 | ✅ |
+| 8 | 반려 시뮬레이션 (`approval_state='rejected', rejected_reason='…'`) → PATCH 시도 → 403 + 사유 메시지 포함 | ✅ |
+
+검증 데이터(법인-…·개인-… 4건) cleanup 완료.
+
+## 7.6 산출물
+
+- API: `malgn-noti-api: 7…` — `0005_company_approval.sql` 신규 · `schema.ts` company 확장 · `auth.ts` signup 분기 · `me.ts` 응답+차단. Workers 배포 #15 Version `6e47d50b-0225-41d9-8bc8-598045659df8`
+- 사용자단: `stores/auth.ts` 타입 · `signup.vue` companyType 전달 + Step 5 분기 · `AppMemberInfoPanel.vue` 배너 + isLocked + 모든 입력 disabled. Pages 배포 #64 alias `56e94e5b.malgn-noti.pages.dev`
+- WBS 갱신: 5-3C-6(`companyType` 전달·저장 + 개인 유형 화면 분기) ⚪→🟢 + 새 항목 5-3C-17(승인 게이트) ✅
+
+## 7.7 알려진 한계 / 후속 작업
+
+- **운영자단 승인 화면 미구현** — 현재 라이브 DB 직접 UPDATE로만 승인/반려 가능. 운영자단(`/admin/member/company/[id]`)에 승인·반려(사유 입력) UI 신설 필요. WBS 5-4-3.
+- **발송·이력 등 다른 도메인 라우트 차단** — 현재는 `/me` PATCH만 차단. 발송(`POST /send/*`), 캠페인, 발신정보 변경 등도 미승인 차단 필요. `requireApproved()` 미들웨어로 일관화 후 적용 권장. 후속.
+- **사용자단 다른 화면 disabled** — `/account/cards`, `/charge`, `/send/*` 등도 isLocked일 때 차단/안내 필요. 화면별 점검 후속.
+- **GNB·홈 글로벌 안내** — 현재는 `/account/settings`에만 배너. 모든 화면 상단(GNB)에 글로벌 안내 띠 검토.
+- **`requireApproved()` 미들웨어 추출** — 현재는 핸들러 내부 인라인. 도메인 라우트 전부 적용 시점에 별도 헬퍼로 분리.
+- **이메일·SMS 자동 안내** — 승인/반려 처리 시 사용자에게 자동 발송. NHN 자격증명 등록 후 trigger.

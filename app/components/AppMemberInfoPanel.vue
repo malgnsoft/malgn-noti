@@ -13,6 +13,11 @@ onMounted(async () => {
 const u = computed(() => auth.user)
 const c = computed(() => auth.tenant)
 
+/* 사업자등록증 심사 미승인이면 정보 수정 차단 */
+const approvalState = computed(() => c.value?.approvalState ?? 'approved')
+const isLocked = computed(() => approvalState.value !== 'approved')
+const rejectedReason = computed(() => c.value?.rejectedReason ?? '')
+
 /* ── 가입 정보 표시 (회사 정보 — 읽기 전용) ───────────── */
 const BIZ_TYPE_LABEL: Record<string, string> = {
   corp: '법인 사업자',
@@ -183,11 +188,28 @@ function changeBizDoc() {
     <div v-if="loading" class="loading">정보를 불러오는 중…</div>
 
     <template v-else>
+      <!-- 사업자등록증 심사 상태 배너 -->
+      <div v-if="isLocked" class="approval-banner" :class="{ rejected: approvalState === 'rejected' }">
+        <UIcon :name="approvalState === 'rejected' ? 'i-lucide-circle-x' : 'i-lucide-clock'" class="banner-icon" />
+        <div class="banner-text">
+          <strong v-if="approvalState === 'pending'">사업자등록증 심사 중입니다</strong>
+          <strong v-else>사업자등록증 심사가 반려되었습니다</strong>
+          <p v-if="approvalState === 'pending'">
+            승인 완료 전까지 서비스 이용 및 회원 정보 수정이 제한됩니다.
+            결과는 등록하신 휴대폰·이메일로 안내됩니다.
+          </p>
+          <p v-else>
+            반려 사유: <em>{{ rejectedReason || '관리자에게 문의해 주세요.' }}</em><br>
+            사업자등록증을 다시 제출해 주세요.
+          </p>
+        </div>
+      </div>
+
       <!-- 가입 정보 -->
       <section class="ms-sec">
         <div class="ms-head">
           <h3>가입 정보</h3>
-          <button v-if="c?.bizType !== 'personal'" type="button" class="btn btn-primary btn-sm" @click="changeBizDoc">
+          <button v-if="c?.companyType !== 'personal'" type="button" class="btn btn-primary btn-sm" @click="changeBizDoc">
             사업자등록증 변경
           </button>
         </div>
@@ -200,10 +222,10 @@ function changeBizDoc() {
             <span class="ms-label">광고성 메일 수신</span>
             <div class="ms-value ad-value">
               <div class="seg">
-                <button type="button" :class="{ active: adReceive === 'reject' }" @click="requestAdChange('reject')">
+                <button type="button" :class="{ active: adReceive === 'reject' }" :disabled="isLocked" @click="requestAdChange('reject')">
                   수신거부
                 </button>
-                <button type="button" :class="{ active: adReceive === 'agree' }" @click="requestAdChange('agree')">
+                <button type="button" :class="{ active: adReceive === 'agree' }" :disabled="isLocked" @click="requestAdChange('agree')">
                   수신동의
                 </button>
               </div>
@@ -228,14 +250,14 @@ function changeBizDoc() {
           <div class="ms-row">
             <span class="ms-label">회사 전화번호</span>
             <div class="ms-value">
-              <input v-model="companyPhoneInput" class="input field-md" placeholder="회사 전화번호를 입력해 주세요">
+              <input v-model="companyPhoneInput" class="input field-md" placeholder="회사 전화번호를 입력해 주세요" :disabled="isLocked">
             </div>
           </div>
           <div class="ms-row">
             <span class="ms-label">이메일 <span class="rq">*</span></span>
             <div class="ms-value value-inline">
               <span>{{ u?.email ?? '-' }}</span>
-              <button type="button" class="btn btn-primary btn-sm" @click="openEmailDialog('manager')">
+              <button type="button" class="btn btn-primary btn-sm" :disabled="isLocked" @click="openEmailDialog('manager')">
                 이메일 변경
               </button>
             </div>
@@ -244,13 +266,13 @@ function changeBizDoc() {
             <span class="ms-label">휴대전화번호 <span class="rq">*</span></span>
             <div class="ms-value value-inline">
               <div class="phone-group">
-                <select v-model="phonePrefix" class="select phone-prefix">
+                <select v-model="phonePrefix" class="select phone-prefix" :disabled="isLocked">
                   <option v-for="p in PHONE_PREFIXES" :key="p" :value="p">{{ p }}</option>
                 </select>
-                <input v-model="phoneMid" class="input phone-part" inputmode="numeric" maxlength="4">
-                <input v-model="phoneLast" class="input phone-part" inputmode="numeric" maxlength="4">
+                <input v-model="phoneMid" class="input phone-part" inputmode="numeric" maxlength="4" :disabled="isLocked">
+                <input v-model="phoneLast" class="input phone-part" inputmode="numeric" maxlength="4" :disabled="isLocked">
               </div>
-              <button type="button" class="btn btn-primary btn-sm" @click="phoneVerifyOpen = true">
+              <button type="button" class="btn btn-primary btn-sm" :disabled="isLocked" @click="phoneVerifyOpen = true">
                 휴대폰 인증
               </button>
               <span class="ms-note">서비스 담당자를 수정하려면 휴대폰 인증이 필요합니다.</span>
@@ -269,7 +291,7 @@ function changeBizDoc() {
             <span class="ms-label">결제 이메일 <span class="rq">*</span></span>
             <div class="ms-value value-inline">
               <span>{{ billingEmailInput || '-' }}</span>
-              <button type="button" class="btn btn-primary btn-sm" @click="openEmailDialog('billing')">
+              <button type="button" class="btn btn-primary btn-sm" :disabled="isLocked" @click="openEmailDialog('billing')">
                 이메일 변경
               </button>
             </div>
@@ -282,7 +304,7 @@ function changeBizDoc() {
         <button type="button" class="delete-link" @click="deleteOpen = true">
           회원 탈퇴
         </button>
-        <button type="button" class="btn btn-primary btn-lg save-btn" :disabled="saving" @click="save">
+        <button type="button" class="btn btn-primary btn-lg save-btn" :disabled="saving || isLocked" @click="save">
           {{ saving ? '저장 중…' : '저장하기' }}
         </button>
       </div>
@@ -331,6 +353,50 @@ function changeBizDoc() {
   text-align: center;
   font-size: var(--fz-md);
   color: var(--ink-400);
+}
+
+/* 사업자등록증 심사 상태 배너 */
+.approval-banner {
+  display: flex;
+  gap: 14px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+  border: 1px solid var(--warning);
+  background: var(--warning-soft, #fff8e6);
+  border-radius: var(--r-md);
+}
+.approval-banner.rejected {
+  border-color: var(--danger);
+  background: var(--danger-soft, #fef2f2);
+}
+.banner-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--warning-ink);
+  margin-top: 2px;
+}
+.approval-banner.rejected .banner-icon {
+  color: var(--danger-ink);
+}
+.banner-text { flex: 1; }
+.banner-text strong {
+  display: block;
+  font-size: var(--fz-md);
+  font-weight: 700;
+  color: var(--ink-900);
+  margin-bottom: 4px;
+}
+.banner-text p {
+  margin: 0;
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  line-height: 1.55;
+}
+.banner-text em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--danger-ink);
 }
 
 .ms-sec + .ms-sec { margin-top: 40px; }

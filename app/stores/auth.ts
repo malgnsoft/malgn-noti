@@ -25,6 +25,9 @@ export interface AuthUser {
 export interface AuthCompany {
   id: number
   name: string
+  companyType?: 'corp' | 'sole' | 'personal' | null
+  approvalState?: 'pending' | 'approved' | 'rejected'
+  rejectedReason?: string | null
   bizNo?: string | null
   bizType?: string | null
   ceoName?: string | null
@@ -45,6 +48,7 @@ interface AuthState {
 
 interface SignupPayload {
   companyName: string
+  companyType?: 'corp' | 'sole' | 'personal'
   loginid: string
   password: string
   name?: string

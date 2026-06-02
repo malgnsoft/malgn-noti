@@ -422,6 +422,7 @@ async function submitSignup() {
   try {
     await auth.signup({
       companyName,
+      companyType: userType.value || undefined,
       loginid: email.value.trim(),
       password: password.value,
       email: email.value.trim(),
@@ -727,8 +728,13 @@ function finish() {
     <section v-else class="panel done-panel">
       <span class="done-icon"><UIcon name="i-lucide-circle-check" /></span>
       <h2 class="panel-title">회원가입이 완료되었습니다</h2>
-      <p class="panel-desc">
+      <p v-if="isBusiness" class="panel-desc">
+        사업자등록증 심사가 진행됩니다.<br>
+        승인 완료 전에는 서비스 이용 및 정보 수정이 제한되며,<br>
         승인 결과는 등록하신 휴대폰·이메일로 안내됩니다.
+      </p>
+      <p v-else class="panel-desc">
+        지금부터 바로 서비스를 이용하실 수 있습니다.
       </p>
     </section>
 
