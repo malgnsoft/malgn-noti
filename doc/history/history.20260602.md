@@ -1047,3 +1047,316 @@ toast.add({ title: target === 'biz' && approvalState.value === 'reviewing'
 - **반려 후 재첨부 시 사유 처리** — 현재는 `rejected_reason`을 그대로 둔 채 `reviewing`으로 전이. 운영자가 새 심사에서 결정하도록 위임. 정책상 더 명확히 하려면 재첨부 시 `rejected_reason=NULL`로 정리도 가능 — 향후 결정.
 - **사업자등록증 외 보조 서류 정책** — 대부업등록증·보험증권은 첨부해도 상태 전이 없음. 운영자가 별도로 확인. 후속 정책 검토 시 변경 가능.
 
+---
+
+# §13. /account/contract 첫 진입 회복 — lazy auto-create + reviewing 자동 회복 (배포 #18 / Pages 6a7a7d2·ca657b2)
+
+## 한 줄
+
+§11/§12 배포 직후 사용자(`bubin@malgnsoft.com`, 회사 16)에게서 두 가지 잔존 문제 보고: **(a)** "파일 선택해도 아무 액션이 없다" — §11 배포 이전에 가입한 사업자라서 signup auto-create가 안 일어났고, `TB_CONTRACT` 0건 → `activeContractId=undefined` → 업로드 분기 무력화. **(b)** "사업자등록증을 업로드한 상태인데 화면이 '등록해 주세요'(pending)로 나온다" — §12 배포(17:18 UTC) **이전인 17:10에 첨부**한 상태라 reviewing 전이가 안 일어나고 `approval_state=pending` 그대로. 두 케이스 모두 **타이밍 race**로 §11/§12 신규 코드가 기존 데이터에는 미적용. 백엔드 두 군데에 **lazy backfill** 추가 — `GET /contracts`는 회사 corp/sole + 계약 0건이면 `'initial'` 자동 INSERT, `GET /contracts/files`는 회사 pending + biz 파일 1건 이상이면 `reviewing`으로 자동 UPDATE. 사용자가 새로고침 한 번이면 자동 복구. 회사 16은 즉시 DB UPDATE로 backfill 완료. Workers 배포 #18(`35e2ec85...`) 및 추가 패치 (`456b73c2...`). 프런트 SSR 안전성도 함께 보강 — `await Promise.all`을 try/catch로 감싸고 `onMounted` 재시도.
+
+## 13.1 두 가지 문제와 원인
+
+| # | 증상 | 회사 16 DB 상태 | 원인 |
+| --- | --- | --- | --- |
+| (a) | "파일 선택 후 아무 액션 없음" | `TB_CONTRACT` 0건 | §11 signup auto-create가 적용된 시점 이전 가입 |
+| (b) | "업로드 후에도 'pending'으로 노출" | biz 파일 1건 + `approval_state='pending'` | 첨부 시점이 §12 배포(17:18) 이전(17:10) |
+
+(a)는 `activeContractId` computed가 첫 계약을 선택하는데 contracts 빈 배열이면 `undefined` → `pickFile`이 "활성 계약을 찾을 수 없습니다" 토스트만 떨궈서 사용자에겐 "아무 일도 안 일어난" 것처럼 보임. 토스트는 떴지만 짧고 우측 상단이라 놓치기 쉬움.
+
+(b)는 §12의 `pending → reviewing` 전이가 `POST /contracts/files` 시점에만 발동하는 설계라서, 그 코드가 라이브에 올라가기 **이전**에 이미 첨부한 사용자는 이벤트가 사라진 셈.
+
+## 13.2 백엔드 두 군데 lazy backfill
+
+### GET /contracts (커밋 6a7a7d2)
+
+```ts
+let rows = await select()
+if (rows.length === 0) {
+  const cs = await db.select({ companyType: company.companyType })
+    .from(company).where(eq(company.id, companyId)).limit(1)
+  const ct = cs[0]?.companyType
+  if (ct === 'corp' || ct === 'sole') {
+    await db.insert(contract).values({
+      companyId,
+      title: '최초 이용계약 온라인체결',
+      version: '신규',
+      contractState: 'initial',
+      status: 1,
+    })
+    rows = await select()
+  }
+}
+```
+
+`personal`은 trigger 안 함 — 승인 게이트 대상이 아니라서.
+
+### GET /contracts/files (커밋 ca657b2)
+
+```ts
+const hasBiz = rows.some(r => r.name.startsWith('사업자등록증_'))
+if (hasBiz) {
+  const cs = await db.select({ state: company.approvalState })
+    .from(company).where(eq(company.id, companyId)).limit(1)
+  if (cs[0]?.state === 'pending') {
+    await db.update(company)
+      .set({ approvalState: 'reviewing' })
+      .where(eq(company.id, companyId))
+  }
+}
+```
+
+`reviewing`/`approved`/`rejected`인 회사는 손대지 않음 — pending만 보정.
+
+다음 `/me` hydrate(또는 `fetchMe()` 호출)부터 글로벌 띠·페이지 배너 모두 정상.
+
+## 13.3 즉시 backfill (회사 16)
+
+```sql
+INSERT INTO TB_CONTRACT (company_id, title, version, contract_state, status)
+VALUES (16, '최초 이용계약 온라인체결', '신규', 'initial', 1);
+
+UPDATE TB_COMPANY
+SET approval_state='reviewing'
+WHERE id=16;
+```
+
+사용자에게 새로고침 안내. 같은 조건의 다른 회사가 있어도 이번 1회로 모두 보정(전체 1건만 해당).
+
+## 13.4 프런트 SSR 안전성 보강 (커밋 b7e8a21)
+
+`AppContractPanel.vue`의 top-level await가 SSR에서 401·네트워크 실패 시 페이지 전체가 죽었다. try/catch로 감싸고 `onMounted`에서 한 번 더 시도하도록 변경 — 백엔드 lazy auto-create와 함께 새로고침 한 번으로 정상 복구된다.
+
+```ts
+try { await Promise.all([loadContracts(), loadFiles()]) }
+catch { /* ignore — onMounted에서 재시도 */ }
+onMounted(async () => {
+  if (contracts.value.length === 0 && bizFiles.value.length === 0) {
+    try { await Promise.all([loadContracts(), loadFiles()]) }
+    catch { /* ignore */ }
+  }
+})
+```
+
+## 13.5 산출물
+
+- API: `malgn-noti-api: 6a7a7d2, ca657b2` — 2 파일 수정(`routes/contracts.ts`). Workers 배포 #18 Version `35e2ec85-3e89-4986-b120-d9cf5bbf877b`, 후속 `456b73c2-c5de-4a99-aece-b4457c0bcd8d`
+- 사용자단: `malgn-noti: b7e8a21` — `AppContractPanel.vue` SSR fallback
+- DB: 회사 16에 `TB_CONTRACT` id=3 backfill + `approval_state='reviewing'` UPDATE
+
+## 13.6 교훈
+
+이번 같은 "신규 코드 + 기존 데이터" race는 회원·인증처럼 **사용자 라이프사이클 이벤트 트리거**가 정책에 묶일 때 흔하다. 두 가지 패턴으로 방어:
+
+1. **조회 시점 lazy backfill** — 이번 §13에서 채택. GET 응답을 떠올릴 때 현재 코드가 보장해야 할 상태를 함께 확인·보정. 데이터마이그레이션 미수행 가능.
+2. **명시적 backfill 마이그레이션** — DDL이나 SQL 스크립트로 일괄 보정. 정합성은 더 명확하지만 운영 절차 필요.
+
+규칙은 신규 데이터가 적고 정책 trigger가 단순한 경우 1번이 비용 대비 효과 좋음. 향후 같은 패턴(사업자등록증 외 다른 본인확인·서류 흐름)에서도 1번을 default로 두는 것을 권장.
+
+---
+
+# §14. 사업자등록증 파일 행에 심사 상태 배지 + 반려 시 삭제 (Pages 7675ce8f)
+
+## 한 줄
+
+§12까지의 안내는 패널 상단 카드와 글로벌 띠에 집중되어 있었는데, **파일 행 자체**에서 상태가 한눈에 안 보였다. 사용자 요청으로 사업자등록증 행 우측에 **회사 승인 상태 배지**(reviewing/approved/rejected) 표시 + **반려 시에만 삭제 버튼** 노출. 같은 묶음의 모든 biz 파일이 같은 회사 상태를 공유하므로 모든 행에 동일 배지. 삭제 후에도 회사는 `rejected` 유지(운영자 결정 보존) → 새 파일 첨부 시 백엔드(§12)가 자동 `reviewing`으로 전이.
+
+## 14.1 화면 변경
+
+- 파일 행 = `[아이콘] [이름·메타] [심사 상태 배지] [확인] [(반려 시) 삭제]`
+- 배지 색상 매핑:
+  - `reviewing` → info 톤 + 로딩 아이콘 + "심사 중"
+  - `approved` → success 톤 + 체크 + "승인"
+  - `rejected` → danger 톤 + X + "반려"
+  - `pending` → 파일 자체가 없으므로 배지 미표시
+- 삭제 버튼은 빨간 outline (`.df-remove` 자체 클래스 — 글로벌 `btn-outline-danger`가 없어 인라인 정의)
+- `pickFile`이 안정적인 키를 쓰도록 `:key="f.id"`(이전엔 `name + at` 조합)
+
+## 14.2 삭제 후 상태 정책
+
+| 상황 | 변동 |
+| --- | --- |
+| `rejected` 상태에서 biz 파일 삭제 | 회사 `approval_state`는 **그대로 rejected** (사유도 유지) |
+| 그 뒤 새 파일 첨부 | §12 코드가 `rejected → reviewing` 자동 전이 |
+| `reviewing`/`approved` 중에는 | 삭제 버튼이 안 보여 사용자 실수 방지 |
+
+## 14.3 산출물
+
+- 사용자단: `malgn-noti: 79e51af` — `AppContractPanel.vue` 단일 파일 수정. Pages 배포 alias `7675ce8f.malgn-noti.pages.dev`
+
+## 14.4 알려진 한계
+
+- `reviewing` 중 잘못 올린 파일을 사용자가 스스로 정정 못함. 정책상 "심사 중에는 변경 불가"가 안전하지만, UX적으로 답답할 수 있음. 운영자단 심사 화면이 생기면 같은 곳에서 처리 가능.
+
+---
+
+# §15. 계약서 서명 다이얼로그 — 휴대폰 본인인증 sub-step + 공인인증서 탭 제거 (배포 Workers 85de422a / Pages 38d4e40e·573a6200)
+
+## 한 줄
+
+`AppContractSignDialog`의 STEP 3 "전자서명/공인인증" 화면에 **휴대폰 본인인증 sub-step**을 선행으로 추가. 인증 통과 전엔 서명·정보 테이블 자체가 노출되지 않음. 가입 시 NICE로 검증한 본인 휴대폰(`TB_USER.phone`)으로 SMS OTP를 발송 → 6자리 확인 → 통과 시 success 톤으로 전환되며 서명 캔버스 자동 셋업. 백엔드는 기존 `POST /auth/phone-code/{send,verify}`에 `purpose='contract_sign'`을 새 enum 값으로 추가(기존 인프라 그대로 재활용). 후속 사용자 피드백 두 가지("등록 정보 없음으로 노출됨" / "공인인증서 삭제") 반영해 — (a) 다이얼로그 open 시 `auth.fetchMe()` 강제 hydrate로 stale 휴대폰 회복, (b) 공인인증서 탭/영역/관련 CSS·상태 전부 제거해 단일 전자서명 흐름으로 단순화.
+
+## 15.1 백엔드 — 'contract_sign' purpose 추가 (Workers 85de422a)
+
+`OtpPurpose` enum + `purposeLabel()` + `sendPhoneCodeB`/`verifyPhoneCodeB` zod enum에 `contract_sign` 추가. 별도 라우트는 만들지 않고 기존 phone-code 인프라(SHA-256 해시·TTL 10분·5회 시도 제한·재발송 시 직전 코드 무효화·소비 후 재사용 차단) 그대로 재사용. OpenAPI 두 path의 schema enum 동기화. SMS 본문은 `[맑은 메시징] 계약서 전자서명 인증코드: NNNNNN (10분 유효)` 형태.
+
+라이브 e2e: 발송 → mockCode 수신 → verify 200 → 소비 후 재시도 401(`인증코드가 만료되었거나 발급된 적이 없습니다`) 모두 정상.
+
+## 15.2 다이얼로그 본인인증 sub-step (Pages 38d4e40e)
+
+`AppContractSignDialog.vue`:
+
+- STEP 3 상단에 본인인증 카드(info 톤 → 통과 후 success 톤 전환)
+- 카드 구조: 헤더(strong + p) → 휴대폰 마스킹 표시(`010-****-1111`) + "인증번호 받기" → 발송 후 6자리 입력 + "확인"
+- `phoneVerified === false` 동안은 서명·정보 테이블·캔버스 모두 미노출
+- 통과 시 `setupCanvas()` 직접 호출 (탭 watcher 제거)
+- `canComplete` computed에 `phoneVerified.value` 추가 → "서명 완료" 버튼 게이팅
+- `finish()`에 본인인증 가드 추가(방어적)
+- `reset()`에 인증 상태 초기화 추가 — 같은 다이얼로그를 닫고 다시 열면 처음부터
+
+부가 정합화:
+- 사업자명/대표자 정보가 하드코딩(`(주)맑은소프트` / `하근호`)이었던 것을 `auth.tenant.name`/`bizNo`/`ceoName`로 동적 바인딩
+- 서명자명 기본값을 `auth.user.name`으로 자동 채움
+
+## 15.3 사용자 피드백 후속 (Pages 573a6200)
+
+1. **"등록 정보 없음으로 표시됨"** — 회사 16 user는 phone=`010-1111-1111`이 있는데 다이얼로그가 stale state로 빈 값을 표시. 다이얼로그 open watcher에 `auth.fetchMe()` 강제 호출 추가. 회원정보 수정 직후나 어떤 경로로든 다이얼로그 열릴 때마다 최신 데이터로 hydrate.
+   - 미등록 케이스 안내문구도 강화 — `회원 정보에 휴대폰 번호가 등록되어 있지 않습니다.` (danger 톤)
+2. **"공인인증서 삭제"** — `signTab`/`certLoaded` 상태, `<button>공인인증서</button>` 탭, `.cd-cert-*` CSS 100여 줄 모두 제거. STEP 3은 본인인증 → 전자서명 단일 흐름.
+
+## 15.4 라이브 e2e (Production)
+
+| # | 호출 | 결과 |
+| --- | --- | --- |
+| 1 | `POST /auth/phone-code/send` (`purpose=contract_sign`, mock 모드) | ✅ 200 + `mockCode` |
+| 2 | `POST /auth/phone-code/verify` (올바른 코드) | ✅ `{verified: true}` |
+| 3 | 같은 코드 재시도 | ✅ 401 — 소비 후 재사용 차단 정상 |
+| 4 | 잘못된 코드 | ✅ 401 — `인증코드가 만료되었거나 발급된 적이 없습니다` |
+
+E2E 잔존 데이터 cleanup 완료.
+
+## 15.5 산출물
+
+- API: `malgn-noti-api: cd75d0c` — 2 파일 수정(`routes/auth.ts`·`openapi.ts`). Workers 배포 Version `85de422a-2ad7-4ce6-929c-8f2b29f03a6e`
+- 사용자단: `malgn-noti: 40979f6, 0054bfc` — `AppContractSignDialog.vue` 단일 파일(235 lines 추가 + 인증서 영역 107 lines 제거). Pages 배포 alias `38d4e40e` → `573a6200`
+
+## 15.6 알려진 한계 / 후속
+
+- **NICE 자격증명은 §16 참조** — 현재 NHN_MOCK + NICE_MOCK 둘 다 켜진 mock 모드라서 사용자가 받는 SMS는 실제 발송 안 됨. 토스트에 `mockCode`가 노출되어 본인 검증.
+- **서명 데이터 보존** — 현재 캔버스 ink 데이터를 PNG로 저장하지 않음. `POST /contracts/:id/sign` 호출만 백엔드에 보내고 상태만 전이. 법적 효력을 강화하려면 캔버스 이미지를 R2 또는 `TB_CONTRACT.signed_image_r2_key` 컬럼에 저장 검토.
+- **본인인증 결과 영속화** — 인증 통과는 다이얼로그 메모리에만 존재. 같은 사용자가 같은 계약 서명을 다시 시작하면 재인증 필요. 정책상 적절 (전자서명법 등본인 동의 강도).
+
+---
+
+# §16. 운영 노트 — NICE / NHN Notification Hub 자격증명 시도와 보류 (라이브 운영 변경)
+
+## 한 줄
+
+오늘 두 외부 서비스의 production 자격증명 등록을 시도 — 둘 다 **외부 측 제약**으로 mock 모드 유지 결정. **NICE**는 자격증명 등록 성공했으나 NICE 콘솔의 **IP 화이트리스트(에러 1007)** 미해결로 즉시 mock 복귀. **NHN Notification Hub**는 사용자가 준 자격이 `AppKey`만이었는데 공식 문서 확인 결과 **기존 채널별 SDK와 완전히 다른 인증 모델**(OAuth2 client_credentials → Bearer 토큰)이라 어댑터 재작성 + User Access Key + Secret Access Key 발급 필요. 둘 다 영업·콘솔 작업 대기.
+
+## 16.1 NICE 본인인증
+
+### 시도
+
+`wrangler secret put`으로 3개 등록:
+- `NICE_CLIENT_ID` = `NIed76e1a1-236a-4cfc-b3b3-4c3586b3dfcf`
+- `NICE_CLIENT_SECRET` = `NzY0...` (전문 보안 사유 생략)
+- `NICE_RETURN_URL` = `https://malgn-noti-api.malgnsoft.workers.dev/auth/nice/callback`
+
+`NICE_MOCK` 삭제 후 `POST /auth/nice/init` 호출 → 500 응답.
+
+### 진단
+
+`wrangler tail`로 캡처한 에러 로그:
+```
+(error) [onError] Error: NICE token failed: 1007 허용되지 않은 IP 접근
+```
+
+NICE 콘솔의 API 보안 정책에 **호출 출발지 IP 화이트리스트**가 활성화된 상태. Cloudflare Workers는 outbound IP가 동적이라 단일 IP 등록 불가. `doc/NICE_AUTH.md §9`에서 사전 예측한 한계 그대로.
+
+### 결정
+
+- `NICE_MOCK=1` 다시 등록 → 가입 흐름 mock 모드 복귀(정상 동작 확인)
+- `NICE_CLIENT_ID` / `NICE_CLIENT_SECRET` / `NICE_RETURN_URL` 3 secret은 **유지** — IP 정책 해결 시 `wrangler secret delete NICE_MOCK` 한 번이면 real 전환
+
+### 해결 옵션 (사용자 결정 대기)
+
+| 옵션 | 작업 | 비고 |
+| --- | --- | --- |
+| A. NICE 콘솔에서 Cloudflare egress IP 등록 | NICE 영업담당에게 IP 목록 송부 후 콘솔 반영 | 통상 거절될 가능성 |
+| B. NICE 콘솔에서 IP 검사 OFF | 콘솔 → API 설정 토글 해제 | 가장 단순, 보안 등급은 다소 낮아짐 |
+| C. 고정 IP 프록시 EC2 | AWS EC2 nano, Workers → EC2 → NICE | 가장 안정, 월 비용 발생 |
+
+사용자 의사로 IP 정책은 일단 **보류**, 자격증명만 보관 상태.
+
+### 보안 메모
+
+`CLIENT_SECRET`이 채팅 평문에 노출됐다. IP 정책 해결 시점에 NICE 콘솔에서 한 번 회전 권장. 회전 후 `wrangler secret put NICE_CLIENT_SECRET` 재등록.
+
+## 16.2 NHN Notification Hub
+
+### 사용자 제공
+
+- AppKey: `JhgDNGyD9dyYQqH5`
+- BaseURL: `https://notification-hub.api.nhncloudservice.com`
+- Secret Key: **제공되지 않음**
+
+### 1차 진단 — 기존 채널별 SDK 가정
+
+현재 어댑터(`src/adapters/nhn/{sms,email,push,kakao}.ts`)는 채널별 분리 API(`https://api-sms.cloud.toast.com` 등)에 대해 작성됨. 인증은 `X-Secret-Key` 헤더. 사용자에게 SecretKey 요청.
+
+### 2차 진단 — 공식 문서 확인
+
+[NHN Cloud Notification Hub 공통 정보](https://docs.nhncloud.com/ko/Notification/Notification%20Hub/ko/api-guide-v1x0/common-info/) 확인 결과:
+
+**Notification Hub는 기존 NHN 채널별 API와 완전히 다른 신규 통합 서비스.**
+
+| 항목 | 기존 채널별 NHN | **Notification Hub** |
+| --- | --- | --- |
+| 인증 헤더 | `X-Secret-Key: <키>` | `Authorization: Bearer <토큰>` |
+| 자격 종류 | AppKey + SecretKey (정적) | **User Access Key ID + Secret Access Key** (OAuth2) |
+| 토큰 발급 | 불필요 | `POST https://oauth.api.nhncloudservice.com/oauth2/token/create` (Bearer, TTL 24h) |
+| AppKey 역할 | 경로 + 인증 | JWT 토큰 발급 시 scope(`scope=appKey:<AppKey>`)에만 사용 |
+
+토큰 발급 cURL:
+```bash
+curl -X POST 'https://oauth.api.nhncloudservice.com/oauth2/token/create' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -u 'UserAccessKeyID:SecretAccessKey' \
+  -d 'grant_type=client_credentials' \
+  -d 'scope=appKey:<AppKey>'
+```
+
+### 결정
+
+User Access Key ID + Secret Access Key를 받으면 다음을 한 번에 진행:
+
+1. **NHN 어댑터 재작성** — 채널별 SDK → Notification Hub 통합 API. 경로 구조와 페이로드 모두 변경. OAuth 토큰 발급 + KV 캐싱(24h) 헬퍼 추가.
+2. `wrangler secret put NHN_OAUTH_USER_KEY` / `NHN_OAUTH_SECRET_KEY` / `NHN_APP_KEY` / `NHN_BASE_URL` 4개 등록.
+3. `wrangler secret delete NHN_MOCK`.
+4. e2e — SMS 1건 + Email 1건 실 발송.
+
+지금은 자격 미수령 + 어댑터 재작성 미진행 → 사용자단·관리자단의 모든 발송 호출은 `NHN_MOCK=1` 그대로 mock 모드 유지(가입 OTP 토스트의 `mockCode`로 검증 정상).
+
+### 코드 변경 없음
+
+이 §16은 운영 시도 + 외부 제약 확인 + 보류 결정의 기록. **코드/배포 변경은 없음**(자격 secret put/delete + `NICE_MOCK` 재등록만). 어댑터 재작성은 키 수령 시점에 §17 이후로 별도.
+
+## 16.3 산출물
+
+- 코드: 없음
+- secret 변경(production Workers):
+  - `+NICE_CLIENT_ID` / `+NICE_CLIENT_SECRET` / `+NICE_RETURN_URL` — 등록 후 유지
+  - `-NICE_MOCK` 일시 삭제 → `+NICE_MOCK=1` 복원
+- 외부 미해결:
+  - NICE: 1007 IP 화이트리스트 (사용자 콘솔 작업)
+  - NHN: User Access Key 발급 (사용자 콘솔 작업)
+
+## 16.4 다음 단계
+
+| 항목 | 트리거 | 작업 |
+| --- | --- | --- |
+| NICE real 전환 | 사용자가 IP 정책 해결 (옵션 B 권장) | `wrangler secret delete NICE_MOCK` + e2e 1건 |
+| NHN real 전환 | 사용자가 User Access Key 발급 | 어댑터 재작성 + secret 등록 + e2e SMS·Email |
+| 사용자 안내 자동화 | 위 두 trigger 발생 시 | 메일 발송 + SMS 통지 인프라가 정확히 위 두 secret에 의존하므로 동시에 enable |
+
