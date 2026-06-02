@@ -1,6 +1,8 @@
 <script setup lang="ts">
 const toast = useToast()
 const api = useApi()
+const auth = useAuthStore()
+const approvalState = computed(() => auth.tenant?.approvalState ?? 'approved')
 
 type ContractState = 'initial' | 'done' | 'renew' | 'expired'
 const STATE_META: Record<ContractState, { label: string, icon: string }> = {
@@ -192,7 +194,16 @@ async function pickFile(target: 'biz' | 'loan' | 'insurance', e: Event) {
   try {
     await api('/contracts/files', { method: 'POST', body: form })
     await loadFiles()
-    toast.add({ title: '서류가 첨부되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+    // 사업자등록증 첨부 시 백엔드가 회사 상태를 pending/rejected → reviewing으로 자동 전이.
+    // store를 갱신해 글로벌 띠·페이지 배너의 안내 문구가 즉시 "심사 중"으로 바뀐다.
+    if (target === 'biz') await auth.fetchMe()
+    toast.add({
+      title: target === 'biz' && approvalState.value === 'reviewing'
+        ? '사업자등록증이 제출되었습니다. 심사가 진행됩니다.'
+        : '서류가 첨부되었습니다.',
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
   }
   catch {
     toast.add({ title: '업로드에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
@@ -297,6 +308,33 @@ function save() {
 
 <template>
   <div class="ct-panel">
+    <!-- 승인 상태 안내 카드 -->
+    <div
+      v-if="approvalState !== 'approved'"
+      class="state-card"
+      :class="approvalState"
+    >
+      <UIcon
+        :name="approvalState === 'rejected' ? 'i-lucide-circle-x' : approvalState === 'reviewing' ? 'i-lucide-loader-circle' : 'i-lucide-clock'"
+        class="state-icon"
+      />
+      <div class="state-text">
+        <strong v-if="approvalState === 'pending'">사업자등록증을 등록해 주세요</strong>
+        <strong v-else-if="approvalState === 'reviewing'">사업자등록증 심사 중입니다</strong>
+        <strong v-else>사업자등록증 심사가 반려되었습니다</strong>
+        <p v-if="approvalState === 'pending'">
+          가입서류 첨부 영역에서 사업자등록증(PDF, 최대 10MB)을 업로드하시면 심사가 시작됩니다.
+        </p>
+        <p v-else-if="approvalState === 'reviewing'">
+          영업일 기준 1~2일 내에 심사 결과를 안내드립니다. 추가 서류 첨부가 필요하면 가입서류 영역에서 진행할 수 있습니다.
+        </p>
+        <p v-else>
+          반려 사유: <em>{{ auth.tenant?.rejectedReason || '관리자에게 문의해 주세요.' }}</em><br>
+          사업자등록증을 새로 첨부하면 심사가 다시 시작됩니다.
+        </p>
+      </div>
+    </div>
+
     <!-- 이용계약 체결 -->
     <section class="ms-sec">
       <div class="ms-head">
@@ -492,6 +530,54 @@ function save() {
 </template>
 
 <style scoped>
+/* 승인 상태 카드 */
+.state-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+  border: 1px solid var(--warning-line);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+}
+.state-card.reviewing {
+  border-color: var(--info-line);
+  background: var(--info-soft);
+}
+.state-card.rejected {
+  border-color: var(--danger);
+  background: #fef2f2;
+}
+.state-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--warning-ink);
+}
+.state-card.reviewing .state-icon { color: var(--info-ink); }
+.state-card.rejected .state-icon { color: var(--danger-ink); }
+.state-text { flex: 1; min-width: 0; }
+.state-text strong {
+  display: block;
+  font-size: var(--fz-md);
+  font-weight: 700;
+  color: var(--ink-900);
+  margin-bottom: 4px;
+}
+.state-text p {
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  line-height: 1.55;
+  margin: 0;
+}
+.state-text em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--danger-ink);
+}
+
 .ms-sec + .ms-sec { margin-top: 40px; }
 .ms-head {
   display: flex;

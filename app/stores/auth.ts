@@ -26,7 +26,7 @@ export interface AuthCompany {
   id: number
   name: string
   companyType?: 'corp' | 'sole' | 'personal' | null
-  approvalState?: 'pending' | 'approved' | 'rejected'
+  approvalState?: 'pending' | 'reviewing' | 'approved' | 'rejected'
   rejectedReason?: string | null
   bizNo?: string | null
   bizType?: string | null

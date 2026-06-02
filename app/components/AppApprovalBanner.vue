@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const auth = useAuthStore()
 const state = computed(() => auth.tenant?.approvalState ?? 'approved')
-const visible = computed(() => state.value === 'pending' || state.value === 'rejected')
+const visible = computed(() => state.value !== 'approved')
 const reason = computed(() => auth.tenant?.rejectedReason ?? '')
 
 function goToContract() {
@@ -17,12 +17,15 @@ function goToContract() {
         <template v-if="state === 'pending'">
           <strong>사업자등록증을 등록해 주세요</strong> — 등록 후 심사 승인이 완료되면 서비스를 이용하실 수 있습니다. 등록 전까지 발송·주소록·발신정보 등록 등 서비스 이용과 회원 정보 수정이 제한됩니다.
         </template>
+        <template v-else-if="state === 'reviewing'">
+          <strong>사업자등록증 심사 중입니다</strong> — 영업일 기준 1~2일 내에 심사 결과를 안내드립니다. 심사 완료 전까지 서비스 이용과 회원 정보 수정이 제한됩니다.
+        </template>
         <template v-else>
           <strong>사업자등록증 심사 반려</strong> — 사유: <em>{{ reason || '관리자에게 문의해 주세요.' }}</em>. 사업자등록증을 다시 제출해 주세요.
         </template>
       </div>
       <button type="button" class="btn-action" @click="goToContract">
-        {{ state === 'rejected' ? '다시 제출하기' : '사업자등록증 등록' }}
+        {{ state === 'rejected' ? '다시 제출하기' : state === 'reviewing' ? '진행 상태 보기' : '사업자등록증 등록' }}
       </button>
     </div>
   </div>
