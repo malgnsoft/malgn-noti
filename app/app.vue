@@ -10,7 +10,7 @@
 import { ko } from '@nuxt/ui/locale'
 
 const toasterConfig = {
-  position: 'top-right' as const,
+  position: 'bottom-left' as const,
   expand: true,
   duration: 5000,
 }
