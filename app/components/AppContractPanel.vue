@@ -4,6 +4,21 @@ const api = useApi()
 const auth = useAuthStore()
 const approvalState = computed(() => auth.tenant?.approvalState ?? 'approved')
 
+/* 사업자등록증 파일의 심사 상태 — 회사 단위 approval_state를 그대로 매핑.
+ * pending: 아직 첨부 전이라 파일 자체가 없음 → 배지 표시 안 함
+ * reviewing / approved / rejected: 같은 사업자등록증 묶음의 모든 파일에 동일 배지 */
+type BizStatus = 'reviewing' | 'approved' | 'rejected' | null
+const bizStatus = computed<BizStatus>(() => {
+  const s = approvalState.value
+  if (s === 'reviewing' || s === 'approved' || s === 'rejected') return s
+  return null
+})
+const BIZ_STATUS_LABEL: Record<NonNullable<BizStatus>, string> = {
+  reviewing: '심사 중',
+  approved: '승인',
+  rejected: '반려',
+}
+
 type ContractState = 'initial' | 'done' | 'renew' | 'expired'
 const STATE_META: Record<ContractState, { label: string, icon: string }> = {
   initial: { label: '최초계약', icon: 'i-lucide-square-pen' },
@@ -211,6 +226,19 @@ async function pickFile(target: 'biz' | 'loan' | 'insurance', e: Event) {
   input.value = ''
 }
 
+/* 첨부 파일 삭제 — 사업자등록증은 '반려' 상태에서만 호출됨(템플릿 v-if로 가드).
+ * 대부업·보험 등 다른 종류는 별도 정책 없이 항상 삭제 가능. */
+async function removeFile(id: number) {
+  try {
+    await api(`/contracts/files/${id}`, { method: 'DELETE' })
+    await loadFiles()
+    toast.add({ title: '첨부가 삭제되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch {
+    toast.add({ title: '삭제에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
 /* 업로드 안내 모달 → 확인 시 파일 선택 창 열기 */
 type UploadTarget = 'biz' | 'loan' | 'insurance'
 const UPLOAD_LABELS: Record<UploadTarget, string> = {
@@ -406,13 +434,27 @@ function save() {
           <input ref="bizInput" type="file" accept="application/pdf" hidden @change="pickFile('biz', $event)">
         </div>
         <div class="doc-files">
-          <div v-for="f in bizFiles" :key="f.name + f.at" class="doc-file">
+          <div v-for="f in bizFiles" :key="f.id" class="doc-file">
             <UIcon name="i-lucide-file-text" class="df-icon" />
             <span class="df-info">
               <span class="df-name">{{ f.name }}</span>
               <span class="df-meta">{{ f.size }} · 첨부일자 {{ f.at }}</span>
             </span>
+            <span v-if="bizStatus" class="df-status" :class="bizStatus">
+              <UIcon
+                :name="bizStatus === 'approved' ? 'i-lucide-circle-check' : bizStatus === 'rejected' ? 'i-lucide-circle-x' : 'i-lucide-loader-circle'"
+              />
+              {{ BIZ_STATUS_LABEL[bizStatus] }}
+            </span>
             <button type="button" class="btn btn-outline-dark btn-sm" @click="openPreview('사업자등록증', f)">확인</button>
+            <button
+              v-if="bizStatus === 'rejected'"
+              type="button"
+              class="btn btn-sm df-remove"
+              @click="removeFile(f.id)"
+            >
+              삭제
+            </button>
           </div>
           <p v-if="!bizFiles.length" class="doc-empty">첨부된 사업자등록증이 없습니다.</p>
         </div>
@@ -779,6 +821,41 @@ function save() {
 .df-meta {
   font-size: var(--fz-xs);
   color: var(--ink-400);
+}
+.df-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  font-size: var(--fz-xs);
+  font-weight: 600;
+  line-height: 1;
+}
+.df-status :deep(svg), .df-status :deep(span > svg) {
+  width: 14px;
+  height: 14px;
+}
+.df-status.reviewing {
+  background: var(--info-soft);
+  color: var(--info-ink);
+}
+.df-status.approved {
+  background: var(--accent-soft);
+  color: var(--success-ink);
+}
+.df-status.rejected {
+  background: #fef2f2;
+  color: var(--danger-ink);
+}
+.df-remove {
+  border: 1px solid var(--danger);
+  color: var(--danger-ink);
+  background: var(--white);
+}
+.df-remove:hover {
+  background: #fef2f2;
 }
 .doc-empty {
   padding: 22px 12px;
