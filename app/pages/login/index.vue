@@ -5,36 +5,25 @@ useHead({ title: '로그인' })
 const route = useRoute()
 const toast = useToast()
 const auth = useAuthStore()
-const lastCompanyId = useLastCompanyId()
 
 const userId = ref('')
 const password = ref('')
 const showPw = ref(false)
 const keepId = ref(true)
 
-// 회원가입 이력 쿠키가 있으면 자동 사용, 없으면 필드 노출
-const companyIdInput = ref('')
-const needCompanyId = computed(() => lastCompanyId.value == null)
-const effectiveCompanyId = computed(() => {
-  if (lastCompanyId.value != null) return lastCompanyId.value
-  const n = Number(companyIdInput.value)
-  return Number.isFinite(n) && n > 0 ? n : null
-})
-
 const submitting = ref(false)
 const canSubmit = computed(
-  () => userId.value.trim().length > 0
-    && password.value.length > 0
-    && effectiveCompanyId.value != null
-    && !submitting.value,
+  () => userId.value.trim().length > 0 && password.value.length > 0 && !submitting.value,
 )
+
+// 같은 이메일이 여러 회사에 가입돼 있을 때 회사 선택용
+const companyChoices = ref<{ id: number, name: string }[]>([])
+const showCompanyPicker = computed(() => companyChoices.value.length > 0)
 
 async function onLogin() {
   if (!canSubmit.value) {
     toast.add({
-      title: needCompanyId.value && effectiveCompanyId.value == null
-        ? '고객사 ID·아이디·비밀번호를 모두 입력해 주세요.'
-        : '아이디와 비밀번호를 입력해 주세요.',
+      title: '아이디와 비밀번호를 입력해 주세요.',
       color: 'error',
       icon: 'i-lucide-circle-alert',
     })
@@ -42,8 +31,45 @@ async function onLogin() {
   }
   submitting.value = true
   try {
+    const choices = await auth.loginByEmail({
+      email: userId.value.trim(),
+      password: password.value,
+    })
+    if (choices) {
+      // 복수 매치 — 사용자 선택 UI 노출
+      companyChoices.value = choices
+      toast.add({
+        title: '같은 아이디로 가입된 고객사가 여러 개입니다. 로그인할 곳을 선택해 주세요.',
+        color: 'info',
+        icon: 'i-lucide-building-2',
+      })
+      return
+    }
+    // 단일 매치 — 바로 로그인 완료
+    toast.add({ title: '로그인되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
+    navigateTo(redirect)
+  }
+  catch (e: unknown) {
+    const status = (e as { response?: { status?: number } })?.response?.status
+    toast.add({
+      title: status === 401
+        ? '아이디 또는 비밀번호가 올바르지 않습니다.'
+        : '로그인 중 오류가 발생했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    submitting.value = false
+  }
+}
+
+async function chooseCompany(companyId: number) {
+  submitting.value = true
+  try {
     await auth.login({
-      companyId: effectiveCompanyId.value!,
+      companyId,
       loginid: userId.value.trim(),
       password: password.value,
     })
@@ -65,34 +91,28 @@ async function onLogin() {
     submitting.value = false
   }
 }
+
+function cancelCompanyPick() {
+  companyChoices.value = []
+  password.value = ''
+}
 </script>
 
 <template>
   <div class="login">
     <h2>로그인</h2>
 
-    <form class="col" style="gap: 16px" @submit.prevent="onLogin">
-      <div v-if="needCompanyId" class="field-group">
-        <label for="login-company" class="auth-label">고객사 ID</label>
-        <input
-          id="login-company"
-          v-model="companyIdInput"
-          class="input"
-          placeholder="회원가입 완료 시 발급된 고객사 ID"
-          inputmode="numeric"
-          autocomplete="off"
-        >
-        <span class="field-hint">처음 이용하시면 회원가입을 먼저 진행해 주세요.</span>
-      </div>
-
+    <!-- 일반 로그인 폼 -->
+    <form v-if="!showCompanyPicker" class="col" style="gap: 16px" @submit.prevent="onLogin">
       <div class="field-group">
         <label for="login-id" class="auth-label">아이디</label>
         <input
           id="login-id"
           v-model="userId"
           class="input"
-          placeholder="아이디를 입력해 주세요"
+          placeholder="가입 시 사용한 이메일을 입력해 주세요"
           autocomplete="username"
+          inputmode="email"
         >
       </div>
 
@@ -123,9 +143,34 @@ async function onLogin() {
       </label>
 
       <button type="submit" class="btn btn-primary btn-lg login-btn" :disabled="!canSubmit">
-        로그인 하기
+        {{ submitting ? '로그인 중…' : '로그인 하기' }}
       </button>
     </form>
+
+    <!-- 회사 선택 (같은 이메일이 여러 회사에 가입) -->
+    <div v-else class="col" style="gap: 16px">
+      <p class="picker-desc">
+        <strong>{{ userId }}</strong>로 가입된 고객사가 여러 개입니다.<br>
+        로그인할 고객사를 선택해 주세요.
+      </p>
+      <ul class="company-list">
+        <li v-for="c in companyChoices" :key="c.id">
+          <button
+            type="button"
+            class="company-card"
+            :disabled="submitting"
+            @click="chooseCompany(c.id)"
+          >
+            <span class="company-name">{{ c.name }}</span>
+            <span class="company-id">ID {{ c.id }}</span>
+            <UIcon name="i-lucide-arrow-right" class="company-arrow" />
+          </button>
+        </li>
+      </ul>
+      <button type="button" class="btn btn-outline-dark" :disabled="submitting" @click="cancelCompanyPick">
+        다시 입력
+      </button>
+    </div>
 
     <p class="reset-line">
       비밀번호가 생각나지 않으신다면
@@ -212,5 +257,56 @@ async function onLogin() {
   font-size: var(--fz-md);
   font-weight: 700;
   color: var(--accent-ink);
+}
+
+/* 회사 선택 UI */
+.picker-desc {
+  font-size: var(--fz-sm);
+  color: var(--ink-700);
+  line-height: 1.55;
+}
+.picker-desc strong {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+.company-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.company-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.company-card:hover:not(:disabled) {
+  border-color: var(--ink-900);
+  background: var(--paper);
+}
+.company-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.company-name {
+  flex: 1;
+  text-align: left;
+  font-size: var(--fz-md);
+  font-weight: 600;
+  color: var(--ink-900);
+}
+.company-id {
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--ink-400);
+}
+.company-arrow {
+  color: var(--ink-400);
 }
 </style>

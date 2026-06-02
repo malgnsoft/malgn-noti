@@ -467,3 +467,63 @@ API 통한 e2e 4건 × 2환경(로컬 dev + 프로덕션 Pages):
 3. **5-3C-4 `/auth/login-by-email`** (1~2시간, companyId UX 개선)
 4. **5-3C-5 약관 동의 적재** (1~2시간)
 5. **5-3C-6 `companyType` 전달·저장** (2~3시간) + 5-3C-6 따라가는 개인 유형 화면 분기 (30분)
+
+---
+
+# §7. 로그인 UX 개선 — `POST /auth/login-by-email` + 고객사 ID 필드 제거 (배포 #10·#52)
+
+## 한 줄
+
+§4의 알려진 한계("로그인이 `companyId`를 요구해 사용자가 자신의 회사 ID를 외워야 함")를 해소. 백엔드 `POST /auth/login-by-email` 신설 — 이메일(또는 아이디) + 비밀번호만으로 회사 자동 찾기, 단일 매치 시 즉시 토큰 발급, 같은 이메일로 여러 회사에 가입된 경우 `multipleCompanies: true + companies[]` 반환. 프런트 `login/index.vue`에서 **고객사 ID 필드를 완전히 제거**, 복수 매치 시 회사 선택 카드 UI 노출 → 선택 시 기존 `/auth/login`으로 명시적 로그인. 라이브 e2e 5 시나리오 통과(단일/복수/잘못된 비번/없는 이메일/같은 이메일 2회사). Workers 배포 #10(Version `a6197cc7-0f01-4612-aa10-5271f7c494a1`), Pages 배포 #52(alias `292da05d.malgn-noti.pages.dev`).
+
+## 7.1 백엔드 — `POST /auth/login-by-email`
+
+`src/routes/auth.ts`:
+
+- 입력: `{email, password}` — `email` 필드명이지만 실제로는 `loginid` 또는 `email` 컬럼 매치 (회원가입 마법사가 `loginid = email`로 발급하므로 둘 다 검색)
+- 검색: `WHERE user.status=1 AND company.status=1 AND (user.loginid = ? OR user.email = ?)` + INNER JOIN company
+- 각 row별로 PBKDF2 비번 검증 (서로 다른 회사·다른 비밀번호 가능)
+- **단일 매치**: 기존 `/auth/login`과 동일 형식의 `AuthResponse` 반환 + 토큰 발급 + `lastLoginAt` 갱신
+- **복수 매치**: `{multipleCompanies: true, companies: [{id, name}, ...]}` 반환 (토큰 발급 안 함)
+- **매치 0 또는 비번 모두 불일치**: 401 `unauthenticated` (계정 enumeration 방지)
+
+OpenAPI: 신규 path 1 + 신규 schema 2(`LoginByEmailRequest`, `MultipleCompaniesResponse`). 응답 schema는 `oneOf: [AuthResponse, MultipleCompaniesResponse]` — 두 가지 가능 형태 명시.
+
+## 7.2 프런트 — `login/index.vue` 개편
+
+- **고객사 ID 필드 완전 제거**. 5/27 §12에서 도입한 `companyIdInput`·`needCompanyId`·`effectiveCompanyId` 로직 모두 삭제. `last-company-id` 쿠키도 더 이상 로그인 폼에서 사용하지 않음(다만 인증 후 hydrateFromAuth에서 갱신은 유지 — 이전 가입 흔적 보존).
+- **`stores/auth.ts.loginByEmail()`** 액션 신규 — 반환값 `null` = 단일 매치 (로그인 완료) / `{id,name}[]` = 복수 매치 (호출자가 회사 선택 후 `login()` 재호출).
+- **복수 매치 UI**: `companyChoices` ref가 비어있지 않으면 일반 폼 대신 회사 선택 카드 리스트 노출. 카드 클릭 시 `chooseCompany(companyId)` → 기존 `login()` 호출. "다시 입력" 버튼으로 초기 폼 복귀.
+- **에러 처리**: 401 응답 → "아이디 또는 비밀번호가 올바르지 않습니다." 토스트. 그 외 → "로그인 중 오류가 발생했습니다."
+- **이메일 placeholder**: "아이디를 입력해 주세요" → "가입 시 사용한 이메일을 입력해 주세요" + `inputmode="email"` 힌트.
+
+## 7.3 라이브 e2e (Production)
+
+| # | 시나리오 | 결과 |
+| --- | --- | --- |
+| 1 | signup → company.id=12 발급 | ✅ |
+| 2 | login-by-email 단일 매치 → 200 + token (169자) | ✅ |
+| 3 | 잘못된 비밀번호 → 401 `unauthenticated` | ✅ |
+| 4 | 존재하지 않는 이메일 → 401 (계정 enumeration 방지) | ✅ |
+| 5 | 같은 이메일로 2번째 회사 signup → login-by-email → `{multipleCompanies:true, companies:[{id:12,name:...}, {id:13,name:...}]}` | ✅ |
+| 6 | 프로덕션 `/login` 페이지 그렙 — "고객사 ID" 0건 / "가입 시 사용한 이메일" 1건 | ✅ |
+
+검증 과정의 임시 계정(company.id 12·13) 2건은 SG 재개방 시 cleanup 예정.
+
+## 7.4 산출물
+
+- API: 3 파일 수정 — `src/routes/auth.ts`(+85) · `src/openapi.ts`(+25) · `src/db/schema.ts` (변동 없음 — verification 정의는 §5에서 이미 반영).
+- 사용자단: 2 파일 수정 — `app/stores/auth.ts`(+20) · `app/pages/login/index.vue`(전면 개편, +90/-30).
+- Workers 배포 #10 Version `a6197cc7...`, Pages 배포 #52 alias `292da05d`.
+- WBS 5-3C-4 ⚪ → ✅. doc/MEMBERSHIP.md §8 P0 #3 완료(로그아웃·재설정 다음).
+
+## 7.5 보안 노트
+
+- **로그인 가능한 입력**: `loginid` 또는 `email` 컬럼 매치. 같은 사용자가 두 컬럼에 다른 값을 가질 수 있다면(현재 회원가입 마법사는 둘 다 email로 채움) 둘 다로 로그인 가능. 운영상 의도된 동작.
+- **enumeration 방지**: 잘못된 이메일·잘못된 비밀번호 모두 동일한 401 메시지("Authentication required") — 응답 내용으로 이메일 존재 여부를 알 수 없음.
+- **타이밍**: 매치 row 수만큼 PBKDF2를 돌리므로 row 수가 많으면 응답 시간이 살짝 길어짐. 복수 매치는 실제로는 드물지만, 한 이메일을 의도적으로 많이 등록해 DoS 가능. 후속 rate limit 작업과 함께 검토.
+
+## 7.6 알려진 한계
+
+- **`last-company-id` 쿠키 잔존**: 더 이상 로그인 폼에서 사용하지 않으나, `hydrateFromAuth`에서 여전히 갱신. 후속에서 제거 또는 다른 용도로 활용 검토.
+- **회원가입에서 loginid ≠ email로 가입한 사용자**: 현재 마법사 외 경로(예: 운영자단 강제 가입)로 만들어진 사용자는 이메일이 비어 있을 수 있어 login-by-email로 로그인 불가. 운영자단 흐름이 생기면 정책 정의 필요.

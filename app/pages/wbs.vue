@@ -193,7 +193,7 @@ const STAGES: Stage[] = [
       { id: '5-3C-1a', group: '사용자단 ↔ API 연동', title: '이메일 OTP (/auth/email-code/send·/verify)', status: 'done', owner: '김도형', note: '6/1 §5. signup.vue Step 3에서 실 API 호출 + mockCode 개발 편의', targetDate: '6/1', completionDate: '6/1' },
       { id: '5-3C-2', group: '사용자단 ↔ API 연동', title: '로그아웃 — GNB 실 연결 (P0)', status: 'pending', owner: '김도형', note: 'useAuthStore().logout() 호출로 데모 토글 교체' },
       { id: '5-3C-3', group: '사용자단 ↔ API 연동', title: '비밀번호 재설정 — OTP 인프라 재활용 (P0)', status: 'pending', owner: '김도형', note: "purpose='reset_password' + POST /auth/password/reset 신설" },
-      { id: '5-3C-4', group: '사용자단 ↔ API 연동', title: 'POST /auth/login-by-email — companyId UX 개선 (P0)', status: 'pending', owner: '김도형' },
+      { id: '5-3C-4', group: '사용자단 ↔ API 연동', title: 'POST /auth/login-by-email — companyId UX 개선 (P0)', status: 'done', owner: '김도형', note: '6/2 §7. 로그인 폼에서 고객사 ID 필드 제거. 같은 이메일이 여러 회사면 회사 선택 UI 노출', targetDate: '6/2', completionDate: '6/2' },
       { id: '5-3C-5', group: '사용자단 ↔ API 연동', title: '약관 동의 적재 (POST /auth/agree-terms) (P1)', status: 'pending', owner: '김도형', note: 'TB_TERMS_AGREEMENT 적재' },
       { id: '5-3C-6', group: '사용자단 ↔ API 연동', title: 'companyType 전달·저장 + 화면 분기 (P1)', status: 'pending', owner: '김도형', note: 'TB_COMPANY.company_type + signup 스키마 확장 + 개인 유형 화면 미노출' },
       { id: '5-3C-7', group: '사용자단 ↔ API 연동', title: 'PATCH /me + /account/settings (P2)', status: 'pending', owner: '김도형' },
