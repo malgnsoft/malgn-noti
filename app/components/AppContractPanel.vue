@@ -1,12 +1,22 @@
 <script setup lang="ts">
 const toast = useToast()
+const api = useApi()
+
+type ContractState = 'initial' | 'done' | 'renew' | 'expired'
+const STATE_META: Record<ContractState, { label: string, icon: string }> = {
+  initial: { label: '최초계약', icon: 'i-lucide-square-pen' },
+  done: { label: '체결완료', icon: 'i-lucide-circle-check' },
+  renew: { label: '계약갱신', icon: 'i-lucide-circle-alert' },
+  expired: { label: '만료', icon: 'i-lucide-archive' },
+}
 
 interface Meta {
   text: string
   danger?: boolean
 }
 interface Contract {
-  status: 'initial' | 'done' | 'renew' | 'expired'
+  id: number
+  status: ContractState
   statusLabel: string
   icon: string
   title: string
@@ -15,79 +25,138 @@ interface Contract {
   canSign: boolean
 }
 
-/* 이용계약 목록 (목업 — 백엔드 연동 시 교체) */
-const contracts = ref<Contract[]>([
-  {
-    status: 'initial',
-    statusLabel: '최초계약',
-    icon: 'i-lucide-square-pen',
-    title: '최초 이용계약 온라인체결',
-    version: '신규',
-    metas: [
-      { text: '회원가입 후 최초 1회 체결이 필요합니다.' },
-      { text: '요청일 2026.05.21 17:37' },
-    ],
-    canSign: true,
-  },
-  {
-    status: 'done',
-    statusLabel: '체결완료',
-    icon: 'i-lucide-circle-check',
-    title: '맑은소프트 메시징 이용계약서 (2022년 구표준)',
-    version: 'v0.9',
-    metas: [
-      { text: '서명자 하근호' },
-      { text: '체결 2022.06.02 09:30' },
-      { text: '만료 2026.04.19' },
-    ],
-    canSign: false,
-  },
-  {
-    status: 'renew',
-    statusLabel: '계약갱신',
-    icon: 'i-lucide-circle-alert',
-    title: '맑은소프트 메시징 이용계약서 (2026년 신규)',
-    version: 'v2.0',
-    metas: [
-      { text: '요청일 2026.05.01 09:00' },
-      { text: '체결마감 2026.05.31', danger: true },
-    ],
-    canSign: true,
-  },
-])
-
-interface DocFile {
-  name: string
-  size: string
-  at: string
-  url?: string
+interface ContractRow {
+  id: number
+  title: string
+  version: string
+  contractState: ContractState
+  signerUserId: number | null
+  signedAt: string | null
+  expiresAt: string | null
+  createdAt: string
 }
 
-/* 사업자등록증 첨부 파일 */
-const bizFiles = ref<DocFile[]>([
-  { name: '사업자등록증_맑은소프트_20260521.pdf', size: '412.0 KB', at: '2026.05.21 17:37' },
-  { name: '사업자등록증_맑은소프트_20230110.pdf', size: '412.0 KB', at: '2023.01.10 11:08' },
-])
-const loanFiles = ref<DocFile[]>([])
-const insuranceFiles = ref<DocFile[]>([])
-
-/* 해당 여부 체크박스 */
-const loanApplicable = ref(false)
-const insuranceApplicable = ref(false)
-
-function nowStamp() {
-  const d = new Date()
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
-function expiryStamp() {
-  const d = new Date()
-  d.setFullYear(d.getFullYear() + 2)
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`
 }
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
 
-function pickFile(target: 'biz' | 'loan' | 'insurance', e: Event) {
+function toContract(row: ContractRow): Contract {
+  const meta = STATE_META[row.contractState]
+  const metas: Meta[] = []
+  if (row.contractState === 'initial') {
+    metas.push({ text: '회원가입 후 최초 1회 체결이 필요합니다.' })
+    metas.push({ text: `요청일 ${fmtDateTime(row.createdAt)}` })
+  }
+  else if (row.contractState === 'done') {
+    if (row.signedAt) metas.push({ text: `체결 ${fmtDateTime(row.signedAt)}` })
+    if (row.expiresAt) metas.push({ text: `만료 ${fmtDate(row.expiresAt)}` })
+  }
+  else if (row.contractState === 'renew') {
+    metas.push({ text: `요청일 ${fmtDateTime(row.createdAt)}` })
+  }
+  else if (row.contractState === 'expired') {
+    if (row.expiresAt) metas.push({ text: `만료 ${fmtDate(row.expiresAt)}` })
+  }
+  return {
+    id: row.id,
+    status: row.contractState,
+    statusLabel: meta.label,
+    icon: meta.icon,
+    title: row.title,
+    version: row.version,
+    metas,
+    canSign: row.contractState === 'initial' || row.contractState === 'renew',
+  }
+}
+
+const contracts = ref<Contract[]>([])
+
+interface FileRow {
+  id: number
+  contractId: number
+  name: string
+  sizeBytes: number
+  uploadedAt: string
+}
+interface DocFile {
+  id: number
+  contractId: number
+  name: string
+  size: string
+  at: string
+}
+
+const bizFiles = ref<DocFile[]>([])
+const loanFiles = ref<DocFile[]>([])
+const insuranceFiles = ref<DocFile[]>([])
+
+function classify(name: string): 'biz' | 'loan' | 'insurance' | null {
+  if (name.startsWith('사업자등록증_')) return 'biz'
+  if (name.startsWith('대부업등록증_')) return 'loan'
+  if (name.startsWith('지급이행보증보험증권_')) return 'insurance'
+  return null
+}
+function toDocFile(row: FileRow): DocFile {
+  // 표시명에서 종류 접두사 제거
+  const stripped = row.name.replace(/^(사업자등록증|대부업등록증|지급이행보증보험증권)_/, '')
+  return {
+    id: row.id,
+    contractId: row.contractId,
+    name: stripped,
+    size: fmtSize(row.sizeBytes),
+    at: fmtDateTime(row.uploadedAt),
+  }
+}
+
+async function loadContracts() {
+  const res = await api<{ data: ContractRow[] }>('/contracts')
+  contracts.value = res.data.map(toContract)
+}
+async function loadFiles() {
+  const res = await api<{ data: FileRow[] }>('/contracts/files')
+  const biz: DocFile[] = []
+  const loan: DocFile[] = []
+  const insurance: DocFile[] = []
+  for (const row of res.data) {
+    const kind = classify(row.name)
+    if (kind === 'biz') biz.push(toDocFile(row))
+    else if (kind === 'loan') loan.push(toDocFile(row))
+    else if (kind === 'insurance') insurance.push(toDocFile(row))
+  }
+  bizFiles.value = biz
+  loanFiles.value = loan
+  insuranceFiles.value = insurance
+}
+
+await Promise.all([loadContracts(), loadFiles()])
+
+/* 해당 여부 체크박스 — 첨부가 있으면 자동 활성화 */
+const loanApplicable = ref(loanFiles.value.length > 0)
+const insuranceApplicable = ref(insuranceFiles.value.length > 0)
+
+/* 활성 계약(initial 또는 renew) — 새 첨부는 여기에 묶음 */
+const activeContractId = computed(() => {
+  return contracts.value.find(c => c.status === 'initial' || c.status === 'renew')?.id
+    ?? contracts.value[0]?.id
+})
+
+async function pickFile(target: 'biz' | 'loan' | 'insurance', e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
@@ -101,16 +170,25 @@ function pickFile(target: 'biz' | 'loan' | 'insurance', e: Event) {
     input.value = ''
     return
   }
-  const entry: DocFile = {
-    name: file.name,
-    size: `${(file.size / 1024).toFixed(1)} KB`,
-    at: nowStamp(),
-    url: URL.createObjectURL(file),
+  const cid = activeContractId.value
+  if (!cid) {
+    toast.add({ title: '활성 계약을 찾을 수 없습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+    input.value = ''
+    return
   }
-  const map = { biz: bizFiles, loan: loanFiles, insurance: insuranceFiles }
-  map[target].value = [entry, ...map[target].value]
+  const form = new FormData()
+  form.append('contractId', String(cid))
+  form.append('kind', target)
+  form.append('file', file)
+  try {
+    await api('/contracts/files', { method: 'POST', body: form })
+    await loadFiles()
+    toast.add({ title: '서류가 첨부되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch {
+    toast.add({ title: '업로드에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
   input.value = ''
-  toast.add({ title: '서류가 첨부되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
 }
 
 /* 업로드 안내 모달 → 확인 시 파일 선택 창 열기 */
@@ -141,15 +219,32 @@ function confirmUpload() {
   inputs[uploadTarget.value].value?.click()
 }
 
-/* 첨부 서류 미리보기 모달 */
+/* 첨부 서류 미리보기 모달 — iframe은 Authorization 헤더를 못 싣기 때문에
+ * 인증된 fetch로 blob을 받아 object URL로 표시. */
 const previewOpen = ref(false)
 const previewLabel = ref('')
-const previewFile = ref<DocFile | null>(null)
-function openPreview(label: string, f: DocFile) {
+const previewFile = ref<(DocFile & { url?: string }) | null>(null)
+let lastObjectUrl: string | null = null
+async function openPreview(label: string, f: DocFile) {
   previewLabel.value = label
-  previewFile.value = f
+  previewFile.value = { ...f }
   previewOpen.value = true
+  try {
+    const blob = await api<Blob>(`/contracts/files/${f.id}/download`, { responseType: 'blob' })
+    if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl)
+    lastObjectUrl = URL.createObjectURL(blob)
+    previewFile.value = { ...f, url: lastObjectUrl }
+  }
+  catch {
+    toast.add({ title: '파일을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
 }
+watch(previewOpen, (v) => {
+  if (!v && lastObjectUrl) {
+    URL.revokeObjectURL(lastObjectUrl)
+    lastObjectUrl = null
+  }
+})
 
 /* 계약서 확인 / 체결 모달 */
 const viewOpen = ref(false)
@@ -165,35 +260,25 @@ function signContract(c: Contract) {
   signTarget.value = c
   signOpen.value = true
 }
-function onSignCompleted() {
+async function onSignCompleted() {
   const c = signTarget.value
-  if (c) {
-    const wasRenewal = c.status === 'renew'
-    c.status = 'done'
-    c.statusLabel = '체결완료'
-    c.icon = 'i-lucide-circle-check'
-    c.canSign = false
-    c.metas = [
-      { text: '서명자 하근호' },
-      { text: `체결 ${nowStamp()}` },
-      { text: `만료 ${expiryStamp()}` },
-    ]
-    /* 갱신 계약 체결 시 기존 계약은 모두 만료 처리 */
-    if (wasRenewal) {
-      for (const other of contracts.value) {
-        if (other === c || other.status === 'expired') continue
-        other.status = 'expired'
-        other.statusLabel = '만료'
-        other.icon = 'i-lucide-archive'
-        other.canSign = false
-      }
-      toast.add({ title: '갱신 계약 체결로 기존 계약이 만료 처리되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-      signTarget.value = null
-      return
-    }
+  if (!c) return
+  const wasRenewal = c.status === 'renew'
+  try {
+    await api(`/contracts/${c.id}/sign`, { method: 'POST' })
+    await loadContracts()
+    toast.add({
+      title: wasRenewal
+        ? '갱신 계약 체결로 기존 계약이 만료 처리되었습니다.'
+        : '이용계약서 체결이 완료되었습니다.',
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
+  }
+  catch {
+    toast.add({ title: '체결 처리에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
   }
   signTarget.value = null
-  toast.add({ title: '이용계약서 체결이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
 }
 
 function save() {
