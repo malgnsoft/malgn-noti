@@ -87,9 +87,7 @@ const CHAPTERS: Chapter[] = [
 const step = ref(1)
 const done = ref(false)
 const reached = reactive<Record<number, boolean>>({ 1: false, 2: false })
-const signTab = ref<'sign' | 'cert'>('sign')
 const signerName = ref(auth.user?.name ?? '')
-const certLoaded = ref(false)
 
 const progress = computed(() => [0, 33, 67][step.value - 1] ?? 0)
 const canConfirm = computed(() => reached[step.value] === true)
@@ -156,8 +154,8 @@ async function verifyPhoneCode() {
     })
     phoneVerified.value = true
     toast.add({ title: '본인 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-    // 인증 완료 직후 서명 캔버스 활성화 — 다음 틱에 셋업
-    if (signTab.value === 'sign') setupCanvas()
+    // 인증 완료 직후 서명 캔버스 활성화
+    setupCanvas()
   }
   catch (e) {
     const msg = (e as { data?: { message?: string } }).data?.message ?? '인증번호가 올바르지 않습니다.'
@@ -171,7 +169,7 @@ async function verifyPhoneCode() {
 const canComplete = computed(() =>
   phoneVerified.value
   && signerName.value.trim() !== ''
-  && (signTab.value === 'sign' ? hasInk.value : certLoaded.value),
+  && hasInk.value,
 )
 
 const docRef = ref<HTMLElement>()
@@ -264,9 +262,6 @@ function confirmDone() {
   emit('close')
 }
 
-watch(signTab, (t) => {
-  if (t === 'sign' && phoneVerified.value) setupCanvas()
-})
 
 /* 초기화 + 스크롤 잠금 */
 let locked = false
@@ -288,9 +283,7 @@ function reset() {
   done.value = false
   reached[1] = false
   reached[2] = false
-  signTab.value = 'sign'
   signerName.value = auth.user?.name ?? ''
-  certLoaded.value = false
   hasInk.value = false
   phoneVerified.value = false
   phoneCodeSent.value = false
@@ -300,6 +293,8 @@ function reset() {
 watch(() => props.open, (v) => {
   if (!import.meta.client) return
   if (v) {
+    // 본인 휴대폰 등 최신 정보가 항상 노출되도록 store hydrate.
+    auth.fetchMe().catch(() => { /* 토큰 만료 등은 useApi가 처리 */ })
     reset()
     lock()
     window.addEventListener('keydown', onKey)
@@ -398,7 +393,8 @@ onBeforeUnmount(() => {
                 <div v-if="!phoneVerified" class="cd-verify-body">
                   <div class="cd-verify-row">
                     <label>휴대폰</label>
-                    <span class="cd-verify-phone">{{ userPhoneMasked || '— 등록 정보 없음 —' }}</span>
+                    <span v-if="userPhoneMasked" class="cd-verify-phone">{{ userPhoneMasked }}</span>
+                    <span v-else class="cd-verify-phone empty">회원 정보에 휴대폰 번호가 등록되어 있지 않습니다.</span>
                     <button
                       type="button"
                       class="btn btn-outline-dark btn-sm"
@@ -431,24 +427,6 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <div class="cd-tabs" :class="{ locked: !phoneVerified }">
-                <button
-                  type="button"
-                  :class="{ on: signTab === 'sign' }"
-                  :disabled="!phoneVerified"
-                  @click="signTab = 'sign'"
-                >
-                  <UIcon name="i-lucide-pen-line" /> 전자 서명
-                </button>
-                <button
-                  type="button"
-                  :class="{ on: signTab === 'cert' }"
-                  :disabled="!phoneVerified"
-                  @click="signTab = 'cert'"
-                >
-                  <UIcon name="i-lucide-shield-check" /> 공인인증서
-                </button>
-              </div>
 
               <table v-if="phoneVerified" class="cd-info-table">
                 <tbody>
@@ -474,7 +452,7 @@ onBeforeUnmount(() => {
               </table>
 
               <!-- 전자 서명 -->
-              <div v-if="phoneVerified && signTab === 'sign'" class="cd-sign-area">
+              <div v-if="phoneVerified" class="cd-sign-area">
                 <div class="cd-sign-head">
                   <span>아래 영역에 마우스 또는 손가락으로 서명해 주세요.</span>
                   <button type="button" class="btn btn-outline-dark btn-sm" @click="clearSign">
@@ -497,26 +475,6 @@ onBeforeUnmount(() => {
                 </p>
               </div>
 
-              <!-- 공인인증서 -->
-              <div v-else-if="phoneVerified" class="cd-cert-area">
-                <div class="cd-cert-box">
-                  <UIcon name="i-lucide-shield-check" class="cd-cert-icon" />
-                  <p class="cd-cert-title">공인인증서로 서명</p>
-                  <p class="cd-cert-desc">등록된 공인인증서(범용/은행)로 본인 인증 후 계약서에 서명합니다.</p>
-                  <button
-                    type="button"
-                    class="btn btn-outline-dark btn-sm"
-                    :class="{ 'btn-primary': certLoaded }"
-                    @click="certLoaded = true"
-                  >
-                    <UIcon :name="certLoaded ? 'i-lucide-check' : 'i-lucide-folder-open'" class="text-[length:var(--fz-sm)]" />
-                    {{ certLoaded ? '공인인증서 선택 완료' : '공인인증서 불러오기' }}
-                  </button>
-                </div>
-                <p class="cd-sign-note">
-                  <UIcon name="i-lucide-info" /> 공인인증서 서명은 전자서명법에 따라 본인의 의사 표시로 간주됩니다.
-                </p>
-              </div>
             </div>
           </div>
 
@@ -814,39 +772,16 @@ onBeforeUnmount(() => {
   font-size: var(--fz-sm);
   color: var(--ink-800);
 }
+.cd-verify-phone.empty {
+  font-family: var(--font-base);
+  color: var(--danger-ink);
+  font-size: var(--fz-xs);
+}
 .cd-code-input {
   flex: 1;
   font-family: var(--font-mono);
   letter-spacing: 4px;
   text-align: center;
-}
-
-.cd-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.cd-tabs.locked button {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.cd-tabs button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--white);
-  font-size: var(--fz-sm);
-  font-weight: 600;
-  color: var(--ink-500);
-  transition: all 0.12s;
-}
-.cd-tabs button.on {
-  border-color: var(--ink-900);
-  background: var(--ink-900);
-  color: var(--white);
 }
 
 .cd-info-table {
@@ -921,35 +856,6 @@ onBeforeUnmount(() => {
   margin: 10px 0 0;
   font-size: var(--fz-xs);
   color: var(--ink-400);
-}
-
-/* 공인인증서 */
-.cd-cert-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 34px 20px;
-  border: 1px dashed var(--ink-300);
-  border-radius: var(--r-md);
-  background: var(--white);
-  text-align: center;
-}
-.cd-cert-icon {
-  font-size: var(--fz-3xl);
-  color: var(--info);
-  margin-bottom: 4px;
-}
-.cd-cert-title {
-  font-size: var(--fz-md);
-  font-weight: 700;
-  color: var(--ink-900);
-  margin: 0;
-}
-.cd-cert-desc {
-  font-size: var(--fz-sm);
-  color: var(--ink-500);
-  margin: 0 0 10px;
 }
 
 /* 푸터 */
