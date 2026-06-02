@@ -433,25 +433,7 @@ function changeBizDoc() {
 }
 .delete-link:hover { color: var(--danger-ink); }
 
-.seg {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
-.seg button {
-  background: var(--white);
-  border: 0;
-  padding: 8px 16px;
-  font-size: var(--fz-sm);
-  color: var(--ink-600);
-  cursor: pointer;
-}
-.seg button.active {
-  background: var(--ink-900);
-  color: var(--white);
-  font-weight: 600;
-}
+/* .seg는 main.css의 글로벌 스타일 사용 (회색 컨테이너 + 흰색 active + soft-shadow) */
 
 @media (max-width: 720px) {
   .ms-row { grid-template-columns: 1fr; gap: 6px; }
