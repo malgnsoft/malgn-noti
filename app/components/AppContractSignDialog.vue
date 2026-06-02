@@ -1,4 +1,7 @@
 <script setup lang="ts">
+const api = useApi()
+const auth = useAuthStore()
+
 interface Article {
   no: string
   title: string
@@ -85,14 +88,89 @@ const step = ref(1)
 const done = ref(false)
 const reached = reactive<Record<number, boolean>>({ 1: false, 2: false })
 const signTab = ref<'sign' | 'cert'>('sign')
-const signerName = ref('하근호')
+const signerName = ref(auth.user?.name ?? '')
 const certLoaded = ref(false)
 
 const progress = computed(() => [0, 33, 67][step.value - 1] ?? 0)
 const canConfirm = computed(() => reached[step.value] === true)
 const hasInk = ref(false)
+
+/* ─── 휴대폰 본인인증 ───
+ * STEP 3 진입 시 본인인증 카드 노출. 인증 통과 전엔 서명·인증서 영역 비활성화.
+ * 사용자가 회원가입 시 NICE로 확인한 본인 휴대폰으로 SMS OTP를 발송 → 6자리 코드 확인. */
+const userPhone = computed(() => (auth.user?.phone ?? '').replace(/\D/g, ''))
+const userPhoneMasked = computed(() => {
+  const p = userPhone.value
+  if (p.length < 8) return ''
+  // 010-****-1234 형태
+  return `${p.slice(0, 3)}-****-${p.slice(-4)}`
+})
+const phoneVerified = ref(false)
+const phoneCodeSent = ref(false)
+const phoneCode = ref('')
+const sendingPhone = ref(false)
+const verifyingPhone = ref(false)
+const phoneMockCode = ref('')
+
+async function sendPhoneCode() {
+  if (!userPhone.value) {
+    toast.add({ title: '등록된 휴대폰 번호가 없습니다. 회원 정보를 확인해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  sendingPhone.value = true
+  try {
+    const res = await api<{ data: { mockCode?: string } }>('/auth/phone-code/send', {
+      method: 'POST',
+      body: { phone: userPhone.value, purpose: 'contract_sign' },
+    })
+    phoneCodeSent.value = true
+    phoneMockCode.value = res.data?.mockCode ?? ''
+    toast.add({
+      title: phoneMockCode.value
+        ? `[테스트] 인증번호: ${phoneMockCode.value}`
+        : '인증번호를 발송했습니다. 10분 안에 입력해 주세요.',
+      color: 'success',
+      icon: 'i-lucide-message-square',
+      duration: phoneMockCode.value ? 8000 : 4000,
+    })
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } }).data?.message ?? '인증번호 발송에 실패했습니다.'
+    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    sendingPhone.value = false
+  }
+}
+
+async function verifyPhoneCode() {
+  if (!/^\d{6}$/.test(phoneCode.value)) {
+    toast.add({ title: '6자리 인증번호를 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  verifyingPhone.value = true
+  try {
+    await api('/auth/phone-code/verify', {
+      method: 'POST',
+      body: { phone: userPhone.value, purpose: 'contract_sign', code: phoneCode.value },
+    })
+    phoneVerified.value = true
+    toast.add({ title: '본인 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+    // 인증 완료 직후 서명 캔버스 활성화 — 다음 틱에 셋업
+    if (signTab.value === 'sign') setupCanvas()
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } }).data?.message ?? '인증번호가 올바르지 않습니다.'
+    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    verifyingPhone.value = false
+  }
+}
+
 const canComplete = computed(() =>
-  signerName.value.trim() !== ''
+  phoneVerified.value
+  && signerName.value.trim() !== ''
   && (signTab.value === 'sign' ? hasInk.value : certLoaded.value),
 )
 
@@ -160,8 +238,8 @@ function clearSign() {
 function next() {
   if (step.value < 3 && canConfirm.value) {
     step.value += 1
-    if (step.value === 3) setupCanvas()
-    else { docRef.value?.scrollTo({ top: 0 }); checkFits() }
+    // STEP 3 진입 시점에는 캔버스 셋업 보류 — 본인인증 통과 후 verifyPhoneCode 안에서 셋업.
+    if (step.value !== 3) { docRef.value?.scrollTo({ top: 0 }); checkFits() }
   }
 }
 function prev() {
@@ -171,6 +249,10 @@ function prev() {
   }
 }
 function finish() {
+  if (!phoneVerified.value) {
+    toast.add({ title: '본인 인증을 먼저 완료해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
   if (!canComplete.value) {
     toast.add({ title: '서명자명과 서명을 모두 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
@@ -183,7 +265,7 @@ function confirmDone() {
 }
 
 watch(signTab, (t) => {
-  if (t === 'sign') setupCanvas()
+  if (t === 'sign' && phoneVerified.value) setupCanvas()
 })
 
 /* 초기화 + 스크롤 잠금 */
@@ -207,9 +289,13 @@ function reset() {
   reached[1] = false
   reached[2] = false
   signTab.value = 'sign'
-  signerName.value = '하근호'
+  signerName.value = auth.user?.name ?? ''
   certLoaded.value = false
   hasInk.value = false
+  phoneVerified.value = false
+  phoneCodeSent.value = false
+  phoneCode.value = ''
+  phoneMockCode.value = ''
 }
 watch(() => props.open, (v) => {
   if (!import.meta.client) return
@@ -292,16 +378,79 @@ onBeforeUnmount(() => {
 
             <!-- 전자서명 (STEP 3) -->
             <div v-else class="cd-sign">
-              <div class="cd-tabs">
-                <button type="button" :class="{ on: signTab === 'sign' }" @click="signTab = 'sign'">
+              <!-- 본인인증 카드 — 통과 전엔 항상 노출 / 통과 후엔 간략 배지만 -->
+              <div class="cd-verify" :class="{ done: phoneVerified }">
+                <div v-if="!phoneVerified" class="cd-verify-head">
+                  <UIcon name="i-lucide-shield-alert" class="cd-verify-icon" />
+                  <div>
+                    <strong>먼저 본인 인증을 완료해 주세요</strong>
+                    <p>가입 시 등록한 휴대폰으로 인증번호를 발송합니다.</p>
+                  </div>
+                </div>
+                <div v-else class="cd-verify-head done">
+                  <UIcon name="i-lucide-circle-check" class="cd-verify-icon" />
+                  <div>
+                    <strong>본인 인증이 완료되었습니다</strong>
+                    <p>아래에서 전자서명을 진행해 주세요.</p>
+                  </div>
+                </div>
+
+                <div v-if="!phoneVerified" class="cd-verify-body">
+                  <div class="cd-verify-row">
+                    <label>휴대폰</label>
+                    <span class="cd-verify-phone">{{ userPhoneMasked || '— 등록 정보 없음 —' }}</span>
+                    <button
+                      type="button"
+                      class="btn btn-outline-dark btn-sm"
+                      :disabled="sendingPhone || !userPhone"
+                      @click="sendPhoneCode"
+                    >
+                      <UIcon name="i-lucide-message-square" class="text-[length:var(--fz-sm)]" />
+                      {{ sendingPhone ? '발송 중…' : phoneCodeSent ? '재발송' : '인증번호 받기' }}
+                    </button>
+                  </div>
+                  <div v-if="phoneCodeSent" class="cd-verify-row">
+                    <label>인증번호</label>
+                    <input
+                      v-model="phoneCode"
+                      class="input cd-code-input"
+                      inputmode="numeric"
+                      maxlength="6"
+                      placeholder="6자리 숫자"
+                      @keyup.enter="verifyPhoneCode"
+                    >
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      :disabled="verifyingPhone || phoneCode.length !== 6"
+                      @click="verifyPhoneCode"
+                    >
+                      {{ verifyingPhone ? '확인 중…' : '확인' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cd-tabs" :class="{ locked: !phoneVerified }">
+                <button
+                  type="button"
+                  :class="{ on: signTab === 'sign' }"
+                  :disabled="!phoneVerified"
+                  @click="signTab = 'sign'"
+                >
                   <UIcon name="i-lucide-pen-line" /> 전자 서명
                 </button>
-                <button type="button" :class="{ on: signTab === 'cert' }" @click="signTab = 'cert'">
+                <button
+                  type="button"
+                  :class="{ on: signTab === 'cert' }"
+                  :disabled="!phoneVerified"
+                  @click="signTab = 'cert'"
+                >
                   <UIcon name="i-lucide-shield-check" /> 공인인증서
                 </button>
               </div>
 
-              <table class="cd-info-table">
+              <table v-if="phoneVerified" class="cd-info-table">
                 <tbody>
                   <tr>
                     <th>계약 명</th>
@@ -309,11 +458,11 @@ onBeforeUnmount(() => {
                   </tr>
                   <tr>
                     <th>사업자명</th>
-                    <td>(주)맑은소프트 (110-86-39050)</td>
+                    <td>{{ auth.tenant?.name || '—' }} <span v-if="auth.tenant?.bizNo">({{ auth.tenant.bizNo }})</span></td>
                   </tr>
                   <tr>
                     <th>대표자</th>
-                    <td>하근호</td>
+                    <td>{{ auth.tenant?.ceoName || '—' }}</td>
                   </tr>
                   <tr>
                     <th>서명자명 <span class="rq">*</span></th>
@@ -325,7 +474,7 @@ onBeforeUnmount(() => {
               </table>
 
               <!-- 전자 서명 -->
-              <div v-if="signTab === 'sign'" class="cd-sign-area">
+              <div v-if="phoneVerified && signTab === 'sign'" class="cd-sign-area">
                 <div class="cd-sign-head">
                   <span>아래 영역에 마우스 또는 손가락으로 서명해 주세요.</span>
                   <button type="button" class="btn btn-outline-dark btn-sm" @click="clearSign">
@@ -349,7 +498,7 @@ onBeforeUnmount(() => {
               </div>
 
               <!-- 공인인증서 -->
-              <div v-else class="cd-cert-area">
+              <div v-else-if="phoneVerified" class="cd-cert-area">
                 <div class="cd-cert-box">
                   <UIcon name="i-lucide-shield-check" class="cd-cert-icon" />
                   <p class="cd-cert-title">공인인증서로 서명</p>
@@ -604,10 +753,82 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow-y: auto;
 }
+/* 본인인증 카드 */
+.cd-verify {
+  border: 1px solid var(--info-line);
+  background: var(--info-soft);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.cd-verify.done {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.cd-verify-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.cd-verify-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--info-ink);
+}
+.cd-verify-head.done .cd-verify-icon { color: var(--success-ink); }
+.cd-verify-head strong {
+  display: block;
+  font-size: var(--fz-md);
+  font-weight: 700;
+  color: var(--ink-900);
+  margin-bottom: 2px;
+}
+.cd-verify-head p {
+  font-size: var(--fz-sm);
+  color: var(--ink-600);
+  margin: 0;
+}
+.cd-verify-body {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cd-verify-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cd-verify-row label {
+  width: 80px;
+  flex-shrink: 0;
+  font-size: var(--fz-sm);
+  font-weight: 600;
+  color: var(--ink-700);
+}
+.cd-verify-phone {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  color: var(--ink-800);
+}
+.cd-code-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  letter-spacing: 4px;
+  text-align: center;
+}
+
 .cd-tabs {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
+}
+.cd-tabs.locked button {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .cd-tabs button {
   display: flex;
