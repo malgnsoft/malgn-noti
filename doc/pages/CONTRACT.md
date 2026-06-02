@@ -3,8 +3,8 @@
 > **목적**: 사업자등록증 등록·심사·이용계약 전자체결·가입 서류 첨부를 한 화면에서 관리.
 > 회원가입한 사업자(`corp`/`sole`)의 **미승인 상태 메인 진입점** + 승인 후 계약 갱신·서류 관리 화면.
 >
-> **연관**: [./SIGNUP.md](./SIGNUP.md) §3·§4 / [./MEMBERSHIP.md](./MEMBERSHIP.md) §1.2·§2 /
-> [./history/history.20260602.md](./history/history.20260602.md) §7·§10
+> **연관**: [./SIGNUP.md](./SIGNUP.md) §3·§4 / [./MEMBERSHIP.md](../MEMBERSHIP.md) §1.2·§2 /
+> [./history/history.20260602.md](../history/history.20260602.md) §7·§10
 >
 > **마지막 현행화**: 2026-06-02
 
@@ -15,10 +15,10 @@
 | 항목 | 값 |
 | --- | --- |
 | 라우트 | `/account/contract` |
-| 파일 | [`app/pages/account/contract.vue`](../app/pages/account/contract.vue) |
-| 메인 컴포넌트 | [`AppContractPanel`](../app/components/AppContractPanel.vue) (~647 라인) |
-| 보조 컴포넌트 | [`AppContractViewDialog`](../app/components/AppContractViewDialog.vue) — 계약서 미리보기 / [`AppContractSignDialog`](../app/components/AppContractSignDialog.vue) — 전자서명 3-스텝 위저드 (~807 라인) |
-| 공통 셸 | [`AppMyPageShell`](../app/components/AppMyPageShell.vue) — 나의 페이지 좌측 메뉴 + 본문 슬롯 |
+| 파일 | [`app/pages/account/contract.vue`](../../app/pages/account/contract.vue) |
+| 메인 컴포넌트 | [`AppContractPanel`](../../app/components/AppContractPanel.vue) (~647 라인) |
+| 보조 컴포넌트 | [`AppContractViewDialog`](../../app/components/AppContractViewDialog.vue) — 계약서 미리보기 / [`AppContractSignDialog`](../../app/components/AppContractSignDialog.vue) — 전자서명 3-스텝 위저드 (~807 라인) |
+| 공통 셸 | [`AppMyPageShell`](../../app/components/AppMyPageShell.vue) — 나의 페이지 좌측 메뉴 + 본문 슬롯 |
 | 접근 권한 | 인증된 사업자(`corp` / `sole`)만 — 개인(`personal`)은 메뉴 미노출(후속) |
 
 ---
@@ -35,7 +35,7 @@
      else: navigateTo('/home')
 ```
 
-코드: [signup.vue `finish()`](../app/pages/signup.vue#L456)
+코드: [signup.vue `finish()`](../../app/pages/signup.vue#L456)
 
 ### 2.2 로그인 직후 (자동)
 
@@ -45,7 +45,7 @@
      else: navigateTo(redirect ?? '/home')
 ```
 
-코드: [login/index.vue `onLogin()`](../app/pages/login/index.vue#L44)
+코드: [login/index.vue `onLogin()`](../../app/pages/login/index.vue#L44)
 
 ### 2.3 미들웨어 리다이렉트 (다른 차단 페이지 시도)
 
@@ -57,11 +57,11 @@
 ```
 
 허용 경로: `/account/*` · `/help` · `/guide` · `/wbs` · `/inquiry` · `meta.auth: false`
-코드: [middleware/approval.global.ts](../app/middleware/approval.global.ts)
+코드: [middleware/approval.global.ts](../../app/middleware/approval.global.ts)
 
 ### 2.4 글로벌 띠 CTA (수동)
 
-[`AppApprovalBanner`](../app/components/AppApprovalBanner.vue) (모든 페이지 layout 최상단) — CTA 클릭 시:
+[`AppApprovalBanner`](../../app/components/AppApprovalBanner.vue) (모든 페이지 layout 최상단) — CTA 클릭 시:
 - pending → "사업자등록증 등록"
 - rejected → "다시 제출하기"
 
@@ -88,7 +88,7 @@
 - **계약서 확인** (모든 상태) → `AppContractViewDialog` 모달 (요약본)
 - **계약체결하기** (`canSign=true`일 때만) → `AppContractSignDialog` 3-스텝 위저드
 
-#### 전자서명 위저드 ([AppContractSignDialog](../app/components/AppContractSignDialog.vue))
+#### 전자서명 위저드 ([AppContractSignDialog](../../app/components/AppContractSignDialog.vue))
 
 | Step | 라벨 | 내용 |
 | --- | --- | --- |
@@ -175,7 +175,7 @@ PDF만 첨부 가능, 최대 10MB.
                                                   └──────────────┘
 ```
 
-코드: [AppContractPanel `onSignCompleted()`](../app/components/AppContractPanel.vue#L168) — `wasRenewal`일 때 다른 모든 계약을 expired로 전이.
+코드: [AppContractPanel `onSignCompleted()`](../../app/components/AppContractPanel.vue#L168) — `wasRenewal`일 때 다른 모든 계약을 expired로 전이.
 
 ---
 

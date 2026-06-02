@@ -1,7 +1,7 @@
 # 회원·인증 통합 인덱스
 
 > **목적**: 회원가입·로그인·계정관리·인증·승인 게이트의 **모든 페이지·API·DB 테이블·정책**을 한 곳에서 조망.
-> 가입 절차 단계별 상세는 [./SIGNUP.md](./SIGNUP.md), NICE 본인확인 인프라는 [./NICE_AUTH.md](./NICE_AUTH.md),
+> 가입 절차 단계별 상세는 [./pages/SIGNUP.md](./pages/SIGNUP.md), NICE 본인확인 인프라는 [./NICE_AUTH.md](./NICE_AUTH.md),
 > 일자별 작업 이력은 [./history/history.20260601.md](./history/history.20260601.md) §4·§5,
 > [./history/history.20260602.md](./history/history.20260602.md) §4~§10 참조.
 >
@@ -241,7 +241,7 @@
 
 ## 6. 정책 결정 사항
 
-> 상세: [./SIGNUP.md](./SIGNUP.md), [./NICE_AUTH.md](./NICE_AUTH.md), [./WBS.md](./WBS.md) §2-4·§2-6
+> 상세: [./pages/SIGNUP.md](./pages/SIGNUP.md), [./NICE_AUTH.md](./NICE_AUTH.md), [./WBS.md](./WBS.md) §2-4·§2-6
 
 ### 6.1 회원 유형 (`company_type`)
 

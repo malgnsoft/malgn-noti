@@ -2,10 +2,10 @@
 
 > **정본 소스**:
 > - 시안 정책 표(사용자 제공 이미지) — 신청 서류·결제 방식·승인 흐름의 기획 정본
-> - [`app/pages/signup.vue`](../app/pages/signup.vue) — 5단계 마법사 실제 구현 (사용자단)
-> - [`../malgn-noti-api/src/routes/auth.ts`](../../malgn-noti-api/src/routes/auth.ts) — 백엔드 `/auth/signup`·`/auth/login` 라우트
-> - [`./WBS.md`](./WBS.md) §2-4(회원·결제·계약 정책), §2-6-1(계약관리 정책)
-> - [`./history/history.20260601.md`](./history/history.20260601.md) §4 — 사용자단 인증 백엔드 연동 (배포 #49)
+> - [`app/pages/signup.vue`](../../app/pages/signup.vue) — 5단계 마법사 실제 구현 (사용자단)
+> - [`../malgn-noti-api/src/routes/auth.ts`](../../../malgn-noti-api/src/routes/auth.ts) — 백엔드 `/auth/signup`·`/auth/login` 라우트
+> - [`./WBS.md`](../WBS.md) §2-4(회원·결제·계약 정책), §2-6-1(계약관리 정책)
+> - [`./history/history.20260601.md`](../history/history.20260601.md) §4 — 사용자단 인증 백엔드 연동 (배포 #49)
 >
 > **마지막 현행화**: 2026-06-01
 
@@ -83,10 +83,10 @@ Content-Type: application/json
 
 ### 가입 후 화면
 
-- **계약관리** ([`/account/contract`](../app/pages/account/contract.vue)) — 카드 충전: 카드 등록 후 즉시 / 후불: 계약서 전자 서명 + 사업자 등록증·지급이행보증보험증권 업로드 → BackOffice 승인 대기 → 통장사본 제출 (운영자단 미구현)
-- **멀티 계정** ([`/account/multi`](../app/pages/account/multi.vue)) — 주계정/보조계정 추가, 서비스 담당자 초대 메일 발송 흐름
-- **결제 카드** ([`/account/cards`](../app/pages/account/cards.vue))
-- **크레딧 충전·내역** ([`/charge`](../app/pages/charge/index.vue) · [`/account/credit`](../app/pages/account/credit.vue))
+- **계약관리** ([`/account/contract`](../../app/pages/account/contract.vue)) — 카드 충전: 카드 등록 후 즉시 / 후불: 계약서 전자 서명 + 사업자 등록증·지급이행보증보험증권 업로드 → BackOffice 승인 대기 → 통장사본 제출 (운영자단 미구현)
+- **멀티 계정** ([`/account/multi`](../../app/pages/account/multi.vue)) — 주계정/보조계정 추가, 서비스 담당자 초대 메일 발송 흐름
+- **결제 카드** ([`/account/cards`](../../app/pages/account/cards.vue))
+- **크레딧 충전·내역** ([`/charge`](../../app/pages/charge/index.vue) · [`/account/credit`](../../app/pages/account/credit.vue))
 
 ---
 
@@ -161,15 +161,15 @@ Content-Type: application/json
 
 | 라우트 | 법인 | 개인사업자 | 개인 |
 | --- | --- | --- | --- |
-| [`/account/settings`](../app/pages/account/settings.vue) (회원 정보 변경) | ✅ | ✅ | ✅ |
-| [`/account/cards`](../app/pages/account/cards.vue) (결제 카드 관리) | ✅ | ✅ | ✅ |
-| [`/account/password`](../app/pages/account/password.vue) (비밀번호 변경) | ✅ | ✅ | ✅ |
-| [`/account/security`](../app/pages/account/security.vue) (보안 로그인) | ✅ | ✅ | ✅ |
-| [`/account/multi`](../app/pages/account/multi.vue) (멀티 계정 추가) | ✅ | ✅ | ❌ 정책상 미노출 |
-| [`/account/contract`](../app/pages/account/contract.vue) (계약 관리) | ✅ | ✅ | ❌ |
-| [`/account/credit`](../app/pages/account/credit.vue) (크레딧 내역) | ✅ | ✅ | ✅ |
-| [`/account/billing`](../app/pages/account/billing.vue) (결제 이력 등) | ✅ | ✅ | ✅ |
-| [`/account/inquiries`](../app/pages/account/inquiries.vue) (나의 문의) | ✅ | ✅ | ✅ |
+| [`/account/settings`](../../app/pages/account/settings.vue) (회원 정보 변경) | ✅ | ✅ | ✅ |
+| [`/account/cards`](../../app/pages/account/cards.vue) (결제 카드 관리) | ✅ | ✅ | ✅ |
+| [`/account/password`](../../app/pages/account/password.vue) (비밀번호 변경) | ✅ | ✅ | ✅ |
+| [`/account/security`](../../app/pages/account/security.vue) (보안 로그인) | ✅ | ✅ | ✅ |
+| [`/account/multi`](../../app/pages/account/multi.vue) (멀티 계정 추가) | ✅ | ✅ | ❌ 정책상 미노출 |
+| [`/account/contract`](../../app/pages/account/contract.vue) (계약 관리) | ✅ | ✅ | ❌ |
+| [`/account/credit`](../../app/pages/account/credit.vue) (크레딧 내역) | ✅ | ✅ | ✅ |
+| [`/account/billing`](../../app/pages/account/billing.vue) (결제 이력 등) | ✅ | ✅ | ✅ |
+| [`/account/inquiries`](../../app/pages/account/inquiries.vue) (나의 문의) | ✅ | ✅ | ✅ |
 
 > ⚠️ **현재 구현**: `/account/multi`·`/account/contract`는 모든 유형에서 노출됩니다. 사용자 유형을 store/쿠키에 저장하지 않고 있어 분기 로직이 아직 없음 → 후속 작업으로 `auth.user.companyType` 같은 필드 도입 + GNB·LNB·계정 메뉴 조건부 렌더링 필요.
 
@@ -182,7 +182,7 @@ Content-Type: application/json
 | 1 | **`userType`이 백엔드로 전달 안 됨** — signup API 스키마에 `companyType` 필드 없음. DB의 `TB_COMPANY`에 컬럼 추가 + signup Zod 확장 + 프런트 전달 필요 | API + frontend 동시 |
 | 2 | **승인 게이트 미구현** — 후불 신청 법인/개인사업자도 가입 즉시 `joined` | `TB_COMPANY.approval_state` + 운영자단 승인 화면 + 가입 시 `joined`/`pending_approval` 분기 |
 | 3 | **개인의 멀티 계정·계약관리 노출 차단 미구현** | `useAuthStore` 응답에 `company.companyType` 노출 → 라우트 가드 + UI 조건부 |
-| 4a | ~~이메일 OTP 미연동~~ | ✅ **완료(2026-06-01)** — `POST /auth/email-code/send`·`/verify` + `TB_VERIFICATION` 적재 + SHA-256 코드 해시 + TTL 10분·재발송 시 직전 코드 만료·5회 시도 제한·소비 후 재사용 차단. 프런트 [signup.vue](../app/pages/signup.vue) `sendIdCode`/`confirmIdCode` 실 API 연동. NHN_MOCK=1 환경에서만 응답에 `mockCode` 노출(개발 편의), real 모드 자동 차단. (자격증명 등록 전까지 어댑터 mock fallback) |
+| 4a | ~~이메일 OTP 미연동~~ | ✅ **완료(2026-06-01)** — `POST /auth/email-code/send`·`/verify` + `TB_VERIFICATION` 적재 + SHA-256 코드 해시 + TTL 10분·재발송 시 직전 코드 만료·5회 시도 제한·소비 후 재사용 차단. 프런트 [signup.vue](../../app/pages/signup.vue) `sendIdCode`/`confirmIdCode` 실 API 연동. NHN_MOCK=1 환경에서만 응답에 `mockCode` 노출(개발 편의), real 모드 자동 차단. (자격증명 등록 전까지 어댑터 mock fallback) |
 | 4b | **휴대폰 OTP 미연동** — PASS 등 외부 인증 호출 없음 | 인증 사업자 선정 + 어댑터. 흐름은 이메일과 동일 패턴 재사용 가능 |
 | 5 | **약관 동의 미적재** — Step 3 체크박스는 화면용. `TB_TERMS_AGREEMENT` 무적재 | signup 시 동의 항목 적재 또는 별도 라우트 |
 | 7 | **서류 업로드 미구현** — 계약관리 화면의 업로드 모달은 UI만 | R2 업로드 + `TB_CONTRACT_FILE` 라우트 |
