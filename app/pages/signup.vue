@@ -736,8 +736,8 @@ function finish() {
       <span class="done-icon"><UIcon name="i-lucide-circle-check" /></span>
       <h2 class="panel-title">회원가입이 완료되었습니다</h2>
       <p v-if="isBusiness" class="panel-desc">
-        사업자등록증 심사가 진행됩니다.<br>
-        승인 완료 전에는 서비스 이용 및 정보 수정이 제한되며,<br>
+        다음 화면에서 <strong>사업자등록증을 등록</strong>해 주세요.<br>
+        등록 후 심사 승인이 완료되어야 서비스를 이용하실 수 있으며,<br>
         승인 결과는 등록하신 휴대폰·이메일로 안내됩니다.
       </p>
       <p v-else class="panel-desc">

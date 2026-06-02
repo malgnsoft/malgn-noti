@@ -32,7 +32,11 @@ async function onLogin() {
       password: password.value,
     })
     toast.add({ title: '로그인되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
+    // 사업자등록증 심사 미승인이면 계약 관리 페이지로 자동 이동 (사용자 정책)
+    const state = auth.tenant?.approvalState
+    const redirect = state && state !== 'approved'
+      ? '/account/contract'
+      : (typeof route.query.redirect === 'string' ? route.query.redirect : '/home')
     navigateTo(redirect)
   }
   catch (e: unknown) {

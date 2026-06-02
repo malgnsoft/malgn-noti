@@ -15,14 +15,14 @@ function goToContract() {
       <UIcon :name="state === 'rejected' ? 'i-lucide-circle-x' : 'i-lucide-clock'" class="banner-icon" />
       <div class="banner-text">
         <template v-if="state === 'pending'">
-          <strong>사업자등록증 심사 중</strong> — 승인 완료 전까지 발송·주소록·발신정보 등록 등 서비스 이용과 회원 정보 수정이 제한됩니다.
+          <strong>사업자등록증을 등록해 주세요</strong> — 등록 후 심사 승인이 완료되면 서비스를 이용하실 수 있습니다. 등록 전까지 발송·주소록·발신정보 등록 등 서비스 이용과 회원 정보 수정이 제한됩니다.
         </template>
         <template v-else>
           <strong>사업자등록증 심사 반려</strong> — 사유: <em>{{ reason || '관리자에게 문의해 주세요.' }}</em>. 사업자등록증을 다시 제출해 주세요.
         </template>
       </div>
       <button type="button" class="btn-action" @click="goToContract">
-        {{ state === 'rejected' ? '다시 제출하기' : '계약 관리' }}
+        {{ state === 'rejected' ? '다시 제출하기' : '사업자등록증 등록' }}
       </button>
     </div>
   </div>

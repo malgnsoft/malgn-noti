@@ -192,10 +192,10 @@ function changeBizDoc() {
       <div v-if="isLocked" class="approval-banner" :class="{ rejected: approvalState === 'rejected' }">
         <UIcon :name="approvalState === 'rejected' ? 'i-lucide-circle-x' : 'i-lucide-clock'" class="banner-icon" />
         <div class="banner-text">
-          <strong v-if="approvalState === 'pending'">사업자등록증 심사 중입니다</strong>
+          <strong v-if="approvalState === 'pending'">사업자등록증을 등록해 주세요</strong>
           <strong v-else>사업자등록증 심사가 반려되었습니다</strong>
           <p v-if="approvalState === 'pending'">
-            승인 완료 전까지 서비스 이용 및 회원 정보 수정이 제한됩니다.
+            계약 관리에서 사업자등록증을 등록해 주세요. 심사 승인이 완료될 때까지 서비스 이용 및 회원 정보 수정이 제한됩니다.
             결과는 등록하신 휴대폰·이메일로 안내됩니다.
           </p>
           <p v-else>
