@@ -42,7 +42,8 @@ function goToContract() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  /* .app-container의 좌우 패딩(var(--container-pad))을 유지하고 상하만 추가 */
+  padding-block: 10px;
   font-size: var(--fz-sm);
   line-height: 1.5;
 }
