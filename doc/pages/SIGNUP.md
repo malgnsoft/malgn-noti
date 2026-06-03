@@ -177,15 +177,16 @@ Content-Type: application/json
 
 ## 8. 알려진 한계 / 후속 작업
 
-| # | 한계 | 후속 작업 |
+| # | 한계 | 상태 |
 | --- | --- | --- |
-| 1 | **`userType`이 백엔드로 전달 안 됨** — signup API 스키마에 `companyType` 필드 없음. DB의 `TB_COMPANY`에 컬럼 추가 + signup Zod 확장 + 프런트 전달 필요 | API + frontend 동시 |
-| 2 | **승인 게이트 미구현** — 후불 신청 법인/개인사업자도 가입 즉시 `joined` | `TB_COMPANY.approval_state` + 운영자단 승인 화면 + 가입 시 `joined`/`pending_approval` 분기 |
-| 3 | **개인의 멀티 계정·계약관리 노출 차단 미구현** | `useAuthStore` 응답에 `company.companyType` 노출 → 라우트 가드 + UI 조건부 |
-| 4a | ~~이메일 OTP 미연동~~ | ✅ **완료(2026-06-01)** — `POST /auth/email-code/send`·`/verify` + `TB_VERIFICATION` 적재 + SHA-256 코드 해시 + TTL 10분·재발송 시 직전 코드 만료·5회 시도 제한·소비 후 재사용 차단. 프런트 [signup.vue](../../app/pages/signup.vue) `sendIdCode`/`confirmIdCode` 실 API 연동. NHN_MOCK=1 환경에서만 응답에 `mockCode` 노출(개발 편의), real 모드 자동 차단. (자격증명 등록 전까지 어댑터 mock fallback) |
-| 4b | **휴대폰 OTP 미연동** — PASS 등 외부 인증 호출 없음 | 인증 사업자 선정 + 어댑터. 흐름은 이메일과 동일 패턴 재사용 가능 |
+| 1 | ~~`userType`이 백엔드로 전달 안 됨~~ | ✅ **완료(6/2 §7)** — `TB_COMPANY.company_type` 추가, signup Zod 확장, 프런트 전달 |
+| 2 | ~~승인 게이트 미구현~~ | ✅ **완료(6/2 §7~§10·§12·§13)** — `TB_COMPANY.approval_state` 4단계(pending/reviewing/approved/rejected) + signup 자동 분기 + 18 라우트 `requireApproved` + 프런트 글로벌 띠·라우트 가드 + biz 첨부 시 자동 reviewing 전이 + lazy backfill |
+| 3 | **개인의 멀티 계정·계약관리 메뉴 노출 차단** | 🟢 **부분** — `auth.tenant.companyType`은 노출됨. LNB 분기·`AppMyPageShell` 메뉴 숨김은 후속 |
+| 4a | ~~이메일 OTP 미연동~~ | ✅ **완료(6/1 §5)** — `POST /auth/email-code/send`·`/verify` + `TB_VERIFICATION` + SHA-256 + TTL 10분·5회 제한·소비 후 재사용 차단. NHN_MOCK 시 mockCode 응답에 노출 |
+| 4b | ~~휴대폰 OTP·본인확인 미연동~~ | ✅ **완료(6/2 §4·§5·§15)** — 자체 SMS OTP 4 purpose(signup·reset·change·**contract_sign**) + NICE 통합인증 인프라(현재 mock). 본인확인은 NICE M(휴대폰)으로 일원화 |
 | 5 | **약관 동의 미적재** — Step 3 체크박스는 화면용. `TB_TERMS_AGREEMENT` 무적재 | signup 시 동의 항목 적재 또는 별도 라우트 |
-| 7 | **서류 업로드 미구현** — 계약관리 화면의 업로드 모달은 UI만 | R2 업로드 + `TB_CONTRACT_FILE` 라우트 |
-| 8 | **사업자등록번호 검증** — 형식(3-2-5) 외 체크섬·국세청 조회 미적용 | 체크섬 lib 또는 외부 API |
+| 6 | ~~서류 업로드 미구현~~ | ✅ **완료(6/2 §11~§14)** — `/contracts/*` 5 라우트 + R2 bucket `malgn-noti-files`. signup auto-create로 가입 직후 'initial' 이용계약 1건 자동 생성. 사업자등록증 첨부 시 자동 reviewing 전이 |
+| 7 | **사업자등록번호 검증** — 형식(3-2-5) 외 체크섬·국세청 조회 미적용 | 체크섬 lib 또는 외부 API (P1) |
+| 8 | **NICE/NHN 자격증명 real 모드 미** (6/2 §16) | NICE: 콘솔 IP 정책 해결 대기 / NHN Notification Hub: User Access Key + 어댑터 재작성 대기 |
 
-가장 영향 큰 후속은 **#1 + #3**(유형 분기를 실 데이터로 구동)과 **#2**(승인 게이트)입니다.
+오늘(6/2) §7~§15 작업으로 **§1·§2·§4b·§6 완료**. 남은 핵심은 **§5 약관 적재**와 외부 자격증명(§8).

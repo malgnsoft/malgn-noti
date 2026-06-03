@@ -2,7 +2,9 @@
 
 > **정본 출처**: <https://auth-guide.niceid.co.kr/> — NICE 통합인증 API 가이드 / 명세서 / 응답코드
 > **우리 적용 범위**: 회원가입 Step 4 "휴대폰 본인 인증"을 자체 SMS OTP에서 NICE **휴대폰(M)** 으로 교체.
-> **연관**: [./MEMBERSHIP.md](./MEMBERSHIP.md) §8 #4b, [./SIGNUP.md](./SIGNUP.md) §8 #6, [./history/history.20260602.md](./history/history.20260602.md) §4
+> **연관**: [./MEMBERSHIP.md](./MEMBERSHIP.md) §6.7·§6.8, [./SIGNUP.md](./pages/SIGNUP.md) §8 #4b·#8, [./history/history.20260602.md](./history/history.20260602.md) §5·§16
+>
+> **마지막 현행화**: 2026-06-02 (§9.1 자격증명 등록 시도 + 1007 IP 미해결로 mock 복귀 반영)
 >
 > **마지막 현행화**: 2026-06-02
 
@@ -374,21 +376,24 @@ const signupB = z.object({
 
 ## 9. 인프라 고려사항 (중요)
 
-### 9.1 Outbound IP 화이트리스트 — Workers 환경 이슈
+### 9.1 Outbound IP 화이트리스트 — Workers 환경 이슈 → **검증됨 (6/2 §16)**
 
 NICE는 **이용기관 서버의 Outbound IP를 사전 등록**해야 API 호출이 가능합니다 (가이드 §13).
 
 **문제**: Cloudflare Workers는 동적 데이터센터 IP를 사용 → 고정 IP 없음.
 
-**선택지**:
+**라이브 시도 결과 (2026-06-02)**: 자격증명을 정상 등록한 상태에서 `POST /auth/nice/init` 호출 시 NICE 응답 `1007 허용되지 않은 IP 접근` 발생. 사전 예측대로 IP 화이트리스트가 막힘. 즉시 `NICE_MOCK=1` 복원해 가입 흐름은 정상 동작 유지. 자격증명 3 secret(CLIENT_ID/CLIENT_SECRET/RETURN_URL)은 해결 시점까지 등록 상태로 보관 — `wrangler secret delete NICE_MOCK` 한 번이면 real 전환.
 
-| 안 | 설명 | 트레이드오프 |
-| --- | --- | --- |
-| **A. Cloudflare 전체 egress IP 대역 등록** | Cloudflare 공식 IP 범위를 모두 NICE에 등록 | 가장 단순. NICE 운영팀이 허용해줄지 협의 필요 |
-| **B. 우리 자체 프록시 EC2 + Workers → EC2 → NICE** | EC2 고정 IP를 NICE에 등록, Workers는 EC2로 프록시 | 인프라 추가. 운영 안정성 ↑. 비용 증가 |
-| **C. Cloudflare Workers Smart Placement + 고정 egress(검토)** | Cloudflare에서 enterprise 등급으로 제공되는 dedicated egress IP 검토 | 비용 큼 |
+**선택지** (6/2 우선순위 재정렬):
 
-**1차 권장**: **A**로 NICE와 협의 → 안 되면 **B**(작은 t4g 인스턴스로 충분).
+| 안 | 설명 | 트레이드오프 | 사용자 의사 |
+| --- | --- | --- | --- |
+| **A. NICE 콘솔 IP 검사 OFF** | 콘솔 → API 설정에서 IP 인증 토글 해제 | 가장 단순. 보안 등급은 다소 낮아짐 | **권장 1순위** |
+| **B. NICE 콘솔에 Cloudflare egress IP 대역 등록** | Cloudflare 공식 IP 목록을 NICE 영업담당에 송부 후 콘솔 반영 | NICE 정책상 거절 가능성 | — |
+| **C. 자체 프록시 EC2 + Workers → EC2 → NICE** | EC2 고정 IP를 NICE에 등록, Workers는 EC2로 프록시 | 인프라 추가. 운영 안정성 ↑. 월 ~$4 + 약간의 코드 | A·B 실패 시 fallback |
+| **D. Cloudflare Workers Smart Placement + dedicated egress IP** | Cloudflare enterprise 등급의 고정 egress IP | 비용 큼 | — |
+
+**현재 결정 (6/2)**: 사용자 의사로 IP 정책은 **보류**. mock 모드 유지하면서 다른 작업 진행.
 
 ### 9.2 NICE 방화벽 호스트
 

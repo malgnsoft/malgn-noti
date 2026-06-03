@@ -8,7 +8,7 @@
 
 ---
 
-## 진행률 스냅샷 (2026-06-01 기준)
+## 진행률 스냅샷 (2026-06-02 기준)
 
 | Step | 가중치 | 진행률 | 핵심 진행 사항 |
 | --- | --- | --- | --- |
@@ -16,9 +16,9 @@
 | **Step 2 · 주요 서비스 정책 이슈 정리** | 15% | **55%** | 회원 구조·결제·메시지 채널·주소록 정책 90% 합의. 후불결제·캠페인 AB 테스트 미정 |
 | **Step 3 · 서비스 기획 (화면설계)** | 20% | **35%** | BackOffice 1차 5종 70%. 2차·통계·운영가이드 미진 |
 | **Step 4 · 디자인 / 퍼블리싱** | 10% | **20%** | 사용자단 Relay-inspired DS 정본·디자인 가이드(/guide) 살아있는 카탈로그로 대체 운영. 정식 스타일 가이드·MD 산출물은 미작성 |
-| **Step 5 · 서비스 개발** | 45% | **40%** | **3 트랙 분리 후 재산정** (5-3M 매트릭스): UI(5-3A) 거의 완료(13✅+1🟢) / API(5-2) 약 60%(9✅+3🟢+4⚪) / **연동(5-3C) 약 7%(1✅+15⚪)** / 관리자단(5-4) 셸·기획만 / 통합·배포(5-5) ✅ 3+⛔ 0+⚪ 4. 가중평균 약 40%. |
+| **Step 5 · 서비스 개발** | 45% | **48%** | UI(5-3A) 거의 완료(13✅+1🟢) / API(5-2) 약 65%(10✅+3🟢+3⚪) — `/contracts/*` 5 라우트 + R2 bucket 신규 / **연동(5-3C) 약 35%(7✅+3🟢+8⚪)** — 6/2 §11~§15에서 5-3C-1·1a·4·6·7·11·17·18·19 완료 / 관리자단(5-4) 셸·기획만 / 통합·배포(5-5) ✅ 3+⛔ 0+⚪ 4. 가중평균 약 48%. |
 
-**전체 가중평균: 약 38%** (`0.10×55 + 0.15×55 + 0.20×35 + 0.10×20 + 0.45×40 ≈ 37.75`)
+**전체 가중평균: 약 42%** (`0.10×55 + 0.15×55 + 0.20×35 + 0.10×20 + 0.45×48 ≈ 41.85`)
 
 **상태 범례**: ✅ 완료 · 🟢 진행 중 · ⚪ 대기 · ⛔ 보류
 
@@ -225,7 +225,9 @@
 | 5-2-13 | 캠페인 API (스케줄러·시뮬레이션·테스트 발송) | ⚪ | 김도형 | — | — | — |
 | 5-2-14 | PG(결제) 어댑터 + 카드 등록·결제·취소 | ⚪ | 김도형 | 게이트웨이 선정 미정 (토스 / 포트원 / 나이스) | — | — |
 | 5-2-15 | AI 템플릿 게이트웨이 (LLM) | ⚪ | 김도형 | 제공자 미정 (Anthropic / OpenAI) | — | — |
-| 5-2-16 | NHN 실 모드 전환 + envelope 암호화 | ⚪ | 김도형 | 현재 `NHN_MOCK=1`. 채널별 appKey 등록 + 자격증명 envelope 복호화 | — | — |
+| 5-2-16 | NHN 실 모드 전환 + envelope 암호화 | ⚪ | 김도형 | 현재 `NHN_MOCK=1`. **신규 통합 서비스(Notification Hub)는 OAuth2 client_credentials + Bearer 토큰 방식 — 어댑터 재작성 필요** (6/2 §16) | — | — |
+| 5-2-17 | 계약·서류 R2 라우트 (`/contracts/*`) + FILES 바인딩 | ✅ | 김도형 | 5 라우트(list/sign/files list/upload/download/delete) + R2 bucket `malgn-noti-files` + `TB_CONTRACT`/`TB_CONTRACT_FILE` schema.ts + signup auto-create + reviewing 자동 전이 + lazy backfill (6/2 §11·§12·§13) | 6/2 | 6/2 |
+| 5-2-18 | NICE 통합인증 인프라 | ✅ | 김도형 | 6/1 §5 + 6/2 §16. mock 모드 — 자격증명 등록 후 콘솔 IP 정책 1007 미해결로 mock 유지 | 6/1 | 6/2 |
 
 ## 5-3. 사용자단 (`malgn-noti`) — **3 트랙으로 분리**
 
@@ -277,21 +279,22 @@
 | **캠페인** | ✅ | ⚪ (스케줄러·시뮬레이션·테스트) | ⚪ | |
 | **크레딧·결제** | ✅ | 🟢 (`/credit-ledger` 읽기, `/payment-methods` 일부, PG 어댑터 미) | ⚪ | |
 | **문의** | ✅ | ✅ (`/inquiries`) | ⚪ | |
-| **나의 페이지** — 회원 정보 변경 | ✅ | ⚪ (`PATCH /me`) | ⚪ | |
+| **나의 페이지** — 회원 정보 변경 | ✅ | ✅ (`GET /me` · `PATCH /me` · `PATCH /me/company`) | 🟢 | 6/2 §6. 이메일·휴대폰 변경 OTP는 미연결 |
 | **나의 페이지** — 비밀번호 변경 | ✅ | ⚪ (`POST /auth/password`) | ⚪ | |
 | **나의 페이지** — 보안로그인 (2FA) | ✅ | ⚪ (`PATCH /me/security`) | ⚪ | TB_VERIFICATION 재사용 |
 | **나의 페이지** — 멀티 계정 (담당자 초대) | ✅ | ⚪ (`/manager-invites`) | ⚪ | |
-| **나의 페이지** — 계약 관리 | ✅ | ⚪ (`/contracts`·`/contracts/*/files`) | ⚪ | R2 업로드 필요 |
+| **나의 페이지** — 계약 관리 | ✅ | ✅ (`/contracts/*` 5 라우트 + R2) | ✅ | 6/2 §11~§15. 이용계약·서명·R2 업로드·미리보기·삭제·휴대폰 본인인증 모두 실 API. 운영자 승인 화면만 미 |
 | **비밀번호 재설정** | ✅ | ⚪ (`POST /auth/password/reset` — OTP 인프라 재활용) | ⚪ | |
 | **로그아웃** | (GNB 데모 토글) | (클라이언트 쿠키 삭제만, `TB_SESSION` 미) | ⚪ | GNB 미연동 |
 | **약관 동의 적재** | (Step 3 화면용 체크박스) | ⚪ (`POST /auth/agree-terms`) | ⚪ | TB_TERMS·TB_TERMS_AGREEMENT |
+| **사업자등록증 심사 승인 게이트** | ✅ (배너 + 미들웨어) | ✅ (DB 4단계 + `requireApproved` 18 라우트 + reviewing 자동 전이) | ✅ | 6/2 §7~§10·§12·§13·§14. 운영자단 승인 UI만 미 |
 | **메시지 관리 랜딩페이지** | ✅ | ⚪ (`/landing-pages` 부분) | ⚪ | |
 | **시스템 페이지** | 🟢 | (정적) | — | |
 
-**진척 합계** (트랙별):
+**진척 합계** (트랙별, 2026-06-02 기준):
 - UI(5-3A) — 13 ✅ + 1 🟢 = **거의 완료**
-- API(5-2) — 9 ✅ + 3 🟢 + 4 ⚪ = **약 60%**
-- **연동(5-3C) — 1 ✅ + 0 🟢 + 13 ⚪ = 약 7%** ← 이번주 본격 작업
+- API(5-2) — 10 ✅ + 3 🟢 + 3 ⚪ = **약 65%** (6/2 신규 5-2-17 `/contracts/*` 5 라우트 + R2 추가)
+- **연동(5-3C) — 7 ✅ + 3 🟢 + 8 ⚪ = 약 35%** (인증·계정 / 이메일 OTP / login-by-email / companyType / 회원정보 / 계약 관리 / 승인 게이트 / 계약 서명 본인인증)
 
 ### 5-3C. 화면 ↔ API 연동 (개별 작업 항목, 진행 중)
 
@@ -301,19 +304,22 @@
 | 5-3C-1a | 이메일 OTP (`/auth/email-code/*`) | ✅ | 김도형 | 6/1 §5 완료. `signup.vue` Step 3에서 실 API 호출 |
 | 5-3C-2 | 로그아웃 — GNB 실 연결 | ⚪ | 김도형 | `useAuthStore().logout()` 호출로 GNB 데모 토글 교체 |
 | 5-3C-3 | 비밀번호 재설정 — OTP 인프라 재활용 | ⚪ | 김도형 | `purpose='reset_password'` + `POST /auth/password/reset` 신설 |
-| 5-3C-4 | `POST /auth/login-by-email` — companyId UX 개선 | ⚪ | 김도형 | 이메일로 회사 lookup |
+| 5-3C-4 | `POST /auth/login-by-email` — companyId UX 개선 | ✅ | 김도형 | 6/2 §2. 고객사 ID 필드 제거 |
 | 5-3C-5 | 약관 동의 적재 (`POST /auth/agree-terms`) | ⚪ | 김도형 | TB_TERMS_AGREEMENT |
-| 5-3C-6 | `companyType` 전달·저장 + 화면 분기 | ⚪ | 김도형 | TB_COMPANY.company_type + signup 스키마 + 개인 화면 미노출 |
-| 5-3C-7 | `PATCH /me` + `/account/settings` (회원 정보 변경) | ⚪ | 김도형 | |
+| 5-3C-6 | `companyType` 전달·저장 + 화면 분기 | 🟢 | 김도형 | 6/2 §7. signup 전달·저장 ✅. 개인 메뉴 미노출 분기 미 |
+| 5-3C-7 | `PATCH /me` + `/account/settings` (회원 정보 변경) | 🟢 | 김도형 | 6/2 §6. PATCH /me·/me/company ✅. 이메일·휴대폰 변경 OTP 미연결 |
 | 5-3C-8 | `POST /auth/password` + `/account/password` (비밀번호 변경) | ⚪ | 김도형 | |
 | 5-3C-9 | `/account/security` (2FA) + `PATCH /me/security` | ⚪ | 김도형 | TB_VERIFICATION 재사용 |
 | 5-3C-10 | `/account/multi` + `/manager-invites` | ⚪ | 김도형 | 초대 토큰·수락 흐름 |
-| 5-3C-11 | `/account/contract` + `/contracts/*/files` (R2 업로드) | ⚪ | 김도형 | |
-| 5-3C-12 | 발송 6채널 — UI에 실 API 호출 (Idempotency-Key 헤더 포함) | ⚪ | 김도형 | NHN 자격증명 등록 전까지는 mock 응답 |
+| 5-3C-11 | `/account/contract` + `/contracts/*/files` (R2 업로드) | ✅ | 김도형 | 6/2 §11~§15. `/contracts/*` 5 라우트 + R2 + 미리보기·삭제·휴대폰 본인인증 서명 + 사업자등록증 자동 reviewing 전이 |
+| 5-3C-12 | 발송 6채널 — UI에 실 API 호출 (Idempotency-Key 헤더 포함) | ⚪ | 김도형 | NHN Notification Hub 자격증명 + 어댑터 재작성 필요 (6/2 §16) |
 | 5-3C-13 | 이력/통계 — 목록·통계 라우트 연동 | ⚪ | 김도형 | API 일부 미구현이라 5-2 동시 진행 필요 |
 | 5-3C-14 | 주소록·발신 정보·템플릿 — CRUD 연동 (API 모두 ✅이므로 프런트 작업) | ⚪ | 김도형 | |
 | 5-3C-15 | 크레딧·결제 — 충전 흐름은 PG 어댑터 미정 (블로커) | ⚪ | 김도형 | |
 | 5-3C-16 | 문의 — `/inquiries` 연동 | ⚪ | 김도형 | |
+| 5-3C-17 | 사업자등록증 심사 승인 게이트 (DB + 미들웨어 + 배너 + 라우트 가드) | ✅ | 김도형 | 6/2 §7~§10·§12·§13·§14. 4단계 enum(pending/reviewing/approved/rejected) + `requireApproved` 18 라우트 + `AppApprovalBanner` 3분기 + lazy backfill |
+| 5-3C-18 | 사업자등록증 첨부 시 reviewing 자동 전이 + 파일 행 배지 + 반려 시 삭제 | ✅ | 김도형 | 6/2 §12·§14 |
+| 5-3C-19 | 계약서 전자서명 다이얼로그 — 휴대폰 본인인증 sub-step (`phone-code` purpose=`contract_sign`) | ✅ | 김도형 | 6/2 §15. 공인인증서 탭 제거 + dialog open 시 fetchMe 강제 hydrate |
 
 ## 5-4. 관리자단 (`malgn-noti-admin`) 화면 개발
 
@@ -337,13 +343,15 @@
 
 | ID | 작업 | 상태 | 담당 | 산출물 / 메모 |
 | --- | --- | --- | --- | --- |
-| 5-5-1 | 사용자단 Cloudflare Pages 배포 #1~#46 | 🟢 | 김도형 | 매 마일스톤 직후 배포 |
+| 5-5-1 | 사용자단 Cloudflare Pages 배포 #1~#69 + alias 다수 | 🟢 | 김도형 | 매 마일스톤 직후 배포 (6/2 최신 alias `573a6200`·`7675ce8f`) |
 | 5-5-2 | 관리자단 Cloudflare Pages 첫 Nuxt 배포 | ✅ | 김도형 | 정적 placeholder → 실 Nuxt 앱 (#1) |
-| 5-5-3 | API Workers 배포 #1~#8 | ✅ | 김도형 | 최신 Version `95f9f894...` |
-| 5-5-4 | DDL — `0002_export_flow.sql` 적용 | ✅ | 김도형 | 라이브 적용 확인 (6/1). 라이브 정본은 우리 초안보다 더 정교(FK 6 + 의미 인덱스명) — 초안 SQL을 라이브 정본에 맞춰 동기화 |
-| 5-5-5 | NHN 실 자격증명 등록 + real 모드 전환 | ⚪ | 김도형 | 채널별 appKey + envelope 키 |
-| 5-5-6 | PG 카드 결제 연동 | ⚪ | 김도형 | — |
-| 5-5-7 | AI 템플릿 게이트웨이 연동 | ⚪ | 김도형 | — |
+| 5-5-3 | API Workers 배포 #1~#19 | 🟢 | 김도형 | 6/2 최신 Version `85de422a-2ad7-4ce6-929c-8f2b29f03a6e` |
+| 5-5-4 | DDL — `0001`~`0005` 라이브 적용 | ✅ | 김도형 | 0001 idempotency / 0002 export_flow / 0003 loginid global unique / 0004 nice_auth / 0005 company_approval. `TB_CONTRACT`/`TB_CONTRACT_FILE`은 §11에서 schema.ts 정의(라이브에 이미 존재) |
+| 5-5-5 | NHN Notification Hub 실 자격증명 등록 + 어댑터 재작성 | ⚪ | 김도형 | 6/2 §16. AppKey만 수령, **User Access Key + Secret Access Key 미수령**. 신규 통합 서비스는 OAuth2 client_credentials + Bearer 토큰 — 어댑터 전면 재작성 필요 |
+| 5-5-6 | NICE 통합인증 실 모드 전환 | ⚪ | 김도형 | 6/2 §16. CLIENT_ID/SECRET/RETURN_URL 등록 성공, **콘솔 IP 화이트리스트 1007**로 mock 복귀. 콘솔 IP 정책 해결 대기 (옵션 B 권장) |
+| 5-5-7 | R2 bucket `malgn-noti-files` 신규 + FILES 바인딩 | ✅ | 김도형 | 6/2 §11. 사업자등록증·대부업등록증·보험증권 첨부용 |
+| 5-5-8 | PG 카드 결제 연동 | ⚪ | 김도형 | — |
+| 5-5-9 | AI 템플릿 게이트웨이 연동 | ⚪ | 김도형 | — |
 
 ---
 
