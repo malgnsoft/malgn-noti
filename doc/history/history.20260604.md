@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-오늘 5건 처리. **(§1)** NICE 자격증명 재확인 + 옵션 B(Cloudflare 대역 등록) 시도 → 여전히 1007. 진단용 `/diag/egress`로 Workers의 outbound가 **IPv6**(`2a06:98c0:3600::103`, Cloudflare `2a06:98c0::/29`)임을 확인. NICE 콘솔에 IPv4 대역만 등록된 게 원인 — IPv6 대역(7개) 추가 등록 안내 + mock 복귀. **(§2)** Hyperdrive 바인딩 교체 — `a2ba4efe...` → `439b109d...`. 신규 Hyperdrive는 **Cloudflare Tunnel(Access)** 기반(host `malgn-dev-db.apiserver.kr` + `access_client_id`). Aurora SG egress IP 화이트리스트 운영 부담 해소 — CLAUDE.md §12 TODO "SG 갱신 운영 절차" 항목 달성. 관련 정본 3개(API CLAUDE.md §3·§12·§8, SCALABILITY.md §6 신규 절, MIGRATION.md §1) 동기화. **(§3)** **관리자단 핸드오프 풀세트** — `handoff_noti_admin` (3,129줄 jsx)을 Vue 3 + Nuxt UI v3로 1:1 포팅. 셸(LNB 메뉴 트리 완전 재정비 + Topbar 동적 브레드크럼) · 공유 컴포넌트 14종(PageHeader/SectionCard/Tabs/Segmented/FilterBar/DateRange/DataTable generic+slot/Pagination/StatusBadge 자동 매핑/ChannelChip/StatCard/Drawer/Modal/Field/EmptyState) · 차트 4종(Bar/Area SVG path+gradient/Donut stroke-dasharray/Progress) · **17 페이지**(대시보드·고객사·고객사 상세·계정·모니터링·발신번호·발신프로필·템플릿검수·결제·채널단가·충전쿠폰·1:1문의·FAQ·공지·통계·운영자·권한그룹·API). app.config.ts `info: 'indigo'` 매핑으로 핸드오프 indigo 강조색을 Nuxt UI semantic으로. 18 라우트 라이브 200. **(§4)** 사용자 보고 후속 — admin의 폰트 사이즈가 핸드오프와 다르다는 신고에서 **두 원인 동시 발견**: (a) `main.css` `html,body{font-size:13px}`가 모든 Tailwind 토큰을 18% 축소시킴(핸드오프는 base font-size 명시 없음 = 16px), (b) 직전 turn의 cwd가 사용자단이라 **사용자단 dist를 admin 프로젝트로 배포**한 상태였음(chunk 600개 / GNB·메모·계약 컴포넌트 등 사용자단 자산이 admin URL에 노출). 둘 다 정정: 13px 제거 + `letter-spacing: -0.01em` 추가, admin 디렉토리에서 clean rebuild + 재배포. Pages alias `8852d5da.malgn-noti-admin.pages.dev` (chunk 96개로 정상화). **(§5)** WBS 페이지 편집 기능 — DB 미사용 / R2 단일 JSON 객체 정본(`wbs/wbs.json`). API에 GET 공개 + PATCH 인증 2 라우트 + 142 task 시드. 사용자단은 임베디드 STAGES 제거 → API 비동기 로드 + 인라인 편집 모달(5 필드, 빈값=`null`=필드 제거). Workers Version `28f3e6a8...`, Pages alias `02bb58e6`.
+오늘 5건 처리. **(§1)** NICE 자격증명 재확인 + 옵션 B(Cloudflare 대역 등록) 시도 → 여전히 1007. 진단용 `/diag/egress`로 Workers의 outbound가 **IPv6**(`2a06:98c0:3600::103`, Cloudflare `2a06:98c0::/29`)임을 확인. NICE 콘솔에 IPv4 대역만 등록된 게 원인 — IPv6 대역(7개) 추가 등록 안내 + mock 복귀. **(§2)** Hyperdrive 바인딩 교체 — `a2ba4efe...` → `439b109d...`. 신규 Hyperdrive는 **Cloudflare Tunnel(Access)** 기반(host `malgn-dev-db.apiserver.kr` + `access_client_id`). Aurora SG egress IP 화이트리스트 운영 부담 해소 — CLAUDE.md §12 TODO "SG 갱신 운영 절차" 항목 달성. 관련 정본 3개(API CLAUDE.md §3·§12·§8, SCALABILITY.md §6 신규 절, MIGRATION.md §1) 동기화. **(§3)** **관리자단 핸드오프 풀세트** — `handoff_noti_admin` (3,129줄 jsx)을 Vue 3 + Nuxt UI v3로 1:1 포팅. 셸(LNB 메뉴 트리 완전 재정비 + Topbar 동적 브레드크럼) · 공유 컴포넌트 14종(PageHeader/SectionCard/Tabs/Segmented/FilterBar/DateRange/DataTable generic+slot/Pagination/StatusBadge 자동 매핑/ChannelChip/StatCard/Drawer/Modal/Field/EmptyState) · 차트 4종(Bar/Area SVG path+gradient/Donut stroke-dasharray/Progress) · **17 페이지**(대시보드·고객사·고객사 상세·계정·모니터링·발신번호·발신프로필·템플릿검수·결제·채널단가·충전쿠폰·1:1문의·FAQ·공지·통계·운영자·권한그룹·API). app.config.ts `info: 'indigo'` 매핑으로 핸드오프 indigo 강조색을 Nuxt UI semantic으로. 18 라우트 라이브 200. **(§4)** 사용자 보고 후속 — admin의 폰트 사이즈가 핸드오프와 다르다는 신고에서 **두 원인 동시 발견**: (a) `main.css` `html,body{font-size:13px}`가 모든 Tailwind 토큰을 18% 축소시킴(핸드오프는 base font-size 명시 없음 = 16px), (b) 직전 turn의 cwd가 사용자단이라 **사용자단 dist를 admin 프로젝트로 배포**한 상태였음(chunk 600개 / GNB·메모·계약 컴포넌트 등 사용자단 자산이 admin URL에 노출). 둘 다 정정: 13px 제거 + `letter-spacing: -0.01em` 추가, admin 디렉토리에서 clean rebuild + 재배포. Pages alias `8852d5da.malgn-noti-admin.pages.dev` (chunk 96개로 정상화). **(§5)** WBS 페이지 편집 기능 — DB 미사용 / R2 단일 JSON 객체 정본(`wbs/wbs.json`). API에 GET 공개 + PATCH 인증 2 라우트 + 142 task 시드. 사용자단은 임베디드 STAGES 제거 → API 비동기 로드 + 인라인 편집 모달(5 필드, 빈값=`null`=필드 제거). Workers Version `28f3e6a8...`, Pages alias `02bb58e6`. 후속(§5.9) — 목표일·완료일 `YYYY.MM.DD` 포맷 통일 + `<input type="date">` 캘린더 위젯 + API Zod regex 강제. Workers Version `eb02206c...`, Pages alias `98bd09e2`.
 
 ---
 
@@ -351,7 +351,18 @@ npx wrangler@4 pages deploy dist --project-name=malgn-noti-admin --branch=main -
 - `malgn-noti: 3ed473e` feat(wbs): /wbs API 연동 + 인라인 편집 모달 (1 file, +376 -355)
 - R2 객체 `wbs/wbs.json` 라이브 (FILES 바인딩, 시드 자동 적재됨)
 
-## 5.8 한계 / 후속
+## 5.9 후속 — 날짜 포맷 정합화 (Workers Version eb02206c / Pages alias 98bd09e2)
+
+사용자 지시: "목표일과 완료일은 년.월.일 로 변경해 주세요."
+
+- **사용자단** `formatYmd` / `toDateInputValue` / `fromDateInputValue` 헬퍼 도입. 어떤 입력(YYYY.MM.DD / YYYY-MM-DD / 레거시 M-D)이든 `YYYY.MM.DD`로 정규화. 표시에 일괄 적용 — 레거시 `5/8`은 2026 기준 `2026.05.08`로 렌더.
+- **편집 모달**: 텍스트 입력 → `<input type="date">` 두 개로 교체(브라우저 캘린더 위젯). 빈값은 `null`로 전송 → R2 필드 제거.
+- **API** Zod에 `^\d{4}\.\d{2}\.\d{2}$` regex 검증 추가, 위반 시 400. OpenAPI 스키마도 동기화.
+- **저장 정책**: 신규 PATCH는 무조건 `YYYY.MM.DD`. 기존 R2의 레거시 값은 그대로 두고 다음 편집 시 자연 정합화.
+- 검증: `/health` 200 / `/health/db` 200 / `/wbs` 200 / `PATCH /wbs/tasks/1-1-1` no-auth → 401(정상). prod & alias `/wbs` 200.
+- 산출물: `malgn-noti-api: 3a35464` fix(wbs): targetDate/completionDate 포맷 YYYY.MM.DD 강제 (Workers Version `eb02206c-c076-4f09-8881-5f536feecb02`). `malgn-noti: 08e5c33` fix(wbs): 목표일·완료일 YYYY.MM.DD 포맷 + native date picker (Pages alias `98bd09e2.malgn-noti.pages.dev`).
+
+## 5.10 한계 / 후속
 
 - **동시 편집 — last-write-wins**. 두 명이 동시에 다른 task를 PATCH하면 둘 다 R2 read-modify-write를 하므로 한쪽이 사라질 수 있다. 강한 정합 필요 시 ETag(If-Match) 도입.
 - **편집 범위 제한**: status / weight / progress / title / group / 단계 추가·삭제는 본 화면에서 안 됨. 필요하면 별도 슬라이스에서 모달 확장 + 권한 강화(owner/admin only).
