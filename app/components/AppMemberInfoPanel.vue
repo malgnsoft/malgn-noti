@@ -122,7 +122,7 @@ async function onEmailChanged(payload: { newEmail: string, code: string, passwor
       await auth.changeEmail(payload)
       toast.add({
         title: '서비스 담당자 이메일이 변경되었습니다.',
-        description: '다음 로그인부터 새 이메일을 사용해 주세요.',
+        description: '로그인 아이디는 그대로 유지되고, 알림·연락처 이메일만 새 주소로 교체됩니다.',
         color: 'success',
         icon: 'i-lucide-circle-check',
       })

@@ -183,8 +183,8 @@ export const useAuthStore = defineStore('auth', {
 
     /**
      * 서비스 담당자 이메일 변경 — 새 이메일에 발송된 OTP 코드 + 본인 비밀번호 검증.
-     * 성공 시 user.email + user.loginid 모두 newEmail로 변경되고, 다음 로그인부터 새 이메일 사용.
-     * (현재 발급된 JWT는 sub=userId라 즉시 invalidate되지 않음 — 토큰 재발급 정책은 후속.)
+     * **user.email 만** 변경된다. loginid 는 가입 시 식별자로 고정되어 그대로 유지 —
+     * 즉 다음 로그인 아이디는 변하지 않고, 알림·연락처용 이메일만 새 주소로 교체된다.
      */
     async changeEmail(payload: { newEmail: string, code: string, password: string }) {
       const api = useApi()
