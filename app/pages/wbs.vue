@@ -86,6 +86,34 @@ const statusMeta: Record<Status, { label: string, dot: string, chip: string }> =
   blocked: { label: '보류', dot: 'bg-rose-500', chip: 'bg-rose-50 text-rose-700 border-rose-200' },
 }
 
+/* ── 날짜 포맷 ──────────────────────────────────────────────────────────────
+ * 정본 저장 포맷: `YYYY.MM.DD` (예: 2026.06.04).
+ * 표시·편집 모두 이 포맷으로 통일.
+ * 레거시(`5/8`·`5/11` 등 year 없는 값)는 2026년 기준으로 표시 변환만(R2 저장값은 다음 편집 시 정합화).
+ */
+function formatYmd(raw?: string): string {
+  if (!raw) return ''
+  if (/^\d{4}\.\d{2}\.\d{2}$/.test(raw)) return raw
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw.replace(/-/g, '.')
+  const m = raw.match(/^(\d{1,2})\/(\d{1,2})$/)
+  if (m) return `2026.${m[1]!.padStart(2, '0')}.${m[2]!.padStart(2, '0')}`
+  return raw
+}
+
+// `<input type="date">` 는 `YYYY-MM-DD`만 받음.
+function toDateInputValue(raw?: string): string {
+  const ymd = formatYmd(raw)
+  return /^\d{4}\.\d{2}\.\d{2}$/.test(ymd) ? ymd.replace(/\./g, '-') : ''
+}
+
+// 저장 시 `YYYY-MM-DD` → `YYYY.MM.DD`.
+function fromDateInputValue(v: string): string | null {
+  const t = v.trim()
+  if (!t) return null
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null
+  return t.replace(/-/g, '.')
+}
+
 function progressFill(pct: number) {
   if (pct >= 70) return 'bg-emerald-500'
   if (pct >= 30) return 'bg-amber-500'
@@ -128,8 +156,8 @@ function openEdit(t: Task) {
   editing.value = t
   editForm.note = t.note ?? ''
   editForm.href = t.href ?? ''
-  editForm.targetDate = t.targetDate ?? ''
-  editForm.completionDate = t.completionDate ?? ''
+  editForm.targetDate = toDateInputValue(t.targetDate)
+  editForm.completionDate = toDateInputValue(t.completionDate)
   editForm.owner = t.owner ?? ''
 }
 
@@ -147,8 +175,8 @@ async function saveEdit() {
     const payload: Record<string, string | null> = {}
     payload.note = editForm.note.trim() === '' ? null : editForm.note.trim()
     payload.href = editForm.href.trim() === '' ? null : editForm.href.trim()
-    payload.targetDate = editForm.targetDate.trim() === '' ? null : editForm.targetDate.trim()
-    payload.completionDate = editForm.completionDate.trim() === '' ? null : editForm.completionDate.trim()
+    payload.targetDate = fromDateInputValue(editForm.targetDate)
+    payload.completionDate = fromDateInputValue(editForm.completionDate)
     if (editForm.owner.trim()) payload.owner = editForm.owner.trim()
 
     const res = await api<{ data: Task }>(`/wbs/tasks/${encodeURIComponent(t.id)}`, {
@@ -352,10 +380,10 @@ async function saveEdit() {
                   <span class="task-date">
                     <template v-if="t.targetDate || t.completionDate">
                       <span class="task-date-label">목표</span>
-                      <span class="task-date-val">{{ t.targetDate || '—' }}</span>
+                      <span class="task-date-val">{{ formatYmd(t.targetDate) || '—' }}</span>
                       <span class="task-date-sep">→</span>
                       <span class="task-date-label">완료</span>
-                      <span class="task-date-val">{{ t.completionDate || '—' }}</span>
+                      <span class="task-date-val">{{ formatYmd(t.completionDate) || '—' }}</span>
                     </template>
                     <template v-else>—</template>
                   </span>
@@ -404,11 +432,11 @@ async function saveEdit() {
         <div class="edit-row edit-row--double">
           <div>
             <label class="edit-label">목표일</label>
-            <input v-model="editForm.targetDate" type="text" class="edit-input" maxlength="20" placeholder="예: 6/12">
+            <input v-model="editForm.targetDate" type="date" class="edit-input">
           </div>
           <div>
             <label class="edit-label">완료일</label>
-            <input v-model="editForm.completionDate" type="text" class="edit-input" maxlength="20" placeholder="예: 6/12">
+            <input v-model="editForm.completionDate" type="date" class="edit-input">
           </div>
         </div>
         <p class="edit-hint">
@@ -847,7 +875,7 @@ async function saveEdit() {
   font-size: 11px;
   color: #a1a1aa;
   font-variant-numeric: tabular-nums;
-  min-width: 160px;
+  min-width: 240px;
   justify-content: flex-end;
 }
 .task-date-label { color: #d4d4d8; font-size: 10px; }
