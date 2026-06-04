@@ -1,4 +1,6 @@
 <script setup lang="ts">
+interface EmailChangePayload { newEmail: string, code: string, password: string }
+
 const props = defineProps<{
   open: boolean
   title: string
@@ -6,12 +8,16 @@ const props = defineProps<{
   currentEmail: string
   confirmLabel: string
 }>()
-const emit = defineEmits<{ close: [], confirm: [string] }>()
+const emit = defineEmits<{ close: [], confirm: [EmailChangePayload] }>()
 
 const toast = useToast()
+const api = useApi()
 
 const newEmail = ref('')
 const codeSent = ref(false)
+const sending = ref(false)
+const verifying = ref(false)
+const submitting = ref(false)
 const codeDigits = ref(['', '', '', '', '', ''])
 const verified = ref(false)
 const password = ref('')
@@ -26,20 +32,44 @@ function reset() {
   codeDigits.value = ['', '', '', '', '', '']
   verified.value = false
   password.value = ''
+  sending.value = false
+  verifying.value = false
+  submitting.value = false
 }
 watch(() => props.open, (v) => {
   if (v) reset()
 })
 
-function sendCode() {
+async function sendCode() {
   if (!newEmailValid.value) {
     toast.add({ title: '올바른 이메일 주소를 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  codeSent.value = true
-  verified.value = false
-  codeDigits.value = ['', '', '', '', '', '']
-  toast.add({ title: '인증코드 6자리를 이메일로 발송했습니다.', color: 'info', icon: 'i-lucide-mail' })
+  sending.value = true
+  try {
+    const res = await api<{ data: { sent: boolean, mockCode?: string } }>('/auth/email-code/send', {
+      method: 'POST',
+      body: { email: newEmail.value.trim(), purpose: 'change_email' },
+    })
+    codeSent.value = true
+    verified.value = false
+    codeDigits.value = ['', '', '', '', '', '']
+    toast.add({
+      title: res.data.mockCode
+        ? `[테스트] 인증코드: ${res.data.mockCode}`
+        : '인증코드 6자리를 이메일로 발송했습니다.',
+      color: 'success',
+      icon: 'i-lucide-mail',
+      duration: res.data.mockCode ? 8000 : 4000,
+    })
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } }).data?.message ?? '인증코드 발송에 실패했습니다.'
+    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    sending.value = false
+  }
 }
 function onCodeInput(i: number, e: Event) {
   const el = e.target as HTMLInputElement
@@ -54,7 +84,7 @@ function onCodeKeydown(i: number, e: KeyboardEvent) {
     (el.previousElementSibling as HTMLInputElement | null)?.focus()
   }
 }
-function confirmCode() {
+async function confirmCode() {
   if (!codeSent.value) {
     toast.add({ title: '먼저 인증코드를 발송해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
@@ -63,15 +93,31 @@ function confirmCode() {
     toast.add({ title: '인증코드 6자리를 모두 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  verified.value = true
-  toast.add({ title: '이메일 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  verifying.value = true
+  try {
+    await api('/auth/email-code/verify', {
+      method: 'POST',
+      body: { email: newEmail.value.trim(), purpose: 'change_email', code: fullCode.value },
+    })
+    verified.value = true
+    toast.add({ title: '이메일 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } }).data?.message ?? '인증코드가 올바르지 않습니다.'
+    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    verifying.value = false
+  }
 }
 function submit() {
   if (!canConfirm.value) {
     toast.add({ title: '이메일 인증과 비밀번호 입력을 완료해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  emit('confirm', newEmail.value.trim())
+  submitting.value = true
+  emit('confirm', { newEmail: newEmail.value.trim(), code: fullCode.value, password: password.value })
+  // 부모가 emit('close')하면 reset()로 submitting 해제됨
 }
 </script>
 
@@ -95,8 +141,8 @@ function submit() {
             placeholder="이메일을 입력해 주세요"
             :disabled="verified"
           >
-          <button type="button" class="btn btn-primary" :disabled="verified" @click="sendCode">
-            인증코드 발송
+          <button type="button" class="btn btn-primary" :disabled="verified || sending" @click="sendCode">
+            {{ sending ? '발송 중…' : codeSent ? '재발송' : '인증코드 발송' }}
           </button>
         </div>
       </div>
@@ -117,8 +163,8 @@ function submit() {
               @keydown="onCodeKeydown(i, $event)"
             >
           </div>
-          <button type="button" class="btn btn-outline-dark" :disabled="verified" @click="confirmCode">
-            {{ verified ? '인증 완료' : '확인' }}
+          <button type="button" class="btn btn-outline-dark" :disabled="verified || verifying" @click="confirmCode">
+            {{ verifying ? '확인 중…' : verified ? '인증 완료' : '확인' }}
           </button>
         </div>
       </div>
@@ -134,8 +180,8 @@ function submit() {
         >
       </div>
 
-      <button type="button" class="btn btn-primary ec-submit" :disabled="!canConfirm" @click="submit">
-        {{ confirmLabel }}
+      <button type="button" class="btn btn-primary ec-submit" :disabled="!canConfirm || submitting" @click="submit">
+        {{ submitting ? '변경 중…' : confirmLabel }}
       </button>
     </div>
   </AppModal>

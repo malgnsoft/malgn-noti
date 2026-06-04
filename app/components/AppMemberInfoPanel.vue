@@ -110,20 +110,28 @@ function openEmailDialog(ctx: 'manager' | 'billing') {
   emailDialogCtx.value = ctx
   emailDialogOpen.value = true
 }
-async function onEmailChanged(newEmail: string) {
+async function onEmailChanged(payload: { newEmail: string, code: string, password: string }) {
   try {
     if (emailDialogCtx.value === 'billing') {
-      await auth.updateCompany({ billingEmail: newEmail })
+      // 결제 이메일은 OTP/비밀번호 백엔드 검증 없이 PATCH /me/company만 호출 (현재 정책).
+      // 후속에서 OTP 검증 백엔드 추가 시 manager와 동일 흐름으로 통일.
+      await auth.updateCompany({ billingEmail: payload.newEmail })
       toast.add({ title: '결제 이메일이 변경되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
     }
     else {
-      // 서비스 담당자 이메일은 OTP 흐름 미구현 — 후속에서 PATCH /me 이메일 변경 라우트 추가 예정
-      toast.add({ title: '서비스 담당자 이메일 변경은 곧 지원됩니다.', color: 'info', icon: 'i-lucide-info' })
+      await auth.changeEmail(payload)
+      toast.add({
+        title: '서비스 담당자 이메일이 변경되었습니다.',
+        description: '다음 로그인부터 새 이메일을 사용해 주세요.',
+        color: 'success',
+        icon: 'i-lucide-circle-check',
+      })
     }
     emailDialogOpen.value = false
   }
-  catch {
-    toast.add({ title: '이메일 변경에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  catch (e) {
+    const msg = (e as { data?: { message?: string } }).data?.message ?? '이메일 변경에 실패했습니다.'
+    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
   }
 }
 

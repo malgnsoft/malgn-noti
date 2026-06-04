@@ -181,6 +181,18 @@ export const useAuthStore = defineStore('auth', {
       this.tenant = res.data.company
     },
 
+    /**
+     * 서비스 담당자 이메일 변경 — 새 이메일에 발송된 OTP 코드 + 본인 비밀번호 검증.
+     * 성공 시 user.email + user.loginid 모두 newEmail로 변경되고, 다음 로그인부터 새 이메일 사용.
+     * (현재 발급된 JWT는 sub=userId라 즉시 invalidate되지 않음 — 토큰 재발급 정책은 후속.)
+     */
+    async changeEmail(payload: { newEmail: string, code: string, password: string }) {
+      const api = useApi()
+      const res = await api<MeResponse>('/me/email-change', { method: 'POST', body: payload })
+      this.user = res.data.user
+      this.tenant = res.data.company
+    },
+
     /** 로그아웃 — 토큰 삭제 + 메모리 클리어 + /login 이동. */
     async logout() {
       useAuthToken().value = null
