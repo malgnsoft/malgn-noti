@@ -1,8 +1,8 @@
-# 2026-06-04 — Hyperdrive Cloudflare Tunnel 전환 + 관리자단 핸드오프 17 페이지 풀세트 + NICE IPv6 진단
+# 2026-06-04 — Hyperdrive Cloudflare Tunnel 전환 + 관리자단 핸드오프 17 페이지 풀세트 + NICE IPv6 진단 + WBS R2 편집
 
 ## 한 줄 요약
 
-오늘 4건 처리. **(§1)** NICE 자격증명 재확인 + 옵션 B(Cloudflare 대역 등록) 시도 → 여전히 1007. 진단용 `/diag/egress`로 Workers의 outbound가 **IPv6**(`2a06:98c0:3600::103`, Cloudflare `2a06:98c0::/29`)임을 확인. NICE 콘솔에 IPv4 대역만 등록된 게 원인 — IPv6 대역(7개) 추가 등록 안내 + mock 복귀. **(§2)** Hyperdrive 바인딩 교체 — `a2ba4efe...` → `439b109d...`. 신규 Hyperdrive는 **Cloudflare Tunnel(Access)** 기반(host `malgn-dev-db.apiserver.kr` + `access_client_id`). Aurora SG egress IP 화이트리스트 운영 부담 해소 — CLAUDE.md §12 TODO "SG 갱신 운영 절차" 항목 달성. 관련 정본 3개(API CLAUDE.md §3·§12·§8, SCALABILITY.md §6 신규 절, MIGRATION.md §1) 동기화. **(§3)** **관리자단 핸드오프 풀세트** — `handoff_noti_admin` (3,129줄 jsx)을 Vue 3 + Nuxt UI v3로 1:1 포팅. 셸(LNB 메뉴 트리 완전 재정비 + Topbar 동적 브레드크럼) · 공유 컴포넌트 14종(PageHeader/SectionCard/Tabs/Segmented/FilterBar/DateRange/DataTable generic+slot/Pagination/StatusBadge 자동 매핑/ChannelChip/StatCard/Drawer/Modal/Field/EmptyState) · 차트 4종(Bar/Area SVG path+gradient/Donut stroke-dasharray/Progress) · **17 페이지**(대시보드·고객사·고객사 상세·계정·모니터링·발신번호·발신프로필·템플릿검수·결제·채널단가·충전쿠폰·1:1문의·FAQ·공지·통계·운영자·권한그룹·API). app.config.ts `info: 'indigo'` 매핑으로 핸드오프 indigo 강조색을 Nuxt UI semantic으로. 18 라우트 라이브 200. **(§4)** 사용자 보고 후속 — admin의 폰트 사이즈가 핸드오프와 다르다는 신고에서 **두 원인 동시 발견**: (a) `main.css` `html,body{font-size:13px}`가 모든 Tailwind 토큰을 18% 축소시킴(핸드오프는 base font-size 명시 없음 = 16px), (b) 직전 turn의 cwd가 사용자단이라 **사용자단 dist를 admin 프로젝트로 배포**한 상태였음(chunk 600개 / GNB·메모·계약 컴포넌트 등 사용자단 자산이 admin URL에 노출). 둘 다 정정: 13px 제거 + `letter-spacing: -0.01em` 추가, admin 디렉토리에서 clean rebuild + 재배포. Pages alias `8852d5da.malgn-noti-admin.pages.dev` (chunk 96개로 정상화).
+오늘 5건 처리. **(§1)** NICE 자격증명 재확인 + 옵션 B(Cloudflare 대역 등록) 시도 → 여전히 1007. 진단용 `/diag/egress`로 Workers의 outbound가 **IPv6**(`2a06:98c0:3600::103`, Cloudflare `2a06:98c0::/29`)임을 확인. NICE 콘솔에 IPv4 대역만 등록된 게 원인 — IPv6 대역(7개) 추가 등록 안내 + mock 복귀. **(§2)** Hyperdrive 바인딩 교체 — `a2ba4efe...` → `439b109d...`. 신규 Hyperdrive는 **Cloudflare Tunnel(Access)** 기반(host `malgn-dev-db.apiserver.kr` + `access_client_id`). Aurora SG egress IP 화이트리스트 운영 부담 해소 — CLAUDE.md §12 TODO "SG 갱신 운영 절차" 항목 달성. 관련 정본 3개(API CLAUDE.md §3·§12·§8, SCALABILITY.md §6 신규 절, MIGRATION.md §1) 동기화. **(§3)** **관리자단 핸드오프 풀세트** — `handoff_noti_admin` (3,129줄 jsx)을 Vue 3 + Nuxt UI v3로 1:1 포팅. 셸(LNB 메뉴 트리 완전 재정비 + Topbar 동적 브레드크럼) · 공유 컴포넌트 14종(PageHeader/SectionCard/Tabs/Segmented/FilterBar/DateRange/DataTable generic+slot/Pagination/StatusBadge 자동 매핑/ChannelChip/StatCard/Drawer/Modal/Field/EmptyState) · 차트 4종(Bar/Area SVG path+gradient/Donut stroke-dasharray/Progress) · **17 페이지**(대시보드·고객사·고객사 상세·계정·모니터링·발신번호·발신프로필·템플릿검수·결제·채널단가·충전쿠폰·1:1문의·FAQ·공지·통계·운영자·권한그룹·API). app.config.ts `info: 'indigo'` 매핑으로 핸드오프 indigo 강조색을 Nuxt UI semantic으로. 18 라우트 라이브 200. **(§4)** 사용자 보고 후속 — admin의 폰트 사이즈가 핸드오프와 다르다는 신고에서 **두 원인 동시 발견**: (a) `main.css` `html,body{font-size:13px}`가 모든 Tailwind 토큰을 18% 축소시킴(핸드오프는 base font-size 명시 없음 = 16px), (b) 직전 turn의 cwd가 사용자단이라 **사용자단 dist를 admin 프로젝트로 배포**한 상태였음(chunk 600개 / GNB·메모·계약 컴포넌트 등 사용자단 자산이 admin URL에 노출). 둘 다 정정: 13px 제거 + `letter-spacing: -0.01em` 추가, admin 디렉토리에서 clean rebuild + 재배포. Pages alias `8852d5da.malgn-noti-admin.pages.dev` (chunk 96개로 정상화). **(§5)** WBS 페이지 편집 기능 — DB 미사용 / R2 단일 JSON 객체 정본(`wbs/wbs.json`). API에 GET 공개 + PATCH 인증 2 라우트 + 142 task 시드. 사용자단은 임베디드 STAGES 제거 → API 비동기 로드 + 인라인 편집 모달(5 필드, 빈값=`null`=필드 제거). Workers Version `28f3e6a8...`, Pages alias `02bb58e6`.
 
 ---
 
@@ -292,6 +292,70 @@ npx wrangler@4 pages deploy dist --project-name=malgn-noti-admin --branch=main -
    - **이력 추적 단순화** — 매 배포 직후 `wrangler deployments list <project>` 결과의 commit hash가 expected repo HEAD와 일치하는지 확인
 2. **base font-size 명시 패턴 금지** — Tailwind 토큰이 16px base를 가정하므로, `html`/`body`에 `font-size`를 다른 값으로 명시하면 모든 토큰이 어긋남. 필요한 경우엔 토큰 자체(`@theme`의 `--font-base`)를 갱신.
 3. **chunk 수 sanity check** — admin 같이 17 페이지 규모면 chunk가 ~100개 안팎. 600개가 떴다면 외부 자산 혼입 의심.
+
+---
+
+# §5. WBS 페이지 편집 기능 — R2 JSON 정본 + 인라인 모달 (Workers Version 28f3e6a8 / Pages alias 02bb58e6)
+
+## 5.1 배경
+
+`/wbs` 페이지는 그동안 [`app/pages/wbs.vue`](../../app/pages/wbs.vue) 안에 STAGES 상수로 임베디드된 데이터 — 매번 코드 수정 + 배포해야 진척률·메모를 갱신할 수 있었다. 사용자가 "**설명·링크·목표일·완료일·담당자를 수정할 수 있게**" + "**DB 미사용, R2에 JSON 파일로 저장**" 정책을 지정.
+
+## 5.2 결정
+
+- **저장소**: R2 단일 객체 (`malgn-noti-files` 버킷 / 키 `wbs/wbs.json`). 기존 FILES 바인딩 재사용 — 신규 바인딩 없음.
+- **편집 가능 필드 5개**: `note` · `href` · `targetDate` · `completionDate` · `owner`. 상태(완료/진행 중/대기) · 단계 가중치 · 진행률 · 그룹 · 제목은 본 화면 편집 대상 아님(시드/코드 변경).
+- **인증 정책**: GET 공개 / PATCH 로그인 필요. 페이지 자체는 그대로 `auth: false`, 편집 버튼이 `auth.user`일 때만 노출.
+- **동시성**: last-write-wins. 단일 운영자 저빈도 사용 가정. ETag/If-Match는 향후 도입 여지.
+
+## 5.3 API 변경 (malgn-noti-api)
+
+신규 파일:
+
+- [`src/data/wbs-seed.ts`](../../../malgn-noti-api/src/data/wbs-seed.ts) — 5 stages / **142 tasks** 시드. 현행 사용자단 임베디드 STAGES 그대로 복제. R2 미존재 시 첫 GET이 이 값을 PUT 후 반환.
+- [`src/routes/wbs.ts`](../../../malgn-noti-api/src/routes/wbs.ts):
+  - `GET /wbs` — 공개. `loadDoc()`이 R2 객체 없으면 시드를 PUT 후 반환.
+  - `PATCH /wbs/tasks/:taskId` — `requireAuth()` 미들웨어. body 5필드. `null` → `delete target[field]` / `undefined` → 유지 / 값 → 갱신. 마지막에 `lastUpdated = new Date().toISOString().slice(0, 10)` + `saveDoc()`.
+
+수정:
+
+- [`src/index.ts`](../../../malgn-noti-api/src/index.ts) — `app.route('/wbs', wbs)` 등록.
+- [`src/openapi.ts`](../../../malgn-noti-api/src/openapi.ts) — `wbs` 태그 + 2개 경로(GET 공개·PATCH 401 응답 포함).
+
+## 5.4 사용자단 변경 (malgn-noti)
+
+[`app/pages/wbs.vue`](../../app/pages/wbs.vue) 전면 재작성:
+
+- 임베디드 STAGES 제거 → top-level `await api('/wbs')`로 비동기 로드. 로딩/에러 상태 노출.
+- task 행 우측에 ✏️ 편집 버튼 — `v-if="auth.user"`로 로그인 사용자에게만 노출.
+- 모달 (`AppModal` 기반): 담당자 / 설명 / 링크 / 목표일 / 완료일 5개 입력.
+  - 빈 문자열 저장 시 payload에 `null` 전송 → 서버 R2에서 해당 필드 제거.
+  - `owner`는 빈 값 불가 (Zod min(1)). 빈 값일 땐 payload에서 제외 → 미변경.
+- 저장 성공 시 `useToast()` 알림 + `Object.assign(t, res.data)`로 in-place 갱신(refetch 없음).
+- 비로그인 부제에 `· 로그인하면 편집 가능` 힌트 노출 + `/login?redirect=/wbs` 링크.
+
+## 5.5 배포
+
+- API: typecheck → `pnpm run deploy` → Version `28f3e6a8-6b53-42ee-b3d7-a145584f43d0`. 번들 2672 KiB / gzip 609. Worker Startup 75 ms. FILES 바인딩(`malgn-noti-files`) 정상.
+- Pages: `pnpm build` → `npx wrangler@4 pages deploy dist --project-name=malgn-noti --branch=main`. alias `02bb58e6.malgn-noti.pages.dev`.
+
+## 5.6 검증
+
+- `GET /health` 200 / `/health/db` 200 (mysql 8.0.42)
+- `GET /wbs` 200, **30,406 bytes** JSON. stages: 5 / tasks: 142 / lastUpdated: `2026-06-01` (시드 값 — R2 첫 PUT 직후 그대로). 시드 자동 적재 동작 확인.
+- `https://malgn-noti.pages.dev/wbs` 200, alias 200.
+
+## 5.7 산출물
+
+- `malgn-noti-api: 9945db3` feat(wbs): R2 JSON 정본 + GET 공개 / PATCH 인증 라우트 (4 files, +452)
+- `malgn-noti: 3ed473e` feat(wbs): /wbs API 연동 + 인라인 편집 모달 (1 file, +376 -355)
+- R2 객체 `wbs/wbs.json` 라이브 (FILES 바인딩, 시드 자동 적재됨)
+
+## 5.8 한계 / 후속
+
+- **동시 편집 — last-write-wins**. 두 명이 동시에 다른 task를 PATCH하면 둘 다 R2 read-modify-write를 하므로 한쪽이 사라질 수 있다. 강한 정합 필요 시 ETag(If-Match) 도입.
+- **편집 범위 제한**: status / weight / progress / title / group / 단계 추가·삭제는 본 화면에서 안 됨. 필요하면 별도 슬라이스에서 모달 확장 + 권한 강화(owner/admin only).
+- **lastUpdated** 자동 갱신만 됨 — 누가 언제 무엇을 바꿨는지 감사 로그는 없음. 운영 단계 진입 전 도입 검토.
 
 ---
 
