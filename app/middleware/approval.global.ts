@@ -7,14 +7,14 @@
  * 허용 페이지:
  *   - 인증 라우트(`meta.auth === false`)는 가드 미적용
  *   - `/account/*` — 회원 정보·계약 관리·문의 등
- *   - `/help`, `/guide`, `/wbs`, `/inquiry` — 도움말·문의 등
+ *   - `/help`, `/guide`, `/inquiry` — 도움말·문의 등
  *   - 그 외 모든 라우트(`/home`·`/send`·`/history`·`/contacts`·`/sender`·`/manage`·
  *     `/campaign`·`/charge` 등)는 차단 → `/account/contract`로 이동
  *
  * SSR/CSR 호환: store 미하이드레이트 시점에는 토큰만 있고 user/tenant는 비어 있을 수 있음.
  * 그 경우 가드는 통과시키고 클라이언트 플러그인이 hydrate한 뒤 재진입 시 작동.
  */
-const ALLOWED_PREFIXES = ['/account', '/help', '/guide', '/wbs', '/inquiry']
+const ALLOWED_PREFIXES = ['/account', '/help', '/guide', '/inquiry']
 
 function isAllowed(path: string): boolean {
   return ALLOWED_PREFIXES.some(p => path === p || path.startsWith(`${p}/`))
