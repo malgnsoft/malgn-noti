@@ -91,7 +91,7 @@ function onDeleteConfirm() {
     </ul>
 
     <div class="list-card">
-      <!-- C 테이블 스타일 — 액션 영역에 검색란 포함 (doc/DESIGN.md §6.5) -->
+      <!-- C 테이블 스타일 — 액션 영역에 검색란 포함 (docs/DESIGN.md §6.5) -->
       <div class="list-toolbar">
         <div class="row" style="gap: 10px; flex-wrap: wrap">
           <span class="toolbar-count">총 <strong>{{ filtered.length }}</strong>개</span>

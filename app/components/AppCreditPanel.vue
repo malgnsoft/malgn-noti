@@ -135,7 +135,7 @@ function openReceipt(r: CreditRow) {
         </ul>
       </div>
 
-      <!-- 검색 필터 (A 테이블 스타일 — doc/DESIGN.md §6.5) -->
+      <!-- 검색 필터 (A 테이블 스타일 — docs/DESIGN.md §6.5) -->
       <div class="filter-bar">
         <div class="cr-presets">
           <button

@@ -467,7 +467,7 @@ function onExportList() {
       </div>
 
       <div class="list-table-scroll">
-        <!-- A 테이블 스타일 — 조회·관리 목록 표준 (doc/DESIGN.md §6.5) -->
+        <!-- A 테이블 스타일 — 조회·관리 목록 표준 (docs/DESIGN.md §6.5) -->
         <table class="table list-table" data-table-style="a">
           <thead>
             <tr>

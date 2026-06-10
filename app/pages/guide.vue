@@ -176,7 +176,7 @@ const segDemo = ref('a')
           <div class="g-hero-meta">
             <div>
               <div class="o">정본</div>
-              <div class="v">doc/DESIGN.md</div>
+              <div class="v">docs/DESIGN.md</div>
             </div>
             <div class="bar" />
             <div>
@@ -692,7 +692,7 @@ const segDemo = ref('a')
             A · B · C 테이블 스타일
           </div>
           <p class="g-desc">
-            목록 화면은 검색 방식에 따라 3가지로 구분 — 액션 영역(<code>.list-toolbar</code>)은 공통, 검색 위치만 다르다. 상세 = <code>doc/DESIGN.md §6.5</code>.
+            목록 화면은 검색 방식에 따라 3가지로 구분 — 액션 영역(<code>.list-toolbar</code>)은 공통, 검색 위치만 다르다. 상세 = <code>docs/DESIGN.md §6.5</code>.
           </p>
 
           <!-- A -->

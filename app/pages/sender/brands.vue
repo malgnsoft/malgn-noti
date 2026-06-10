@@ -98,7 +98,7 @@ function onSyncConfirm() {
       </div>
 
       <div class="list-table-scroll">
-        <!-- B 테이블 스타일 — 검색 영역 없는 단순 목록 (doc/DESIGN.md §6.5) -->
+        <!-- B 테이블 스타일 — 검색 영역 없는 단순 목록 (docs/DESIGN.md §6.5) -->
         <table class="table" data-table-style="b">
           <thead>
             <tr>

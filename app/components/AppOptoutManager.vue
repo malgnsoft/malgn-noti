@@ -190,7 +190,7 @@ function onDownloadConfirm() {
       </li>
     </ul>
 
-    <!-- C 테이블 스타일 — 액션 영역에 인라인 검색 (doc/DESIGN.md §6.5) -->
+    <!-- C 테이블 스타일 — 액션 영역에 인라인 검색 (docs/DESIGN.md §6.5) -->
     <div class="list-card">
       <div class="list-toolbar">
         <div class="list-toolbar-l">
