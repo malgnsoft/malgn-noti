@@ -37,6 +37,21 @@ const infoRows = computed(() => [
 
 /* ── 광고성 메일 수신 — 즉시 변경 (확인 모달 후) ──────── */
 const adReceive = computed(() => c.value?.adReceive ?? 'reject')
+const adReceiveAt = computed(() => c.value?.adReceiveAt ?? null)
+const adReceiveAtLabel = computed(() => {
+  const v = adReceiveAt.value
+  if (!v) return ''
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+})
+const adReceiveNotice = computed(() => {
+  if (!adReceiveAtLabel.value) return ''
+  return adReceive.value === 'agree'
+    ? `${adReceiveAtLabel.value} 광고성 메일 수신에 동의함`
+    : `${adReceiveAtLabel.value} 광고성 메일 수신을 거부함`
+})
 const adConfirmOpen = ref(false)
 const pendingAd = ref<'agree' | 'reject'>('agree')
 const adConfirmMeta = computed(() => pendingAd.value === 'reject'
@@ -54,6 +69,7 @@ async function confirmAdChange() {
     await auth.updateCompany({ adReceive: pendingAd.value })
     toast.add({
       title: pendingAd.value === 'agree' ? '광고성 메일 수신에 동의했습니다.' : '광고성 메일 수신을 거부했습니다.',
+      description: adReceiveAtLabel.value ? `처리 일시: ${adReceiveAtLabel.value}` : undefined,
       color: 'success', icon: 'i-lucide-circle-check',
     })
   }
@@ -110,36 +126,36 @@ function openEmailDialog(ctx: 'manager' | 'billing') {
   emailDialogCtx.value = ctx
   emailDialogOpen.value = true
 }
-async function onEmailChanged(payload: { newEmail: string, code: string, password: string }) {
-  try {
-    if (emailDialogCtx.value === 'billing') {
-      // 결제 이메일은 OTP/비밀번호 백엔드 검증 없이 PATCH /me/company만 호출 (현재 정책).
-      // 후속에서 OTP 검증 백엔드 추가 시 manager와 동일 흐름으로 통일.
-      await auth.updateCompany({ billingEmail: payload.newEmail })
-      toast.add({ title: '결제 이메일이 변경되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-    }
-    else {
-      await auth.changeEmail(payload)
-      toast.add({
-        title: '서비스 담당자 이메일이 변경되었습니다.',
-        description: '로그인 아이디는 그대로 유지되고, 알림·연락처 이메일만 새 주소로 교체됩니다.',
-        color: 'success',
-        icon: 'i-lucide-circle-check',
-      })
-    }
-    emailDialogOpen.value = false
+/**
+ * 다이얼로그가 await 하는 비동기 처리. 성공 시 다이얼로그가 스스로 close,
+ * throw 시 다이얼로그는 열린 채로 submit 상태만 해제하고 에러 메시지를 토스트로 띄운다.
+ */
+async function handleEmailConfirm(payload: { newEmail: string, code: string, password: string }) {
+  if (emailDialogCtx.value === 'billing') {
+    // 결제 이메일은 OTP/비밀번호 백엔드 검증 없이 PATCH /me/company만 호출 (현재 정책).
+    // 후속에서 OTP 검증 백엔드 추가 시 manager와 동일 흐름으로 통일.
+    await auth.updateCompany({ billingEmail: payload.newEmail })
+    toast.add({ title: '결제 이메일이 변경되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
   }
-  catch (e) {
-    const msg = (e as { data?: { message?: string } }).data?.message ?? '이메일 변경에 실패했습니다.'
-    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+  else {
+    await auth.changeEmail(payload)
+    toast.add({
+      title: '서비스 담당자 이메일이 변경되었습니다.',
+      description: '로그인 아이디는 그대로 유지되고, 알림·연락처 이메일만 새 주소로 교체됩니다.',
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
   }
 }
 
-/* ── 회원 탈퇴 (미구현 — 후속) ────────────────────────── */
+/* ── 회원 탈퇴 — 비밀번호 재인증 → soft-delete → 세션 종료 + /login 이동 ──
+ * 실제 처리는 AppWithdrawDialog가 onConfirm(handleWithdraw)을 await 한다.
+ * 성공 시 다이얼로그가 스스로 close, throw 시 열린 채로 에러 토스트만 띄운다. */
 const deleteOpen = ref(false)
-function confirmDelete() {
-  deleteOpen.value = false
-  toast.add({ title: '회원 탈퇴 기능은 곧 지원됩니다.', color: 'info', icon: 'i-lucide-info' })
+async function handleWithdraw(payload: { password: string, reason?: string }) {
+  await auth.withdraw(payload)
+  toast.add({ title: '회원 탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  await navigateTo('/login')
 }
 
 /* ── 휴대폰 본인 인증 (NICE 미연결 — 후속) ───────────── */
@@ -242,6 +258,10 @@ function changeBizDoc() {
                   수신동의
                 </button>
               </div>
+              <span v-if="adReceiveNotice" class="ad-stamp">
+                <UIcon name="i-lucide-clock-3" class="ad-stamp-icon" />
+                {{ adReceiveNotice }}
+              </span>
               <span class="ad-note">
                 중요 공지 및 서비스와 관련한 필수 안내 등은 수신 설정과 관계없이 발송될 수 있습니다.
               </span>
@@ -328,8 +348,8 @@ function changeBizDoc() {
         :desc="emailDialogConfig.desc"
         :current-email="emailDialogConfig.current"
         :confirm-label="emailDialogConfig.confirm"
+        :on-confirm="handleEmailConfirm"
         @close="emailDialogOpen = false"
-        @confirm="onEmailChanged"
       />
 
       <AppPhoneVerifyDialog
@@ -347,14 +367,10 @@ function changeBizDoc() {
         @confirm="confirmAdChange"
       />
 
-      <AppConfirmDialog
+      <AppWithdrawDialog
         :open="deleteOpen"
-        title="회원 탈퇴"
-        message="회원 탈퇴 시 모든 발송 이력·주소록·설정이 영구 삭제되며 복구할 수 없습니다. 정말 탈퇴하시겠습니까?"
-        confirm-label="회원 탈퇴"
-        danger
+        :on-confirm="handleWithdraw"
         @close="deleteOpen = false"
-        @confirm="confirmDelete"
       />
     </template>
   </div>
@@ -479,6 +495,23 @@ function changeBizDoc() {
   font-size: var(--fz-xs);
   color: var(--ink-400);
   line-height: 1.5;
+}
+.ad-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fz-xs);
+  color: var(--ink-600);
+  background: var(--ink-50);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.ad-stamp-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-500);
 }
 
 .field-md { max-width: 320px; }

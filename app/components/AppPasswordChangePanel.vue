@@ -1,16 +1,20 @@
 <script setup lang="ts">
 const toast = useToast()
+const auth = useAuthStore()
 
 const currentPw = ref('')
 const newPw = ref('')
 const confirmPw = ref('')
+const saving = ref(false)
 
 const showCurrent = ref(false)
 const showNew = ref(false)
 const showConfirm = ref(false)
 
-/* 새 비밀번호 규칙: 최소 8자 + 특수문자 포함 */
-const SPECIAL = /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\/~`';]/
+/* 새 비밀번호 규칙: 최소 8자 + 특수문자 1자 이상.
+ * 특수문자 정의는 백엔드(POST /me/password)의 z.regex(/[^A-Za-z0-9]/)와 동일하게
+ * "영문·숫자 외 모든 문자"로 맞춘다 — 프론트가 더 엄격해 BE 허용값을 막는 일이 없도록. */
+const SPECIAL = /[^A-Za-z0-9]/
 const newPwError = computed(() => {
   if (!newPw.value) return ''
   if (newPw.value.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
@@ -32,15 +36,27 @@ const canSave = computed(() =>
   && !confirmError.value,
 )
 
-function save() {
+async function save() {
   if (!canSave.value) {
     toast.add({ title: '입력값을 다시 확인해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  currentPw.value = ''
-  newPw.value = ''
-  confirmPw.value = ''
-  toast.add({ title: '비밀번호가 변경되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  if (saving.value) return
+  saving.value = true
+  try {
+    await auth.changePassword({ currentPassword: currentPw.value, newPassword: newPw.value })
+    currentPw.value = ''
+    newPw.value = ''
+    confirmPw.value = ''
+    toast.add({ title: '비밀번호가 변경되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e: unknown) {
+    const data = (e as { data?: { message?: string } })?.data
+    toast.add({ title: data?.message ?? '비밀번호 변경에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -121,8 +137,8 @@ function save() {
     </section>
 
     <div class="ms-actions">
-      <button type="button" class="btn btn-primary btn-lg save-btn" :disabled="!canSave" @click="save">
-        저장하기
+      <button type="button" class="btn btn-primary btn-lg save-btn" :disabled="!canSave || saving" @click="save">
+        {{ saving ? '변경 중…' : '저장하기' }}
       </button>
     </div>
   </div>

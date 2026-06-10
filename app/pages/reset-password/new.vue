@@ -72,13 +72,15 @@ async function onSubmit() {
   catch (e: unknown) {
     const status = (e as { response?: { status?: number } })?.response?.status
     const data = (e as { data?: { message?: string } })?.data
-    // 401/410 → 인증코드 만료·불일치(소비됨) → 처음부터 다시
-    if (status === 401 || status === 410) {
+    // 401 → 코드 만료·불일치·소비됨 또는 계정 없음(백엔드가 모두 401로 응답) → 처음부터 다시.
+    // 서버가 사유별 메시지를 분기해 주므로 data.message 를 그대로 노출한다.
+    if (status === 401) {
       if (import.meta.client) sessionStorage.removeItem('reset-pw')
       toast.add({ title: data?.message ?? '인증이 만료되었습니다. 다시 시도해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
       navigateTo('/reset-password')
       return
     }
+    // 400(검증 실패) 등 — 입력값 문제이므로 현재 화면에 머무른다.
     toast.add({ title: data?.message ?? '비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
   }
   finally {

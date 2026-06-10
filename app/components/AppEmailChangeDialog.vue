@@ -7,8 +7,10 @@ const props = defineProps<{
   desc: string
   currentEmail: string
   confirmLabel: string
+  /** 부모가 제공하는 비동기 처리 함수. throw 시 다이얼로그는 열린 채로 submit 상태만 해제. */
+  onConfirm: (payload: EmailChangePayload) => Promise<void>
 }>()
-const emit = defineEmits<{ close: [], confirm: [EmailChangePayload] }>()
+const emit = defineEmits<{ close: [] }>()
 
 const toast = useToast()
 const api = useApi()
@@ -110,14 +112,24 @@ async function confirmCode() {
     verifying.value = false
   }
 }
-function submit() {
+async function submit() {
   if (!canConfirm.value) {
     toast.add({ title: '이메일 인증과 비밀번호 입력을 완료해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
+  if (submitting.value) return
   submitting.value = true
-  emit('confirm', { newEmail: newEmail.value.trim(), code: fullCode.value, password: password.value })
-  // 부모가 emit('close')하면 reset()로 submitting 해제됨
+  try {
+    await props.onConfirm({ newEmail: newEmail.value.trim(), code: fullCode.value, password: password.value })
+    emit('close')
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } }).data?.message ?? '이메일 변경에 실패했습니다.'
+    toast.add({ title: msg, color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    submitting.value = false
+  }
 }
 </script>
 

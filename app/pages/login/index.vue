@@ -27,17 +27,31 @@ async function onLogin() {
   }
   submitting.value = true
   try {
-    await auth.loginByEmail({
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/home'
+    const result = await auth.loginByEmail({
       email: userId.value.trim(),
       password: password.value,
     })
+
+    // 보안로그인(2FA) 계정 — 토큰 미발급, 2차 코드 입력 화면으로 이동.
+    if (result.twoFactorRequired) {
+      navigateTo({
+        path: '/login/security',
+        query: {
+          method: result.method,
+          to: result.sentTo,
+          pendingToken: result.pendingToken,
+          expiresAt: result.expiresAt,
+          redirect,
+        },
+      })
+      return
+    }
+
     toast.add({ title: '로그인되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
     // 사업자등록증 심사 미승인이면 계약 관리 페이지로 자동 이동 (사용자 정책)
     const state = auth.tenant?.approvalState
-    const redirect = state && state !== 'approved'
-      ? '/account/contract'
-      : (typeof route.query.redirect === 'string' ? route.query.redirect : '/home')
-    navigateTo(redirect)
+    navigateTo(state && state !== 'approved' ? '/account/contract' : redirect)
   }
   catch (e: unknown) {
     const status = (e as { response?: { status?: number } })?.response?.status

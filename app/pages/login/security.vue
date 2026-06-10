@@ -4,20 +4,33 @@ useHead({ title: '보안 인증' })
 
 const route = useRoute()
 const toast = useToast()
+const auth = useAuthStore()
 
 /* ── 보안로그인(2단계 인증) 코드 입력 ────────────────────────
  * 보안로그인을 사용 중인 계정이 1차(아이디·비번) 인증을 통과한 직후 도달한다.
- * 발송 방식(email/phone)·마스킹된 수신처는 1차 응답이 쿼리로 넘겨준다.
- *   ?method=email&to=ho***@malgn.example&redirect=/home
- * 백엔드 로그인 2FA 엔드포인트가 확정되기 전까지 verify 호출은 관대하게 처리한다.
+ * 1차 응답(loginByEmail의 TwoFactorChallenge)이 쿼리로 컨텍스트를 넘겨준다.
+ *   ?method=email&to=ho***@malgn.example&pendingToken=<단기토큰>&expiresAt=<ISO>&redirect=/home
+ * pendingToken 은 2차 verify·resend 호출의 단기 자격증명(수명 10분, body 전달)이다.
+ * method/to/expiresAt 는 재발송 응답으로 갱신될 수 있어 ref(쿼리 초기값)로 보관한다.
  */
-const method = computed<'email' | 'phone'>(() => (route.query.method === 'phone' ? 'phone' : 'email'))
-const maskedTo = computed(() => (typeof route.query.to === 'string' ? route.query.to : ''))
 const redirect = computed(() => (typeof route.query.redirect === 'string' ? route.query.redirect : '/home'))
+const pendingToken = computed(() => (typeof route.query.pendingToken === 'string' ? route.query.pendingToken : ''))
 
-const methodLabel = computed(() => (method.value === 'phone' ? '휴대전화' : '이메일'))
+const method = ref<'email' | 'sms'>(route.query.method === 'sms' ? 'sms' : 'email')
+const sentTo = ref(typeof route.query.to === 'string' ? route.query.to : '')
+const expiresAt = ref(typeof route.query.expiresAt === 'string' ? route.query.expiresAt : '')
+
+/* pendingToken 없이 직접 진입(예: 새로고침으로 쿼리 소실)하면 로그인부터 다시. */
+onMounted(() => {
+  if (!pendingToken.value) {
+    toast.add({ title: '인증 세션이 없습니다. 다시 로그인해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    navigateTo('/login')
+  }
+})
+
+const methodLabel = computed(() => (method.value === 'sms' ? '휴대전화' : '이메일'))
 const destLine = computed(() => {
-  const where = maskedTo.value || (method.value === 'phone' ? '등록된 휴대전화' : '등록된 이메일')
+  const where = sentTo.value || (method.value === 'sms' ? '등록된 휴대전화' : '등록된 이메일')
   return `${where}(으)로 발송된 6자리 인증코드를 입력해 주세요.`
 })
 
@@ -38,31 +51,67 @@ function onCodeKeydown(i: number, e: KeyboardEvent) {
   }
 }
 
-/* ── 재발송 쿨다운 (30초) ──────────────────────────────────── */
-const cooldown = ref(0)
+/* ── 시계 틱(1초) — 코드 만료(expiresAt) 카운트다운 + 재발송 쿨다운(30초) ──── */
+const now = ref(Date.now())
 let timer: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  timer = setInterval(() => { now.value = Date.now() }, 1000)
+})
+onBeforeUnmount(() => clearInterval(timer))
 
+/* 코드 만료까지 남은 초 — expiresAt 미지정이면 null(표시 안 함). */
+const expiresInSec = computed(() => {
+  if (!expiresAt.value) return null
+  const ms = new Date(expiresAt.value).getTime() - now.value
+  return ms > 0 ? Math.ceil(ms / 1000) : 0
+})
+const expired = computed(() => expiresInSec.value === 0)
+const expiryLabel = computed(() => {
+  if (expiresInSec.value == null) return ''
+  if (expiresInSec.value === 0) return '인증코드가 만료되었습니다. 재발송해 주세요.'
+  const m = Math.floor(expiresInSec.value / 60)
+  const s = expiresInSec.value % 60
+  return `남은 시간 ${m}:${String(s).padStart(2, '0')}`
+})
+
+/* 재발송 쿨다운(anti-spam, 30초) — 목표 시각 기반으로 now 틱에서 파생. */
+const resendReadyAt = ref(0)
+const cooldown = computed(() => {
+  const sec = Math.ceil((resendReadyAt.value - now.value) / 1000)
+  return sec > 0 ? sec : 0
+})
 function startCooldown() {
-  cooldown.value = 30
-  clearInterval(timer)
-  timer = setInterval(() => {
-    cooldown.value -= 1
-    if (cooldown.value <= 0) clearInterval(timer)
-  }, 1000)
+  resendReadyAt.value = Date.now() + 30_000
 }
 onMounted(() => startCooldown())
-onBeforeUnmount(() => clearInterval(timer))
 
 const resending = ref(false)
 async function resend() {
-  if (cooldown.value > 0 || resending.value) return
+  if (cooldown.value > 0 || resending.value || !pendingToken.value) return
   resending.value = true
   try {
-    // TODO(api): 로그인 2FA 코드 재발송 엔드포인트 확정 시 연결.
-    await new Promise(r => setTimeout(r, 400))
+    const res = await auth.resendTwoFactor({ pendingToken: pendingToken.value })
+    // 재발송 응답으로 발송 컨텍스트 갱신(만료 시각 포함).
+    method.value = res.method
+    sentTo.value = res.sentTo
+    expiresAt.value = res.expiresAt
     codeDigits.value = ['', '', '', '', '', '']
     startCooldown()
-    toast.add({ title: `인증코드를 ${methodLabel.value}로 재발송했습니다.`, color: 'info', icon: 'i-lucide-send' })
+    if (res.mockCode) {
+      toast.add({ title: `인증코드 재발송됨 (개발 모드: ${res.mockCode})`, color: 'info', icon: 'i-lucide-send' })
+    }
+    else {
+      toast.add({ title: `인증코드를 ${methodLabel.value}로 재발송했습니다.`, color: 'info', icon: 'i-lucide-send' })
+    }
+  }
+  catch (e: unknown) {
+    const data = (e as { data?: { code?: string, message?: string, details?: { retryAfterSeconds?: number } } })?.data
+    // 429 rate_limited — 서버가 알려준 retryAfterSeconds로 쿨다운을 동기화(미제공 시 기존 30초 유지).
+    const retry = data?.details?.retryAfterSeconds
+    if (typeof retry === 'number' && retry > 0) {
+      resendReadyAt.value = Date.now() + retry * 1000
+    }
+    toast.add({ title: data?.message ?? '재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
   }
   finally {
     resending.value = false
@@ -76,12 +125,19 @@ async function verify() {
     toast.add({ title: '인증코드 6자리를 모두 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
+  if (!pendingToken.value) {
+    toast.add({ title: '인증 세션이 없습니다. 다시 로그인해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    navigateTo('/login')
+    return
+  }
   verifying.value = true
   try {
-    // TODO(api): 로그인 2FA verify 엔드포인트 확정 시 연결(현재는 통과 처리).
-    await new Promise(r => setTimeout(r, 400))
+    // 2차 코드 검증 → 정식 토큰 발급 + /me 페치(로그인 완료).
+    await auth.verifyTwoFactor({ pendingToken: pendingToken.value, code: fullCode.value })
     toast.add({ title: '보안 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-    navigateTo(redirect.value)
+    // 사업자등록증 심사 미승인이면 계약 관리 페이지로(로그인 페이지와 동일 정책).
+    const state = auth.tenant?.approvalState
+    navigateTo(state && state !== 'approved' ? '/account/contract' : redirect.value)
   }
   catch (e: unknown) {
     const data = (e as { data?: { message?: string } })?.data
@@ -110,16 +166,18 @@ async function verify() {
             inputmode="numeric"
             maxlength="1"
             aria-label="인증코드"
+            :disabled="expired"
             @input="onCodeInput(i, $event)"
             @keydown="onCodeKeydown(i, $event)"
           >
         </div>
+        <p v-if="expiryLabel" class="expiry-line" :class="{ expired }">{{ expiryLabel }}</p>
       </div>
 
       <button
         type="submit"
         class="btn btn-primary btn-lg submit-btn"
-        :disabled="fullCode.length !== 6 || verifying"
+        :disabled="fullCode.length !== 6 || verifying || expired"
       >
         {{ verifying ? '확인 중…' : '확인' }}
       </button>
@@ -187,6 +245,17 @@ async function verify() {
   background: var(--white);
   border-color: var(--ink-300);
   outline: none;
+}
+.expiry-line {
+  align-self: flex-start;
+  margin: 2px 0 0;
+  font-size: var(--fz-xs);
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+.expiry-line.expired {
+  color: var(--danger-ink, var(--danger));
+  font-weight: 600;
 }
 .submit-btn {
   width: 100%;
