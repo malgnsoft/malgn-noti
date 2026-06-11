@@ -3,18 +3,66 @@ import type { ApprovalStatus, SenderNumber, SenderRegisterResult } from '~/types
 
 useHead({ title: '발신 번호 관리' })
 const toast = useToast()
+const api = useApi()
 
-/* 목업 데이터 — 백엔드(malgn-noti-api) 연동 시 교체 */
-const rows = ref<SenderNumber[]>([
-  {
-    id: 's1',
-    type: '대표자 번호, 사업자 자체 번호',
-    number: '16447143',
-    status: '승인',
-    requestedAt: '2026-04-09 17:23',
-    approvedAt: '2026-04-10 16:04',
-  },
-])
+/* 서버 응답(TB_SENDER_PHONE) 원형 */
+interface SenderPhoneRow {
+  id: number
+  number: string
+  type: string | null
+  approvalState: ApprovalStatus
+  status: number
+  requestedAt: string
+  approvedAt: string | null
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '-'
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+function toView(r: SenderPhoneRow): SenderNumber {
+  return {
+    id: String(r.id),
+    type: r.type ?? '-',
+    number: r.number,
+    status: r.approvalState,
+    requestedAt: fmtDateTime(r.requestedAt),
+    approvedAt: fmtDateTime(r.approvedAt),
+  }
+}
+
+/* 발신 번호 목록 — GET /sender-phones (커서 누적, 최대 5페이지) */
+const rows = ref<SenderNumber[]>([])
+async function load() {
+  try {
+    const all: SenderPhoneRow[] = []
+    let cursor: string | null = null
+    for (let i = 0; i < 5; i++) {
+      const q = new URLSearchParams({ limit: '100' })
+      if (cursor) q.set('cursor', cursor)
+      const res = await api<{ data: SenderPhoneRow[], nextCursor: string | null }>(`/sender-phones?${q.toString()}`)
+      all.push(...res.data)
+      cursor = res.nextCursor
+      if (!cursor) break
+    }
+    rows.value = all.map(toView)
+    // 사라진 행은 선택에서 제거
+    selected.value = selected.value.filter(id => rows.value.some(r => r.id === id))
+  }
+  catch {
+    toast.add({ title: '발신 번호 목록을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
+
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await load() }
+catch { /* ignore (미승인 테넌트는 403) */ }
+onMounted(() => {
+  if (!rows.value.length) load().catch(() => { /* ignore */ })
+})
 
 const selected = ref<string[]>([])
 const page = ref(1)
@@ -44,20 +92,48 @@ const openRegister = ref(false)
 const openGuide = ref(false)
 const openDelete = ref(false)
 
-function onRegistered(result: SenderRegisterResult) {
-  rows.value = [
-    { id: `s${Date.now()}`, ...result },
-    ...rows.value,
-  ]
-  page.value = 1
+async function onRegistered(result: SenderRegisterResult) {
+  // 백엔드는 { number, type? }만 받고 approvalState='대기'로 신청 처리(즉시승인 없음).
+  // 다이얼로그의 인증·서류 입력은 UI 유지/후속, 등록은 번호·유형만 전송.
+  try {
+    await api('/sender-phones', {
+      method: 'POST',
+      body: { number: result.number, type: result.type || undefined },
+    })
+    await load()
+    page.value = 1
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } })?.data?.message
+    toast.add({ title: msg || '발신 번호 등록에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
 }
 
-function onDeleteConfirm() {
-  const count = selected.value.length
-  rows.value = rows.value.filter(r => !selected.value.includes(r.id))
-  selected.value = []
+async function onDeleteConfirm() {
+  const ids = [...selected.value]
   openDelete.value = false
-  toast.add({ title: `발신 번호 ${count}건을 삭제했습니다.`, color: 'info', icon: 'i-lucide-info' })
+  let ok = 0
+  let fail = 0
+  for (const id of ids) {
+    try {
+      await api(`/sender-phones/${id}`, { method: 'DELETE' })
+      ok++
+    }
+    catch {
+      fail++
+    }
+  }
+  await load()
+  selected.value = []
+  if (ok && !fail) {
+    toast.add({ title: `발신 번호 ${ok}건을 삭제했습니다.`, color: 'info', icon: 'i-lucide-info' })
+  }
+  else if (ok && fail) {
+    toast.add({ title: `${ok}건 삭제 · ${fail}건 실패(승인된 번호는 운영자에게 해지 요청).`, color: 'warning', icon: 'i-lucide-triangle-alert' })
+  }
+  else if (fail) {
+    toast.add({ title: '삭제에 실패했습니다. 승인된 번호는 운영자에게 해지 요청해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
 }
 
 </script>
