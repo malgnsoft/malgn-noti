@@ -65,8 +65,11 @@ async function confirmSave() {
   catch (e) {
     const status = (e as { response?: { status?: number }, statusCode?: number })?.response?.status
       ?? (e as { statusCode?: number })?.statusCode
+    // 비밀번호 불일치는 422(전역 자동 로그아웃 차단). 401은 전환기 호환용으로 함께 인식 — 모달은 유지.
+    const badPassword = status === 422 || status === 401
+    const serverMsg = (e as { data?: { message?: string } })?.data?.message
     toast.add({
-      title: status === 401 ? '비밀번호가 일치하지 않습니다.' : '설정 저장에 실패했습니다.',
+      title: badPassword ? (serverMsg || '비밀번호가 일치하지 않습니다.') : '설정 저장에 실패했습니다.',
       color: 'error',
       icon: 'i-lucide-circle-alert',
     })
