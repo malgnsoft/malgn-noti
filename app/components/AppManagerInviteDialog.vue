@@ -1,11 +1,12 @@
 <script setup lang="ts">
-const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ close: [], invited: [{ name: string, email: string }] }>()
+const props = defineProps<{ open: boolean, submitting?: boolean }>()
+const emit = defineEmits<{ close: [], submit: [{ name: string, email: string, role: 'admin' | 'member' }] }>()
 
 const toast = useToast()
 
 const name = ref('')
 const email = ref('')
+const role = ref<'admin' | 'member'>('member')
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const emailError = computed(() => {
@@ -18,6 +19,7 @@ watch(() => props.open, (v) => {
   if (v) {
     name.value = ''
     email.value = ''
+    role.value = 'member'
   }
 })
 
@@ -26,21 +28,16 @@ function send() {
     toast.add({ title: '이름과 이메일을 올바르게 입력해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  emit('invited', { name: name.value.trim(), email: email.value.trim() })
-  toast.add({
-    title: `${email.value.trim()} 으로 초대 메일을 발송했습니다.`,
-    color: 'success',
-    icon: 'i-lucide-mail-check',
-  })
-  emit('close')
+  // 실제 생성·토스트·닫기는 호출부(패널)가 서버 응답 후 처리한다.
+  emit('submit', { name: name.value.trim(), email: email.value.trim(), role: role.value })
 }
 </script>
 
 <template>
-  <AppModal :open="open" title="서비스 담당자 초대" :width="460" @close="emit('close')">
+  <AppModal :open="open" title="담당자 추가" :width="460" @close="emit('close')">
     <p class="iv-desc">
-      초대할 서비스 담당자의 이름과 이메일을 입력해 주세요.
-      입력한 이메일로 <b>서비스 담당자 등록 안내 메일</b>이 발송됩니다.
+      추가할 담당자의 이름·이메일·권한을 입력해 주세요.
+      계정이 즉시 생성되며, 입력한 이메일로 <b>임시 비밀번호 안내 메일</b>이 발송됩니다.
     </p>
 
     <div class="iv-form">
@@ -66,7 +63,14 @@ function send() {
           @keyup.enter="send"
         >
         <p v-if="emailError" class="iv-error">{{ emailError }}</p>
-        <p v-else class="iv-help">이 이메일이 서비스 담당자의 로그인 아이디로 사용됩니다.</p>
+        <p v-else class="iv-help">이 이메일이 담당자의 로그인 아이디로 사용됩니다.</p>
+      </div>
+      <div class="iv-row">
+        <label>권한 <span class="rq">*</span></label>
+        <div class="radio-group">
+          <label class="radio"><input v-model="role" type="radio" value="member"><span>멤버</span></label>
+          <label class="radio"><input v-model="role" type="radio" value="admin"><span>관리자</span></label>
+        </div>
       </div>
     </div>
 
@@ -74,8 +78,8 @@ function send() {
       <button type="button" class="btn btn-outline-dark" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-primary" :disabled="!canSend" @click="send">
-        <UIcon name="i-lucide-send" class="text-[length:var(--fz-sm)]" /> 초대 메일 발송
+      <button type="button" class="btn btn-primary" :disabled="!canSend || submitting" @click="send">
+        <UIcon name="i-lucide-user-plus" class="text-[length:var(--fz-sm)]" /> 담당자 추가
       </button>
     </template>
   </AppModal>

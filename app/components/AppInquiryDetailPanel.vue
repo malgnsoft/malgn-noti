@@ -1,77 +1,144 @@
 <script setup lang="ts">
 const toast = useToast()
+const api = useApi()
+const auth = useAuthStore()
+const route = useRoute()
+const id = computed(() => Number(route.params.id))
 
+type Status = 'wait' | 'progress' | 'done'
+const STATUS_META: Record<Status, { label: string, badge: string }> = {
+  wait: { label: '답변대기', badge: 'badge-error' },
+  progress: { label: '답변중', badge: 'badge-success' },
+  done: { label: '답변완료', badge: 'badge-neutral' },
+}
+const PRODUCT_LABEL: Record<string, string> = {
+  all: '전체', sms: 'SMS', rcs: 'RCS', kakao: '카카오톡', email: '이메일', push: 'PUSH',
+}
+const TYPE_LABEL: Record<string, string> = {
+  product: '상품', payment: '결제', partner: '제휴', etc: '기타',
+}
+
+interface InquiryRow {
+  id: number
+  inquiryType: string
+  productType: string | null
+  title: string
+  body: string
+  answerState: Status
+  createdAt: string
+}
+interface ReplyRow {
+  id: number
+  parentReplyId: number | null
+  authorUserId: number | null
+  authorName: string
+  adminYn: 'Y' | 'N'
+  body: string
+  createdAt: string
+}
 interface Comment {
   id: number
   author: string
   isAdmin: boolean
   time: string
-  mention?: string
   body: string
-  own?: boolean
-  replies?: Comment[]
+  own: boolean
+  replies: Comment[]
 }
 
-/* 문의 상세 (목업 — 백엔드 연동 시 교체) */
-const inquiry = {
-  status: '답변대기',
-  channel: '결제',
-  title: '1:1 문의 제목',
-  time: '2026.05.20 14:32',
-  comments: 10,
-  source: '신고하기 또는 결제내역 > 문의하기 했을 경우 관련 정보 노출 영역',
-  content: '온라인 강의는 단순히 콘텐츠를 잘 만드는 것만으로는 수익이 발생하지 않습니다. 수익이 나는 강의는 기획 단계부터 구조가 다르게 설계됩니다. 이번 심화 특강에서는 강의 상품을 기획할 때 반드시 고려해야 할 수익 구조 설계 방식을 다룹니다. 무료 콘텐츠와 유료 콘텐츠의 경계 설정 방식을 함께 살펴봅니다.',
-  files: ['image.jpg', 'image.jpg'],
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+function channelOf(r: InquiryRow): string {
+  const product = r.productType && r.productType !== 'all' ? PRODUCT_LABEL[r.productType] : undefined
+  if (product) return product
+  return TYPE_LABEL[r.inquiryType] ?? '문의'
 }
 
-const REPLY_BODY = '해당 강의는 초보자도 수강할 수 있도록 구성되어 있습니다. 기본 개념부터 차근차근 설명하며, 중간중간 실무 예시를 함께 다루기 때문에 관련 경험이 없으신 분들도 따라오실 수 있습니다.\n다만, 용어 자체가 처음인 경우에는 초반 강의에서 다소 낯설게 느껴질 수는 있으나 강의를 순서대로 수강하시면 자연스럽게 이해하실 수 있도록 구성되어 있습니다. 기초부터 정리하고 싶은 분들께 특히 추천드립니다.'
+const inquiry = ref<{ status: Status, statusLabel: string, badge: string, channel: string, title: string, time: string, content: string } | null>(null)
+const comments = ref<Comment[]>([])
 
-const COMMENTS: Comment[] = [
-  {
-    id: 1,
-    author: '관리자 닉네임',
-    isAdmin: true,
-    time: '1시간 전',
-    body: REPLY_BODY,
-  },
-  {
-    id: 2,
-    author: '닉네임',
-    isAdmin: false,
-    time: '2026.05.20',
-    mention: '닉네임',
-    body: REPLY_BODY,
-    own: true,
-  },
-  {
-    id: 3,
-    author: '관리자 닉네임',
-    isAdmin: true,
-    time: '2026.05.18',
-    mention: '닉네임',
-    body: REPLY_BODY,
-    replies: [
-      {
-        id: 4,
-        author: '닉네임',
-        isAdmin: false,
-        time: '방금 전',
-        mention: '닉네임',
-        body: REPLY_BODY,
-        own: true,
-      },
-    ],
-  },
-]
+function toComment(r: ReplyRow): Comment {
+  return {
+    id: r.id,
+    author: r.authorName,
+    isAdmin: r.adminYn === 'Y',
+    time: fmtDateTime(r.createdAt),
+    body: r.body,
+    own: r.authorUserId != null && r.authorUserId === auth.user?.id,
+    replies: [],
+  }
+}
 
-function downloadFile(name: string) {
-  toast.add({ title: `${name} 파일을 다운로드합니다.`, color: 'info', icon: 'i-lucide-download' })
+const totalComments = computed(() => {
+  let n = 0
+  const count = (list: Comment[]) => { for (const c of list) { n++; count(c.replies) } }
+  count(comments.value)
+  return n
+})
+
+async function loadInquiry() {
+  const res = await api<{ data: InquiryRow }>(`/inquiries/${id.value}`)
+  const r = res.data
+  const meta = STATUS_META[r.answerState] ?? STATUS_META.wait
+  inquiry.value = {
+    status: r.answerState,
+    statusLabel: meta.label,
+    badge: meta.badge,
+    channel: channelOf(r),
+    title: r.title,
+    time: fmtDateTime(r.createdAt),
+    content: r.body,
+  }
 }
-function onReply() {
-  toast.add({ title: '답글 작성', color: 'info', icon: 'i-lucide-corner-down-right' })
+async function loadReplies() {
+  const res = await api<{ data: ReplyRow[] }>(`/inquiries/${id.value}/replies`)
+  const byId = new Map<number, Comment>()
+  for (const row of res.data) byId.set(row.id, toComment(row))
+  const roots: Comment[] = []
+  for (const row of res.data) {
+    const c = byId.get(row.id)!
+    if (row.parentReplyId && byId.has(row.parentReplyId)) byId.get(row.parentReplyId)!.replies.push(c)
+    else roots.push(c)
+  }
+  comments.value = roots
 }
-function onMenu() {
-  toast.add({ title: '댓글 메뉴', color: 'info', icon: 'i-lucide-ellipsis-vertical' })
+
+async function loadAll() {
+  await Promise.all([loadInquiry(), loadReplies()])
+}
+
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await loadAll() }
+catch { /* ignore */ }
+onMounted(() => {
+  if (!inquiry.value) loadAll().catch(() => {
+    toast.add({ title: '문의 내역을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  })
+})
+
+/* 답변 작성 */
+const replyBody = ref('')
+const submitting = ref(false)
+async function submitReply() {
+  const body = replyBody.value.trim()
+  if (!body || submitting.value) return
+  submitting.value = true
+  try {
+    await api(`/inquiries/${id.value}/replies`, { method: 'POST', body: { body } })
+    replyBody.value = ''
+    await loadAll()
+    toast.add({ title: '답변이 등록되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch {
+    toast.add({ title: '답변 등록에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    submitting.value = false
+  }
 }
 function goList() {
   navigateTo('/account/inquiries')
@@ -89,12 +156,9 @@ function goList() {
       </div>
 
       <!-- 문의 헤더 -->
-      <div class="iqd-head">
+      <div v-if="inquiry" class="iqd-head">
         <div class="iqd-head-top">
-          <span class="badge badge-error">{{ inquiry.status }}</span>
-          <button type="button" class="iqd-menu" aria-label="더보기" @click="onMenu">
-            <UIcon name="i-lucide-ellipsis-vertical" />
-          </button>
+          <span class="badge" :class="inquiry.badge">{{ inquiry.statusLabel }}</span>
         </div>
         <p class="iqd-title">
           <span class="iqd-channel">{{ inquiry.channel }}</span>
@@ -102,70 +166,63 @@ function goList() {
         </p>
         <div class="iqd-meta">
           <span class="iqd-meta-item"><UIcon name="i-lucide-clock" /> {{ inquiry.time }}</span>
-          <span class="iqd-meta-item"><UIcon name="i-lucide-message-square" /> {{ inquiry.comments }}</span>
+          <span class="iqd-meta-item"><UIcon name="i-lucide-message-square" /> {{ totalComments }}</span>
         </div>
       </div>
 
-      <p class="iqd-source">{{ inquiry.source }}</p>
-
       <!-- 문의 내용 -->
-      <div class="iqd-content">{{ inquiry.content }}</div>
-
-      <!-- 첨부파일 -->
-      <div class="iqd-files">
-        <span class="iqd-files-label">첨부파일</span>
-        <ul class="iqd-files-list">
-          <li v-for="(f, i) in inquiry.files" :key="i">
-            <span class="iqd-file-name">{{ f }}</span>
-            <button type="button" class="iqd-file-dl" :aria-label="`${f} 다운로드`" @click="downloadFile(f)">
-              <UIcon name="i-lucide-download" />
-            </button>
-          </li>
-        </ul>
-      </div>
+      <div v-if="inquiry" class="iqd-content">{{ inquiry.content }}</div>
+      <div v-else class="iqd-empty">문의 내역을 불러오는 중입니다.</div>
 
       <div class="iqd-rule" />
 
       <!-- 댓글 -->
-      <h4 class="iqd-comments-title">전체 {{ COMMENTS.length }}</h4>
+      <h4 class="iqd-comments-title">전체 {{ totalComments }}</h4>
       <ul class="iqd-comments">
-        <li v-for="c in COMMENTS" :key="c.id" class="iqd-comment">
+        <li v-for="c in comments" :key="c.id" class="iqd-comment">
           <div class="iqd-c-head">
             <span class="iqd-avatar"><UIcon name="i-lucide-circle-user-round" /></span>
             <span class="iqd-c-author" :class="{ admin: c.isAdmin }">{{ c.author }}</span>
             <span class="iqd-c-time">{{ c.time }}</span>
-            <div class="iqd-c-actions">
-              <button type="button" class="iqd-c-reply" @click="onReply">답글</button>
-              <button v-if="c.own" type="button" class="iqd-menu sm" aria-label="더보기" @click="onMenu">
-                <UIcon name="i-lucide-ellipsis-vertical" />
-              </button>
-            </div>
           </div>
-          <p class="iqd-c-body">
-            <span v-if="c.mention" class="iqd-mention">@{{ c.mention }}</span>{{ c.body }}
-          </p>
+          <p class="iqd-c-body">{{ c.body }}</p>
 
           <!-- 대댓글 -->
-          <ul v-if="c.replies?.length" class="iqd-replies">
+          <ul v-if="c.replies.length" class="iqd-replies">
             <li v-for="r in c.replies" :key="r.id" class="iqd-reply">
               <div class="iqd-c-head">
                 <span class="iqd-avatar"><UIcon name="i-lucide-circle-user-round" /></span>
                 <span class="iqd-c-author" :class="{ admin: r.isAdmin }">{{ r.author }}</span>
                 <span class="iqd-c-time">{{ r.time }}</span>
-                <div class="iqd-c-actions">
-                  <button type="button" class="iqd-c-reply" @click="onReply">답글</button>
-                  <button v-if="r.own" type="button" class="iqd-menu sm" aria-label="더보기" @click="onMenu">
-                    <UIcon name="i-lucide-ellipsis-vertical" />
-                  </button>
-                </div>
               </div>
-              <p class="iqd-c-body">
-                <span v-if="r.mention" class="iqd-mention">@{{ r.mention }}</span>{{ r.body }}
-              </p>
+              <p class="iqd-c-body">{{ r.body }}</p>
             </li>
           </ul>
         </li>
+        <li v-if="!comments.length" class="iqd-empty">아직 등록된 답변이 없습니다.</li>
       </ul>
+
+      <!-- 답변 작성 -->
+      <div class="iqd-compose">
+        <textarea
+          v-model="replyBody"
+          class="textarea iqd-compose-input"
+          rows="3"
+          placeholder="답변을 입력해 주세요."
+          @keydown.meta.enter="submitReply"
+          @keydown.ctrl.enter="submitReply"
+        />
+        <div class="iqd-compose-actions">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            :disabled="!replyBody.trim() || submitting"
+            @click="submitReply"
+          >
+            <UIcon name="i-lucide-corner-down-right" class="text-[length:var(--fz-sm)]" /> 답변 등록
+          </button>
+        </div>
+      </div>
     </section>
   </div>
 </template>
@@ -387,4 +444,27 @@ function goList() {
   border-radius: var(--r-md);
 }
 .iqd-reply + .iqd-reply { margin-top: 8px; }
+
+.iqd-empty {
+  padding: 32px 0;
+  text-align: center;
+  font-size: var(--fz-sm);
+  color: var(--ink-400);
+}
+
+/* 답변 작성 */
+.iqd-compose {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.iqd-compose-input {
+  width: 100%;
+  resize: vertical;
+}
+.iqd-compose-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
 </style>

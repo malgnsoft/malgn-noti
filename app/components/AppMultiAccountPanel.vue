@@ -21,53 +21,134 @@ const METHOD_ROWS = [
   { title: '임직원(업무 담당 직원)', desc: '임직원 소유의 휴대폰 본인 인증', docs: '사업자등록증, 재직증명서' },
 ]
 
-interface VerifyRecord {
-  memberType: string
-  name: string
-  docs: string
-  status: '승인' | '승인 대기' | '반려' | '초대 발송'
-  requestedAt: string
-  verifiedAt: string
+/* ── 멀티 계정(매니저) — /me/members ───────────────────────────── */
+const toast = useToast()
+const api = useApi()
+const auth = useAuthStore()
+
+type Role = 'owner' | 'admin' | 'member'
+interface MemberRow {
+  id: number
+  loginid: string
+  name: string | null
+  email: string | null
+  role: Role
+  status: number
+  lastLoginAt: string | null
+  createdAt: string
+}
+const ROLE_LABEL: Record<Role, string> = { owner: '소유자', admin: '관리자', member: '멤버' }
+
+const canManage = computed(() => auth.user?.role === 'owner' || auth.user?.role === 'admin')
+const myId = computed(() => auth.user?.id ?? null)
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '-'
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-/* 본인 인증 내역 (목업 — 백엔드 연동 시 교체) */
-const records = ref<VerifyRecord[]>([
-  {
-    memberType: '사업자 멀티계정',
-    name: '김덕조',
-    docs: '사업자등록증, 재직증명서',
-    status: '승인',
-    requestedAt: '2026-04-13 16:41',
-    verifiedAt: '2026-04-13 18:52',
-  },
-])
+const members = ref<MemberRow[]>([])
+async function loadMembers() {
+  const res = await api<{ data: { items: MemberRow[] } }>('/me/members')
+  members.value = res.data.items
+}
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await loadMembers() }
+catch { /* ignore */ }
+onMounted(() => {
+  if (members.value.length === 0) loadMembers().catch(() => { /* ignore */ })
+})
 
-const statusClass: Record<VerifyRecord['status'], string> = {
-  '승인': 'badge-success',
-  '승인 대기': 'badge-neutral',
-  '반려': 'badge-error',
-  '초대 발송': 'badge-neutral',
+function errStatus(e: unknown): number | undefined {
+  return (e as { response?: { status?: number } })?.response?.status
+    ?? (e as { statusCode?: number })?.statusCode
 }
 
-/* 서비스 담당자 초대 모달 */
-const inviteOpen = ref(false)
-function onInvited(p: { name: string, email: string }) {
-  const now = new Date()
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} `
-    + `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  records.value = [
-    {
-      memberType: '사업자 멀티계정',
-      name: `${p.name} (${p.email})`,
-      docs: '-',
-      status: '초대 발송',
-      requestedAt: fmt(now),
-      verifiedAt: '-',
-    },
-    ...records.value,
-  ]
-  inviteOpen.value = false
+/* 담당자 추가 모달 */
+const addOpen = ref(false)
+const adding = ref(false)
+async function onSubmitMember(p: { name: string, email: string, role: 'admin' | 'member' }) {
+  if (adding.value) return
+  adding.value = true
+  try {
+    await api('/me/members', { method: 'POST', body: p })
+    await loadMembers()
+    addOpen.value = false
+    toast.add({ title: '담당자 계정이 생성되었습니다. 임시 비밀번호가 이메일로 발송되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e) {
+    toast.add({
+      title: errStatus(e) === 409 ? '이미 사용 중인 이메일입니다.' : '담당자 추가에 실패했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    adding.value = false
+  }
+}
+
+/* 권한 변경 */
+async function changeRole(m: MemberRow, role: Role) {
+  if (role === m.role) return
+  try {
+    await api(`/me/members/${m.id}`, { method: 'PATCH', body: { role } })
+    await loadMembers()
+    toast.add({ title: '권한이 변경되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e) {
+    await loadMembers()
+    toast.add({
+      title: errStatus(e) === 409 ? '마지막 소유자는 변경할 수 없습니다.' : '권한 변경에 실패했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+}
+
+/* 활성/정지 토글 */
+async function toggleStatus(m: MemberRow) {
+  const next = m.status === 1 ? 0 : 1
+  try {
+    await api(`/me/members/${m.id}`, { method: 'PATCH', body: { status: next } })
+    await loadMembers()
+    toast.add({ title: next === 1 ? '계정이 활성화되었습니다.' : '계정이 정지되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e) {
+    toast.add({
+      title: errStatus(e) === 409 ? '마지막 소유자는 정지할 수 없습니다.' : '상태 변경에 실패했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+}
+
+/* 삭제 */
+const deleteTarget = ref<MemberRow | null>(null)
+const deleteMessage = computed(() => {
+  const m = deleteTarget.value
+  if (!m) return ''
+  return `${m.name || m.loginid} (${m.email || m.loginid}) 계정을 삭제하시겠습니까?\n삭제한 계정은 복구할 수 없습니다.`
+})
+async function confirmDelete() {
+  const m = deleteTarget.value
+  if (!m) return
+  try {
+    await api(`/me/members/${m.id}`, { method: 'DELETE' })
+    await loadMembers()
+    toast.add({ title: '계정이 삭제되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch (e) {
+    toast.add({
+      title: errStatus(e) === 409 ? '마지막 소유자는 삭제할 수 없습니다.' : '계정 삭제에 실패했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  deleteTarget.value = null
 }
 </script>
 
@@ -77,9 +158,9 @@ function onInvited(p: { name: string, email: string }) {
     <section class="ms-sec">
       <div class="ms-head">
         <h3>본인 인증 안내</h3>
-        <button type="button" class="btn btn-primary btn-sm" @click="inviteOpen = true">
+        <button v-if="canManage" type="button" class="btn btn-primary btn-sm" @click="addOpen = true">
           <UIcon name="i-lucide-user-plus" class="text-[length:var(--fz-sm)]" />
-          서비스 담당자 초대하기
+          담당자 추가
         </button>
       </div>
 
@@ -115,43 +196,87 @@ function onInvited(p: { name: string, email: string }) {
       </table>
     </section>
 
-    <!-- 본인 인증 내역 -->
+    <!-- 멀티 계정 목록 -->
     <section class="ms-sec">
       <div class="ms-head">
-        <h3>본인 인증 내역</h3>
+        <h3>멀티 계정</h3>
+        <button v-if="canManage" type="button" class="btn btn-primary btn-sm" @click="addOpen = true">
+          <UIcon name="i-lucide-user-plus" class="text-[length:var(--fz-sm)]" />
+          담당자 추가
+        </button>
       </div>
 
       <table class="table">
         <thead>
           <tr>
-            <th>회원 유형</th>
-            <th>회원 이름(임직원 이름)</th>
-            <th>제출 서류</th>
-            <th style="width: 92px">상태</th>
-            <th style="width: 140px">인증 요청 일시</th>
-            <th style="width: 140px">인증 일시</th>
+            <th>이름</th>
+            <th>이메일(아이디)</th>
+            <th style="width: 120px">권한</th>
+            <th style="width: 80px">상태</th>
+            <th style="width: 150px">최근 로그인</th>
+            <th style="width: 150px">생성일</th>
+            <th style="width: 150px">관리</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(r, i) in records" :key="i">
-            <td>{{ r.memberType }}</td>
-            <td>{{ r.name }}</td>
-            <td>{{ r.docs }}</td>
-            <td><span class="badge" :class="statusClass[r.status]">{{ r.status }}</span></td>
-            <td class="mu-date">{{ r.requestedAt }}</td>
-            <td class="mu-date">{{ r.verifiedAt }}</td>
+          <tr v-for="m in members" :key="m.id">
+            <td>
+              {{ m.name || '-' }}
+              <span v-if="m.id === myId" class="badge badge-neutral">본인</span>
+            </td>
+            <td>{{ m.email || m.loginid }}</td>
+            <td>
+              <select
+                v-if="canManage && m.id !== myId && m.role !== 'owner'"
+                class="select mu-role-select"
+                :value="m.role"
+                @change="changeRole(m, ($event.target as HTMLSelectElement).value as Role)"
+              >
+                <option value="admin">관리자</option>
+                <option value="member">멤버</option>
+              </select>
+              <span v-else>{{ ROLE_LABEL[m.role] }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="m.status === 1 ? 'badge-success' : 'badge-neutral'">
+                {{ m.status === 1 ? '활성' : '정지' }}
+              </span>
+            </td>
+            <td class="mu-date">{{ fmtDateTime(m.lastLoginAt) }}</td>
+            <td class="mu-date">{{ fmtDateTime(m.createdAt) }}</td>
+            <td>
+              <div v-if="canManage && m.id !== myId" class="mu-actions">
+                <button type="button" class="btn btn-outline-dark btn-sm" @click="toggleStatus(m)">
+                  {{ m.status === 1 ? '정지' : '활성화' }}
+                </button>
+                <button type="button" class="btn btn-sm mu-del" @click="deleteTarget = m">
+                  삭제
+                </button>
+              </div>
+              <span v-else class="mu-muted">—</span>
+            </td>
           </tr>
-          <tr v-if="!records.length">
-            <td colspan="6" class="mu-empty">본인 인증 내역이 없습니다.</td>
+          <tr v-if="!members.length">
+            <td colspan="7" class="mu-empty">멀티 계정이 없습니다.</td>
           </tr>
         </tbody>
       </table>
     </section>
 
     <AppManagerInviteDialog
-      :open="inviteOpen"
-      @close="inviteOpen = false"
-      @invited="onInvited"
+      :open="addOpen"
+      :submitting="adding"
+      @close="addOpen = false"
+      @submit="onSubmitMember"
+    />
+    <AppConfirmDialog
+      :open="!!deleteTarget"
+      title="멀티 계정 삭제"
+      :message="deleteMessage"
+      confirm-label="삭제"
+      danger
+      @close="deleteTarget = null"
+      @confirm="confirmDelete"
     />
   </div>
 </template>
@@ -262,4 +387,21 @@ function onInvited(p: { name: string, email: string }) {
   color: var(--ink-400);
   padding: 28px 0;
 }
+
+.mu-role-select {
+  height: 30px;
+  padding: 0 8px;
+  font-size: var(--fz-sm);
+}
+.mu-actions {
+  display: flex;
+  gap: 6px;
+}
+.mu-del {
+  border: 1px solid var(--danger);
+  color: var(--danger-ink);
+  background: var(--white);
+}
+.mu-del:hover { background: #fef2f2; }
+.mu-muted { color: var(--ink-300); }
 </style>

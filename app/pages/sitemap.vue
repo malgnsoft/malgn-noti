@@ -116,7 +116,7 @@ const groups: SmGroup[] = [
       { label: '크레딧 관리', desc: '크레딧 충전·사용 내역·영수증', type: 'page', to: '/account/credit' },
       { label: '결제 내역', desc: '결제·청구 내역', type: 'page', to: '/account/billing' },
       { label: '나의 문의', desc: '1:1 문의 목록', type: 'page', to: '/account/inquiries' },
-      { label: '문의 상세', desc: '문의 내용·답변 댓글 스레드', type: 'page', to: '/account/inquiries/detail' },
+      { label: '문의 상세', desc: '문의 내용·답변 댓글 스레드', type: 'page', to: '/account/inquiries/1' },
       { label: '1:1 문의 작성', desc: '문의 작성 폼', type: 'page', to: '/account/inquiry' },
       { label: '문의 작성 완료', desc: '문의 접수 완료', type: 'page', to: '/account/inquiry/complete' },
       { label: '서비스 담당자 초대', desc: '담당자 이름·이메일 입력 모달', type: 'popup' },

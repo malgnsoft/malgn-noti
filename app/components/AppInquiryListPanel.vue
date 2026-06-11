@@ -1,14 +1,8 @@
 <script setup lang="ts">
 const toast = useToast()
+const api = useApi()
 
 type Status = 'wait' | 'progress' | 'done'
-
-/* 문의 상태별 집계 (목업 — 백엔드 연동 시 교체) */
-const STATS: { key: Status, label: string, count: number, icon: string, tone: string }[] = [
-  { key: 'wait', label: '답변대기', count: 10, icon: 'i-lucide-clock', tone: 'danger' },
-  { key: 'progress', label: '답변중', count: 30, icon: 'i-lucide-message-square-more', tone: 'accent' },
-  { key: 'done', label: '답변완료', count: 20, icon: 'i-lucide-circle-check', tone: 'ink' },
-]
 
 const STATUS_META: Record<Status, { label: string, badge: string }> = {
   wait: { label: '답변대기', badge: 'badge-error' },
@@ -16,6 +10,24 @@ const STATUS_META: Record<Status, { label: string, badge: string }> = {
   done: { label: '답변완료', badge: 'badge-neutral' },
 }
 
+/* 문의 채널/유형 라벨 — productType 우선, 없으면 inquiryType */
+const PRODUCT_LABEL: Record<string, string> = {
+  all: '전체', sms: 'SMS', rcs: 'RCS', kakao: '카카오톡', email: '이메일', push: 'PUSH',
+}
+const TYPE_LABEL: Record<string, string> = {
+  product: '상품', payment: '결제', partner: '제휴', etc: '기타',
+}
+
+/* 서버 응답(TB_INQUIRY) 원형 */
+interface InquiryRow {
+  id: number
+  inquiryType: string
+  productType: string | null
+  title: string
+  body: string
+  answerState: Status
+  createdAt: string
+}
 interface Inquiry {
   id: number
   status: Status
@@ -23,40 +35,87 @@ interface Inquiry {
   title: string
   body: string
   time: string
-  comments: number
 }
 
-const SAMPLE_BODY = '온라인 강의는 단순히 콘텐츠를 잘 만드는 것만으로는 수익이 발생하지 않습니다. 수익이 나는 강의는 기획 단계부터 구조가 다르게 설계됩니다. 이번 심화 특강에서는 강의 상품을 기획할 때 반드시 고려해야 할 수익 구조 설계 방식을 다룹니다. 무료 콘텐츠와 유료 콘텐츠의 경계 설정 방식을 함께 살펴봅니다.'
+function channelOf(r: InquiryRow): string {
+  const product = r.productType && r.productType !== 'all' ? PRODUCT_LABEL[r.productType] : undefined
+  if (product) return product
+  return TYPE_LABEL[r.inquiryType] ?? '문의'
+}
+function relTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const diff = Date.now() - d.getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return '방금 전'
+  if (min < 60) return `${min}분 전`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}시간 전`
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`
+}
+function toInquiry(r: InquiryRow): Inquiry {
+  return {
+    id: r.id,
+    status: r.answerState,
+    channel: channelOf(r),
+    title: r.title,
+    body: r.body,
+    time: relTime(r.createdAt),
+  }
+}
 
-/* 문의 내역 (목업) */
-const INQUIRIES = ref<Inquiry[]>([
-  { id: 1, status: 'wait', channel: '카카오톡', title: '문의 제목이 들어갑니다.', body: SAMPLE_BODY, time: '방금 전', comments: 10 },
-  { id: 2, status: 'wait', channel: '카카오톡', title: '문의 제목이 들어갑니다.', body: SAMPLE_BODY, time: '1시간 전', comments: 10 },
-  { id: 3, status: 'progress', channel: '카카오톡', title: '문의 제목이 들어갑니다.', body: SAMPLE_BODY, time: '6시간 전', comments: 10 },
-  { id: 4, status: 'progress', channel: '카카오톡', title: '문의 제목이 들어갑니다.', body: SAMPLE_BODY, time: '2026.05.20', comments: 10 },
-  { id: 5, status: 'done', channel: '카카오톡', title: '문의 제목이 들어갑니다.', body: SAMPLE_BODY, time: '2026.05.18', comments: 10 },
-  { id: 6, status: 'done', channel: 'SMS', title: '발송 결과 리포트 관련 문의입니다.', body: SAMPLE_BODY, time: '2026.05.15', comments: 4 },
-  { id: 7, status: 'done', channel: '이메일', title: '도메인 인증이 실패했습니다.', body: SAMPLE_BODY, time: '2026.05.12', comments: 2 },
-])
+/* 문의 내역 — 커서 페이징으로 누적 로드 */
+const items = ref<Inquiry[]>([])
+const nextCursor = ref<string | null>(null)
+const loading = ref(false)
 
-const keyword = ref('')
-const filtered = computed(() => {
-  const k = keyword.value.trim()
-  if (!k) return INQUIRIES.value
-  return INQUIRIES.value.filter(q => q.title.includes(k) || q.body.includes(k))
+async function load(reset = false) {
+  if (loading.value) return
+  loading.value = true
+  try {
+    const q = new URLSearchParams({ limit: '20' })
+    if (!reset && nextCursor.value) q.set('cursor', nextCursor.value)
+    const res = await api<{ data: InquiryRow[], nextCursor: string | null }>(`/inquiries?${q.toString()}`)
+    const mapped = res.data.map(toInquiry)
+    items.value = reset ? mapped : [...items.value, ...mapped]
+    nextCursor.value = res.nextCursor
+  }
+  catch {
+    if (reset) toast.add({ title: '문의 내역을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+// SSR에서 실패해도 페이지가 죽지 않도록 swallow — client mount 시 재시도.
+try { await load(true) }
+catch { /* ignore */ }
+onMounted(() => {
+  if (items.value.length === 0) load(true)
 })
 
-const PAGE = 5
-const visible = ref(PAGE)
-const shown = computed(() => filtered.value.slice(0, visible.value))
-const hasMore = computed(() => visible.value < filtered.value.length)
-watch(keyword, () => { visible.value = PAGE })
+/* 상태 집계 — 별도 count 엔드포인트가 없어 로드된 항목 기준 best-effort */
+const STATS = computed(() => ([
+  { key: 'wait' as const, label: '답변대기', count: items.value.filter(i => i.status === 'wait').length, icon: 'i-lucide-clock', tone: 'danger' },
+  { key: 'progress' as const, label: '답변중', count: items.value.filter(i => i.status === 'progress').length, icon: 'i-lucide-message-square-more', tone: 'accent' },
+  { key: 'done' as const, label: '답변완료', count: items.value.filter(i => i.status === 'done').length, icon: 'i-lucide-circle-check', tone: 'ink' },
+]))
+
+const keyword = ref('')
+const shown = computed(() => {
+  const k = keyword.value.trim()
+  if (!k) return items.value
+  return items.value.filter(q => q.title.includes(k) || q.body.includes(k))
+})
+const hasMore = computed(() => !!nextCursor.value)
 
 function showMore() {
-  visible.value += PAGE
+  load(false)
 }
-function goDetail(_q: Inquiry) {
-  navigateTo('/account/inquiries/detail')
+function goDetail(q: Inquiry) {
+  navigateTo(`/account/inquiries/${q.id}`)
 }
 function goWrite() {
   navigateTo('/account/inquiry')
@@ -85,11 +144,16 @@ function requestDelete(q: Inquiry) {
   openMenuId.value = null
   deleteTarget.value = q
 }
-function confirmDelete() {
-  if (deleteTarget.value) {
-    const id = deleteTarget.value.id
-    INQUIRIES.value = INQUIRIES.value.filter(x => x.id !== id)
+async function confirmDelete() {
+  const t = deleteTarget.value
+  if (!t) return
+  try {
+    await api(`/inquiries/${t.id}`, { method: 'DELETE' })
+    items.value = items.value.filter(x => x.id !== t.id)
     toast.add({ title: '문의가 삭제되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch {
+    toast.add({ title: '문의 삭제에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
   }
   deleteTarget.value = null
 }
@@ -152,9 +216,6 @@ function confirmDelete() {
           <div class="iq-meta">
             <span class="iq-meta-item">
               <UIcon name="i-lucide-clock" /> {{ q.time }}
-            </span>
-            <span class="iq-meta-item">
-              <UIcon name="i-lucide-message-square" /> {{ q.comments }}
             </span>
           </div>
         </li>

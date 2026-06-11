@@ -1,13 +1,61 @@
 <script setup lang="ts">
 const toast = useToast()
+const api = useApi()
+const auth = useAuthStore()
 
-/* 보유 크레딧 (목업 — 백엔드 연동 시 교체) */
-const balance = 300000
-const STATS = [
-  { label: '총 충전한 크레딧', value: 300000 },
-  { label: '보너스 크레딧', value: 1000 },
-  { label: '이번 달 사용 크레딧', value: 5000 },
-]
+/* 보유 크레딧 — auth store가 정본(/me) */
+const balance = computed(() => auth.creditBalance)
+
+/* 서버 원장(TB_CREDIT_LEDGER) 원형 — amount는 부호 있는 DECIMAL 문자열 */
+type EntryType = 'charge' | 'consume' | 'refund' | 'cancel' | 'admin_grant' | 'expire' | 'hold' | 'hold_release'
+interface LedgerRow {
+  id: number
+  entryType: EntryType
+  amount: string
+  balanceAfter: string
+  description: string | null
+  bonusYn: 'Y' | 'N'
+  expireAt: string | null
+  createdAt: string
+}
+
+const ENTRY_LABEL: Record<EntryType, string> = {
+  charge: '충전', consume: '사용', refund: '환불', cancel: '취소',
+  admin_grant: '관리자 지급', expire: '소멸', hold: '홀드', hold_release: '홀드 해제',
+}
+/* 구분 필터(한글) → entryType 서버 파라미터 */
+const TYPE_TO_ENTRY: Record<string, EntryType | undefined> = {
+  전체구분: undefined, 충전: 'charge', '관리자 지급': 'admin_grant', 취소: 'cancel', 사용: 'consume', 소멸: 'expire',
+}
+
+interface CreditRow {
+  id: number
+  at: string
+  type: string
+  desc: string
+  receipt: boolean
+  delta: number
+  expireAt: string
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '-'
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+function toCreditRow(r: LedgerRow): CreditRow {
+  return {
+    id: r.id,
+    at: fmtDateTime(r.createdAt),
+    type: ENTRY_LABEL[r.entryType] ?? r.entryType,
+    desc: r.description ?? '',
+    receipt: r.entryType === 'charge',
+    delta: Number(r.amount),
+    expireAt: fmtDateTime(r.expireAt),
+  }
+}
 
 /* 기간 필터 */
 const PRESETS = [
@@ -45,28 +93,84 @@ const typeFilter = ref<typeof TYPES[number]>('전체구분')
 const PAGE_SIZES = [30, 50, 100]
 const pageSize = ref(30)
 
-interface CreditRow {
-  at: string
-  type: '충전' | '관리자 지급' | '취소' | '사용' | '소멸'
-  desc: string
-  receipt?: boolean
-  delta: number
-  expireAt: string
+/* 충전·사용 내역 — 서버 원장 로드(커서 페이징, 최대 5페이지 누적) */
+const ledger = ref<LedgerRow[]>([])
+const loading = ref(false)
+
+function dayStartISO(d: string): string | undefined {
+  if (!d) return undefined
+  const dt = new Date(`${d}T00:00:00`)
+  return Number.isNaN(dt.getTime()) ? undefined : dt.toISOString()
+}
+function dayEndISO(d: string): string | undefined {
+  if (!d) return undefined
+  const dt = new Date(`${d}T23:59:59.999`)
+  return Number.isNaN(dt.getTime()) ? undefined : dt.toISOString()
 }
 
-/* 충전·사용 내역 (목업) */
-const ROWS: CreditRow[] = [
-  { at: '2026.05.20 14:32', type: '충전', desc: '크레딧 구매', receipt: true, delta: 10000, expireAt: '2027.05.20 14:32' },
-  { at: '2026.05.18 10:05', type: '관리자 지급', desc: '이벤트 당첨 10,000 크레딧 충전', delta: 10000, expireAt: '2027.05.18 10:05' },
-  { at: '2026.05.15 09:20', type: '취소', desc: '환불 차감', delta: 10000, expireAt: '2027.05.15 09:20' },
-  { at: '2026.05.12 16:48', type: '사용', desc: '결제 취소', delta: -2000, expireAt: '-' },
-  { at: '2026.05.10 11:30', type: '소멸', desc: '이메일 전송', delta: -2000, expireAt: '-' },
-]
+async function loadLedger() {
+  if (loading.value) return
+  loading.value = true
+  try {
+    const entryType = TYPE_TO_ENTRY[typeFilter.value]
+    const from = dayStartISO(fromDate.value)
+    const to = dayEndISO(toDate.value)
+    const all: LedgerRow[] = []
+    let cursor: string | null = null
+    for (let i = 0; i < 5; i++) {
+      const q = new URLSearchParams({ limit: '100' })
+      if (entryType) q.set('entryType', entryType)
+      if (from) q.set('from', from)
+      if (to) q.set('to', to)
+      if (cursor) q.set('cursor', cursor)
+      const res = await api<{ data: LedgerRow[], nextCursor: string | null }>(`/credit-ledger?${q.toString()}`)
+      all.push(...res.data)
+      cursor = res.nextCursor
+      if (!cursor) break
+    }
+    ledger.value = all
+  }
+  catch {
+    toast.add({ title: '크레딧 내역을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    loading.value = false
+  }
+}
 
-/* 검색 조건 — 검색하기 클릭 시점에 적용 */
-const applied = ref({ keyword: '', type: '전체구분' as typeof TYPES[number] })
-const filteredRows = computed(() => ROWS.filter((r) => {
-  if (applied.value.type !== '전체구분' && r.type !== applied.value.type) return false
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await Promise.all([loadLedger(), auth.fetchMe()]) }
+catch { /* ignore */ }
+onMounted(() => {
+  if (ledger.value.length === 0) loadLedger()
+})
+
+/* 보유 크레딧 요약 — 별도 집계 엔드포인트가 없어 로드된 원장 기준 best-effort */
+const STATS = computed(() => {
+  const now = new Date()
+  let charged = 0
+  let bonus = 0
+  let usedThisMonth = 0
+  for (const r of ledger.value) {
+    const amt = Number(r.amount)
+    if (r.entryType === 'charge') charged += amt
+    if (r.bonusYn === 'Y') bonus += amt
+    if (r.entryType === 'consume') {
+      const d = new Date(r.createdAt)
+      if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) usedThisMonth += Math.abs(amt)
+    }
+  }
+  return [
+    { label: '총 충전한 크레딧', value: charged },
+    { label: '보너스 크레딧', value: bonus },
+    { label: '이번 달 사용 크레딧', value: usedThisMonth },
+  ]
+})
+
+/* 검색 조건 — 검색하기 클릭 시점에 적용(키워드는 client-side 필터) */
+const applied = ref({ keyword: '' })
+const rows = computed(() => ledger.value.map(toCreditRow))
+const filteredRows = computed(() => rows.value.filter((r) => {
   if (applied.value.keyword && !r.desc.includes(applied.value.keyword)) return false
   return true
 }))
@@ -83,24 +187,46 @@ watch(pageCount, () => { if (page.value > pageCount.value) page.value = pageCoun
 function fmt(n: number) {
   return Math.abs(n).toLocaleString('ko-KR')
 }
-function search() {
-  applied.value = { keyword: keyword.value.trim(), type: typeFilter.value }
+async function search() {
+  applied.value = { keyword: keyword.value.trim() }
+  page.value = 1
+  await loadLedger()
 }
-function resetFilter() {
+async function resetFilter() {
   keyword.value = ''
   typeFilter.value = '전체구분'
   applyPreset('month')
-  applied.value = { keyword: '', type: '전체구분' }
+  applied.value = { keyword: '' }
+  await loadLedger()
 }
 function goCharge() {
   navigateTo('/charge')
 }
+
 /* 영수증 모달 */
+interface ReceiptData {
+  receiptNo: string
+  issuedAt: string
+  companyName: string | null
+  bizNo: string | null
+  amount: string
+  balanceAfter: string
+  memo: string | null
+}
 const receiptOpen = ref(false)
 const receiptRow = ref<CreditRow | null>(null)
-function openReceipt(r: CreditRow) {
+const receiptData = ref<ReceiptData | null>(null)
+async function openReceipt(r: CreditRow) {
   receiptRow.value = r
+  receiptData.value = null
   receiptOpen.value = true
+  try {
+    const res = await api<{ data: ReceiptData }>(`/credit-ledger/${r.id}/receipt`)
+    receiptData.value = res.data
+  }
+  catch {
+    toast.add({ title: '영수증을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
 }
 </script>
 
@@ -247,6 +373,7 @@ function openReceipt(r: CreditRow) {
     <AppReceiptDialog
       :open="receiptOpen"
       :row="receiptRow"
+      :receipt="receiptData"
       @close="receiptOpen = false"
     />
   </div>

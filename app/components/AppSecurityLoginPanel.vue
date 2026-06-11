@@ -1,13 +1,15 @@
 <script setup lang="ts">
+type Method = 'email' | 'sms'
 const toast = useToast()
+const api = useApi()
 
-/* 저장된 설정 (목업 — 백엔드 연동 시 교체) */
+/* 저장된 설정 — GET /me/security */
 const savedEnabled = ref(false)
-const savedMethod = ref<'email' | 'phone'>('email')
+const savedMethod = ref<Method>('email')
 
 /* 편집 중 값 */
-const enabled = ref(savedEnabled.value)
-const method = ref<'email' | 'phone'>(savedMethod.value)
+const enabled = ref(false)
+const method = ref<Method>('email')
 
 const dirty = computed(() =>
   enabled.value !== savedEnabled.value
@@ -16,17 +18,62 @@ const dirty = computed(() =>
 
 const METHODS = [
   { value: 'email' as const, label: '이메일 인증', desc: '가입한 이메일로 인증코드를 발송합니다.', icon: 'i-lucide-mail' },
-  { value: 'phone' as const, label: '휴대전화 인증', desc: '등록된 휴대전화로 인증코드를 발송합니다.', icon: 'i-lucide-smartphone' },
+  { value: 'sms' as const, label: '휴대전화 인증', desc: '등록된 휴대전화로 인증코드를 발송합니다.', icon: 'i-lucide-smartphone' },
 ]
 
+async function load() {
+  const res = await api<{ data: { securityLoginYn: 'Y' | 'N', securityLoginMethod: string | null } }>('/me/security')
+  savedEnabled.value = res.data.securityLoginYn === 'Y'
+  savedMethod.value = res.data.securityLoginMethod === 'sms' ? 'sms' : 'email'
+  enabled.value = savedEnabled.value
+  method.value = savedMethod.value
+}
+
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await load() }
+catch { /* ignore */ }
+onMounted(() => { load().catch(() => { /* ignore */ }) })
+
+/* 저장 — 비밀번호 재인증 후 PUT /me/security */
+const pwOpen = ref(false)
+const password = ref('')
+const submitting = ref(false)
+
 function save() {
-  savedEnabled.value = enabled.value
-  savedMethod.value = method.value
-  toast.add({
-    title: enabled.value ? '보안로그인이 설정되었습니다.' : '보안로그인이 해제되었습니다.',
-    color: 'success',
-    icon: 'i-lucide-circle-check',
-  })
+  password.value = ''
+  pwOpen.value = true
+}
+async function confirmSave() {
+  if (!password.value || submitting.value) return
+  submitting.value = true
+  try {
+    const res = await api<{ data: { securityLoginYn: 'Y' | 'N', securityLoginMethod: string | null } }>('/me/security', {
+      method: 'PUT',
+      body: { enabled: enabled.value, method: method.value, password: password.value },
+    })
+    savedEnabled.value = res.data.securityLoginYn === 'Y'
+    savedMethod.value = res.data.securityLoginMethod === 'sms' ? 'sms' : 'email'
+    enabled.value = savedEnabled.value
+    method.value = savedMethod.value
+    pwOpen.value = false
+    toast.add({
+      title: savedEnabled.value ? '보안로그인이 설정되었습니다.' : '보안로그인이 해제되었습니다.',
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
+  }
+  catch (e) {
+    const status = (e as { response?: { status?: number }, statusCode?: number })?.response?.status
+      ?? (e as { statusCode?: number })?.statusCode
+    toast.add({
+      title: status === 401 ? '비밀번호가 일치하지 않습니다.' : '설정 저장에 실패했습니다.',
+      color: 'error',
+      icon: 'i-lucide-circle-alert',
+    })
+  }
+  finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -81,6 +128,27 @@ function save() {
         저장하기
       </button>
     </div>
+
+    <!-- 비밀번호 재인증 -->
+    <AppModal :open="pwOpen" title="비밀번호 확인" :width="400" @close="pwOpen = false">
+      <p class="sl-pw-desc">보안로그인 설정을 변경하려면 비밀번호를 다시 입력해 주세요.</p>
+      <input
+        v-model="password"
+        type="password"
+        class="input sl-pw-input"
+        placeholder="현재 비밀번호"
+        autocomplete="current-password"
+        @keyup.enter="confirmSave"
+      >
+      <template #footer>
+        <button type="button" class="btn btn-outline-dark" @click="pwOpen = false">
+          취소
+        </button>
+        <button type="button" class="btn btn-primary" :disabled="!password || submitting" @click="confirmSave">
+          확인
+        </button>
+      </template>
+    </AppModal>
   </div>
 </template>
 
@@ -211,6 +279,14 @@ function save() {
   min-width: 160px;
   font-weight: 600;
 }
+
+.sl-pw-desc {
+  font-size: var(--fz-sm);
+  color: var(--ink-500);
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.sl-pw-input { width: 100%; }
 
 @media (max-width: 640px) {
   .sl-method-list { flex-direction: column; }

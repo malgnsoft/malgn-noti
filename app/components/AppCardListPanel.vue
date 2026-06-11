@@ -1,21 +1,46 @@
 <script setup lang="ts">
 const toast = useToast()
+const api = useApi()
 
+/* 서버 응답(TB_PAYMENT_METHOD, billingKey 마스킹) */
+interface CardRow {
+  id: number
+  brand: string | null
+  last4: string | null
+  alias: string | null
+  defaultYn: 'Y' | 'N'
+}
 interface SavedCard {
-  id: string
+  id: number
   brand: string
   last4: string
   alias?: string
 }
 
-/* 등록 카드 (목업 — 백엔드 연동 시 교체) */
-const cards = ref<SavedCard[]>([
-  { id: 'master', brand: 'MASTER', last4: '5547' },
-  { id: 'visa', brand: 'VISA', last4: '6118' },
-])
-const defaultCard = ref('master')   /* 라디오 선택 (대기) */
-const savedDefault = ref('master')  /* 저장된 기본 카드 */
+const cards = ref<SavedCard[]>([])
+const defaultCard = ref<number | null>(null)   /* 라디오 선택 (대기) */
+const savedDefault = ref<number | null>(null)   /* 저장된 기본 카드 */
 const dirty = computed(() => defaultCard.value !== savedDefault.value)
+
+async function load() {
+  const res = await api<{ data: CardRow[], nextCursor: string | null }>('/payment-methods?limit=100')
+  cards.value = res.data.map(r => ({
+    id: r.id,
+    brand: r.brand ?? 'CARD',
+    last4: r.last4 ?? '----',
+    alias: r.alias ?? undefined,
+  }))
+  const def = res.data.find(r => r.defaultYn === 'Y')
+  savedDefault.value = def?.id ?? null
+  defaultCard.value = def?.id ?? cards.value[0]?.id ?? null
+}
+
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await load() }
+catch { /* ignore (미승인 테넌트는 403) */ }
+onMounted(() => {
+  if (!cards.value.length) load().catch(() => { /* ignore */ })
+})
 
 const addOpen = ref(false)
 const deleteTarget = ref<SavedCard | null>(null)
@@ -24,29 +49,51 @@ const deleteMessage = computed(() => {
   return c ? `${c.alias || c.brand} (**********${c.last4}) 카드를 삭제하시겠습니까?` : ''
 })
 
-function onRegistered(card: { brand: string, last4: string, alias: string }) {
-  const id = `c${Date.now()}`
-  cards.value = [...cards.value, { id, brand: card.brand, last4: card.last4, alias: card.alias || undefined }]
-  if (!defaultCard.value) defaultCard.value = id
+async function onRegistered(card: { brand: string, last4: string, alias: string }) {
+  try {
+    await api('/payment-methods', {
+      method: 'POST',
+      body: {
+        pgProvider: 'mock',
+        billingKeyBase64: btoa(`mock-billing-key-${card.last4}-${cards.value.length}`),
+        brand: card.brand,
+        last4: card.last4,
+        alias: card.alias || undefined,
+      },
+    })
+    await load()
+  }
+  catch {
+    toast.add({ title: '카드 등록에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
   addOpen.value = false
 }
-function confirmDelete() {
+async function confirmDelete() {
   const c = deleteTarget.value
   if (!c) return
-  cards.value = cards.value.filter(x => x.id !== c.id)
-  const fallback = cards.value[0]?.id ?? ''
-  if (defaultCard.value === c.id) defaultCard.value = fallback
-  if (savedDefault.value === c.id) savedDefault.value = fallback
+  try {
+    await api(`/payment-methods/${c.id}`, { method: 'DELETE' })
+    await load()
+    toast.add({ title: '결제 카드가 삭제되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch {
+    toast.add({ title: '카드 삭제에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
   deleteTarget.value = null
-  toast.add({ title: '결제 카드가 삭제되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
 }
-function saveDefault() {
+async function saveDefault() {
   if (!defaultCard.value) {
     toast.add({ title: '기본으로 저장할 카드를 선택해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
-  savedDefault.value = defaultCard.value
-  toast.add({ title: '기본 결제 카드가 저장되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  try {
+    await api(`/payment-methods/${defaultCard.value}`, { method: 'PATCH', body: { defaultYn: 'Y' } })
+    savedDefault.value = defaultCard.value
+    toast.add({ title: '기본 결제 카드가 저장되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
+  catch {
+    toast.add({ title: '기본 카드 저장에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
 }
 </script>
 

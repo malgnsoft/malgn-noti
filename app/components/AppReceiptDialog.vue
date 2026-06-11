@@ -4,22 +4,43 @@ interface ReceiptRow {
   desc: string
   delta: number
 }
+/* 서버 영수증(GET /credit-ledger/:id/receipt) */
+interface ReceiptData {
+  receiptNo: string
+  issuedAt: string
+  companyName: string | null
+  bizNo: string | null
+  amount: string
+  balanceAfter: string
+  memo: string | null
+}
 
 const props = defineProps<{
   open: boolean
   row?: ReceiptRow | null
+  receipt?: ReceiptData | null
 }>()
 
 const emit = defineEmits<{ close: [] }>()
 
-/* 금액 계산 (크레딧 1 = 1원, 부가세 포함가 역산) */
-const amount = computed(() => Math.abs(props.row?.delta ?? 0))
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/* 금액 계산 (크레딧 1 = 1원, 부가세 포함가 역산) — 서버 영수증 우선 */
+const amount = computed(() => Math.abs(props.receipt ? Number(props.receipt.amount) : props.row?.delta ?? 0))
 const supply = computed(() => Math.round(amount.value / 1.1))
 const vat = computed(() => amount.value - supply.value)
 const orderNo = computed(() => {
+  if (props.receipt?.receiptNo) return props.receipt.receiptNo
   const digits = (props.row?.at ?? '').replace(/\D/g, '')
   return `MNC-${digits.slice(0, 8) || '00000000'}-${digits.slice(8) || '0000'}`
 })
+const issuedAt = computed(() => props.receipt?.issuedAt ? fmtDateTime(props.receipt.issuedAt) : (props.row?.at ?? ''))
+const productName = computed(() => props.receipt?.memo || props.row?.desc || '크레딧 충전')
 
 function won(n: number) {
   return `${n.toLocaleString('ko-KR')}원`
@@ -82,11 +103,21 @@ onBeforeUnmount(() => {
             <table class="rc-table">
               <tbody>
                 <tr><th>주문번호</th><td>{{ orderNo }}</td></tr>
-                <tr><th>거래일시</th><td>{{ row.at }}</td></tr>
-                <tr><th>상품명</th><td>{{ row.desc }} ({{ amount.toLocaleString('ko-KR') }} 크레딧)</td></tr>
-                <tr><th>결제수단</th><td>신용카드 (**** **** **** 5547)</td></tr>
+                <tr><th>거래일시</th><td>{{ issuedAt }}</td></tr>
+                <tr><th>상품명</th><td>{{ productName }} ({{ amount.toLocaleString('ko-KR') }} 크레딧)</td></tr>
+                <tr><th>결제수단</th><td>신용카드</td></tr>
               </tbody>
             </table>
+
+            <template v-if="receipt">
+              <div class="rc-section-label">구매자 정보</div>
+              <table class="rc-table">
+                <tbody>
+                  <tr><th>상호</th><td>{{ receipt.companyName || '-' }}</td></tr>
+                  <tr><th>사업자등록번호</th><td>{{ receipt.bizNo || '-' }}</td></tr>
+                </tbody>
+              </table>
+            </template>
 
             <div class="rc-section-label">결제 금액</div>
             <table class="rc-table">
