@@ -2,11 +2,13 @@
 useHead({ title: '크레딧 충전' })
 
 const toast = useToast()
+const api = useApi()
+const auth = useAuthStore()
 
-/* 보유 크레딧 (목업 — 백엔드 연동 시 교체) */
-const balance = 120000
+/* 보유 크레딧 — auth store(/me) 정본 */
+const balance = computed(() => auth.creditBalance)
 
-/* 충전 금액 옵션 */
+/* 충전 금액 옵션(프리셋) */
 const AMOUNTS = [
   { value: 10000, bonus: 0 },
   { value: 50000, bonus: 0 },
@@ -15,58 +17,150 @@ const AMOUNTS = [
   { value: 500000, bonus: 40000 },
   { value: 1000000, bonus: 100000 },
 ]
-const selectedAmount = ref(100000)
+const MIN_AMOUNT = 1000
+const selectedPreset = ref<number | 'custom'>(100000)
+const customAmount = ref<number | null>(null)
 
-/* 결제 카드 */
+/* 실효 충전 금액 */
+const amount = computed(() => {
+  if (selectedPreset.value === 'custom') return Math.max(0, Math.floor(customAmount.value ?? 0))
+  return selectedPreset.value
+})
+/* 보너스 — 프리셋 매칭 시에만 부여(직접 입력은 보너스 0) */
+const bonus = computed(() => AMOUNTS.find(a => a.value === amount.value)?.bonus ?? 0)
+
+/* 결제 카드 — GET /payment-methods */
+interface CardRow {
+  id: number
+  brand: string | null
+  last4: string | null
+  alias: string | null
+  defaultYn: 'Y' | 'N'
+}
 interface PayCard {
-  id: string
+  id: number
   brand: string
   last4: string
   alias?: string
 }
-const cards = ref<PayCard[]>([
-  { id: 'master', brand: 'MASTER', last4: '5547' },
-  { id: 'visa', brand: 'VISA', last4: '6118' },
-])
-const selectedCard = ref('master')
+const cards = ref<PayCard[]>([])
+const selectedCard = ref<number | null>(null)
 const cardDialogOpen = ref(false)
 
+async function loadCards() {
+  const res = await api<{ data: CardRow[], nextCursor: string | null }>('/payment-methods?limit=100')
+  cards.value = res.data.map(r => ({
+    id: r.id,
+    brand: r.brand ?? 'CARD',
+    last4: r.last4 ?? '----',
+    alias: r.alias ?? undefined,
+  }))
+  const def = res.data.find(r => r.defaultYn === 'Y')
+  // 기존 선택이 유효하면 유지, 아니면 기본카드(없으면 첫 카드)
+  if (!cards.value.some(c => c.id === selectedCard.value)) {
+    selectedCard.value = def?.id ?? cards.value[0]?.id ?? null
+  }
+}
+
+// SSR에서 실패해도 죽지 않도록 swallow — client mount 시 재시도.
+try { await Promise.all([loadCards(), auth.fetchMe()]) }
+catch { /* ignore (미승인 테넌트는 403) */ }
+onMounted(() => {
+  if (!cards.value.length) loadCards().catch(() => { /* ignore */ })
+})
+
 const agreed = ref(false)
-const canPay = computed(() => agreed.value && !!selectedCard.value)
+const paying = ref(false)
+const canPay = computed(() =>
+  agreed.value && !!selectedCard.value && amount.value >= MIN_AMOUNT && !paying.value,
+)
 const confirmOpen = ref(false)
 
-const selectedMeta = computed(() => AMOUNTS.find(a => a.value === selectedAmount.value) ?? AMOUNTS[0]!)
 const selectedCardMeta = computed(() => cards.value.find(c => c.id === selectedCard.value))
 
 function addCard() {
   cardDialogOpen.value = true
 }
-function onCardRegistered(card: { brand: string, last4: string, alias: string }) {
-  const id = `c${Date.now()}`
-  cards.value = [...cards.value, { id, brand: card.brand, last4: card.last4, alias: card.alias || undefined }]
-  selectedCard.value = id
+async function onCardRegistered(card: { brand: string, last4: string, alias: string }) {
+  try {
+    await api('/payment-methods', {
+      method: 'POST',
+      body: {
+        pgProvider: 'mock',
+        billingKeyBase64: btoa(`mock-billing-key-${card.last4}-${cards.value.length}`),
+        brand: card.brand,
+        last4: card.last4,
+        alias: card.alias || undefined,
+      },
+    })
+    await loadCards()
+    // 방금 등록한 카드를 선택(최근 생성분이 목록에 포함됨)
+    const last = cards.value[cards.value.length - 1]
+    if (last) selectedCard.value = last.id
+  }
+  catch {
+    toast.add({ title: '카드 등록에 실패했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
   cardDialogOpen.value = false
 }
 function pay() {
-  if (!canPay.value) {
+  if (!agreed.value) {
     toast.add({ title: '구매 조건 동의 후 결제를 진행해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  if (!selectedCard.value) {
+    toast.add({ title: '결제할 카드를 선택해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  if (amount.value < MIN_AMOUNT) {
+    toast.add({ title: `최소 충전 금액은 ${MIN_AMOUNT.toLocaleString()}원입니다.`, color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
   confirmOpen.value = true
 }
-function confirmPay() {
+
+interface ChargeResult {
+  ledgerId: number
+  amount: string | number
+  balanceAfter: string | number
+  receiptNo: string
+}
+async function confirmPay() {
+  if (paying.value) return
   confirmOpen.value = false
+  paying.value = true
+  const before = balance.value
   const card = selectedCardMeta.value
-  navigateTo({
-    path: '/charge/result',
-    query: {
-      amount: String(selectedAmount.value),
-      bonus: String(selectedMeta.value.bonus),
-      brand: card?.alias || card?.brand || 'CARD',
-      last4: card?.last4 ?? '',
-      before: String(balance),
-    },
-  })
+  try {
+    // POST /me/charge { amount, paymentMethodId? }. Idempotency-Key로 이중충전 방지(api-dev 계약).
+    const idemKey = `charge-${selectedCard.value ?? 'default'}-${amount.value}-${crypto.randomUUID()}`
+    const res = await api<{ data: ChargeResult }>('/me/charge', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': idemKey },
+      body: { amount: amount.value, paymentMethodId: selectedCard.value ?? undefined },
+    })
+    // 잔액 갱신
+    await auth.fetchMe()
+    navigateTo({
+      path: '/charge/result',
+      query: {
+        ledgerId: String(res.data.ledgerId),
+        receiptNo: res.data.receiptNo,
+        amount: String(amount.value),
+        bonus: String(bonus.value),
+        brand: card?.alias || card?.brand || 'CARD',
+        last4: card?.last4 ?? '',
+        before: String(before),
+        after: String(res.data.balanceAfter),
+      },
+    })
+  }
+  catch {
+    toast.add({ title: '결제 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+  finally {
+    paying.value = false
+  }
 }
 </script>
 
@@ -94,21 +188,37 @@ function confirmPay() {
             v-for="a in AMOUNTS"
             :key="a.value"
             class="amount-row"
-            :class="{ on: selectedAmount === a.value }"
+            :class="{ on: selectedPreset === a.value }"
           >
-            <input v-model="selectedAmount" type="radio" :value="a.value">
+            <input v-model="selectedPreset" type="radio" :value="a.value">
             <span class="amount-val">{{ a.value.toLocaleString() }}</span>
             <span class="cred-ico">C</span>
             <span v-if="a.bonus" class="amount-bonus">+ 보너스 {{ a.bonus.toLocaleString() }}</span>
+          </label>
+
+          <label class="amount-row" :class="{ on: selectedPreset === 'custom' }">
+            <input v-model="selectedPreset" type="radio" value="custom">
+            <span class="amount-val">직접 입력</span>
+            <input
+              v-model.number="customAmount"
+              type="number"
+              class="input amount-custom"
+              :min="MIN_AMOUNT"
+              step="1000"
+              placeholder="금액 입력"
+              inputmode="numeric"
+              @focus="selectedPreset = 'custom'"
+            >
+            <span class="cred-ico">C</span>
           </label>
         </div>
 
         <div class="pay-amount">
           <span class="pa-label">결제 예정 금액</span>
           <div class="pa-value">
-            {{ selectedAmount.toLocaleString() }} <span class="pa-unit">원</span>
+            {{ amount.toLocaleString() }} <span class="pa-unit">원</span>
           </div>
-          <span class="pa-note">VAT 포함</span>
+          <span class="pa-note">VAT 포함<span v-if="bonus"> · 보너스 {{ bonus.toLocaleString() }}C</span></span>
         </div>
       </section>
 
@@ -117,7 +227,7 @@ function confirmPay() {
         <h2 class="cc-head">결제하기</h2>
 
         <h3 class="cc-sub">결제카드 등록</h3>
-        <div class="card-list">
+        <div v-if="cards.length" class="card-list">
           <label
             v-for="c in cards"
             :key="c.id"
@@ -132,6 +242,7 @@ function confirmPay() {
             </span>
           </label>
         </div>
+        <p v-else class="card-empty">등록된 결제 카드가 없습니다. 카드를 추가해 주세요.</p>
         <button type="button" class="btn btn-outline-dark add-card" @click="addCard">
           <UIcon name="i-lucide-plus" class="text-[length:var(--fz-sm)]" /> 카드 추가
         </button>
@@ -152,7 +263,7 @@ function confirmPay() {
         </label>
 
         <button type="button" class="btn btn-primary pay-btn" :disabled="!canPay" @click="pay">
-          결제하기
+          {{ paying ? '결제 처리 중…' : '결제하기' }}
         </button>
       </section>
     </div>
@@ -312,6 +423,14 @@ function confirmPay() {
   font-weight: 600;
   color: var(--accent-ink);
 }
+.amount-custom {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  margin-left: auto;
+  text-align: right;
+  font-family: var(--font-mono);
+}
 
 /* 결제 예정 금액 */
 .pay-amount {
@@ -405,6 +524,15 @@ function confirmPay() {
   font-family: var(--font-mono);
   font-size: var(--fz-xs);
   color: var(--ink-500);
+}
+.card-empty {
+  padding: 18px 14px;
+  text-align: center;
+  font-size: var(--fz-sm);
+  color: var(--ink-400);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  margin: 0;
 }
 .add-card {
   width: 100%;

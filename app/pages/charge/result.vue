@@ -2,18 +2,24 @@
 useHead({ title: '충전 결과' })
 
 const route = useRoute()
+const api = useApi()
+const toast = useToast()
 
-const amount = Number(route.query.amount) || 100000
+const amount = Number(route.query.amount) || 0
 const bonus = Number(route.query.bonus) || 0
-const brand = (route.query.brand as string) || 'MASTER'
-const last4 = (route.query.last4 as string) || '0000'
+const brand = (route.query.brand as string) || 'CARD'
+const last4 = (route.query.last4 as string) || '----'
 const before = Number(route.query.before) || 0
+const afterQuery = Number(route.query.after)
+const ledgerId = Number(route.query.ledgerId) || 0
+const receiptNo = (route.query.receiptNo as string) || ''
 
 const charged = amount + bonus
-const after = before + charged
+/* 결제 후 잔액 — 서버 balanceAfter 우선, 없으면 client 합산 */
+const after = computed(() => (Number.isFinite(afterQuery) && afterQuery > 0 ? afterQuery : before + charged))
 const paymentInfo = `${brand} (**********${last4}, 일시불)`
 
-const orderNo = ref('—')
+const orderNo = ref(receiptNo || '—')
 const orderDate = ref('—')
 const validUntil = ref('—')
 
@@ -29,12 +35,43 @@ function fmtDateTime(d: Date) {
 
 onMounted(() => {
   const now = new Date()
-  orderNo.value = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${String(now.getTime()).slice(-10)}`
+  if (!receiptNo) {
+    orderNo.value = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${String(now.getTime()).slice(-10)}`
+  }
   orderDate.value = fmtDateTime(now)
   const exp = new Date(now)
   exp.setFullYear(exp.getFullYear() + 1)
   validUntil.value = `${exp.getFullYear()}.${pad(exp.getMonth() + 1)}.${pad(exp.getDate())}`
 })
+
+/* 영수증 — GET /credit-ledger/:id/receipt → AppReceiptDialog */
+interface ReceiptData {
+  receiptNo: string
+  issuedAt: string
+  companyName: string | null
+  bizNo: string | null
+  amount: string
+  balanceAfter: string
+  memo: string | null
+}
+const receiptOpen = ref(false)
+const receiptData = ref<ReceiptData | null>(null)
+const receiptRow = computed(() => ({ at: orderDate.value, desc: '크레딧 충전', delta: amount }))
+async function openReceipt() {
+  if (!ledgerId) {
+    toast.add({ title: '영수증 정보를 찾을 수 없습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  receiptOpen.value = true
+  receiptData.value = null
+  try {
+    const res = await api<{ data: ReceiptData }>(`/credit-ledger/${ledgerId}/receipt`)
+    receiptData.value = res.data
+  }
+  catch {
+    toast.add({ title: '영수증을 불러오지 못했습니다.', color: 'error', icon: 'i-lucide-circle-alert' })
+  }
+}
 </script>
 
 <template>
@@ -88,10 +125,22 @@ onMounted(() => {
         </div>
       </div>
 
-      <button type="button" class="btn btn-primary go-btn" @click="navigateTo('/account/credit')">
-        크레딧 관리 바로가기
-      </button>
+      <div class="result-actions">
+        <button type="button" class="btn btn-outline-dark go-btn" @click="openReceipt">
+          <UIcon name="i-lucide-receipt" class="text-[length:var(--fz-sm)]" /> 영수증 보기
+        </button>
+        <button type="button" class="btn btn-primary go-btn" @click="navigateTo('/account/credit')">
+          크레딧 관리 바로가기
+        </button>
+      </div>
     </div>
+
+    <AppReceiptDialog
+      :open="receiptOpen"
+      :row="receiptRow"
+      :receipt="receiptData"
+      @close="receiptOpen = false"
+    />
   </div>
 </template>
 
@@ -209,11 +258,20 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.go-btn {
+.result-actions {
   width: 100%;
-  height: 48px;
   margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+.go-btn {
+  flex: 1;
+  height: 48px;
   font-size: var(--fz-md);
   font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .result-actions { flex-direction: column; }
 }
 </style>

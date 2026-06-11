@@ -2,6 +2,7 @@
 useHead({ title: '문의하기' })
 const router = useRouter()
 const toast = useToast()
+const api = useApi()
 
 const TYPE_OPTIONS = [
   { value: 'product', label: '메시지 상품' },
@@ -45,7 +46,8 @@ function removeFile(i: number) {
   files.value = files.value.filter((_, j) => j !== i)
 }
 
-function onSubmit() {
+const submitting = ref(false)
+async function onSubmit() {
   if (!title.value.trim()) {
     toast.add({ title: '문의 제목을 입력해 주세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
     return
@@ -54,15 +56,34 @@ function onSubmit() {
     toast.add({ title: '문의 내용을 입력해 주세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
     return
   }
-  const typeLabel = TYPE_OPTIONS.find(t => t.value === inquiryType.value)?.label ?? ''
-  const prodLabel = PRODUCTS.find(p => p.value === productType.value)?.label ?? ''
-  const fullType = inquiryType.value === 'product' && prodLabel
-    ? `${typeLabel} - ${prodLabel}`
-    : typeLabel
-  router.push({
-    path: '/account/inquiry/complete',
-    query: { type: fullType, title: title.value.trim(), content: content.value.trim() },
-  })
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    // 첨부파일: 백엔드 createB에 attachments 필드가 없어 이번엔 미전송(UI만 유지).
+    const res = await api<{ data: { id: number } }>('/inquiries', {
+      method: 'POST',
+      body: {
+        inquiryType: inquiryType.value,
+        productType: inquiryType.value === 'product' ? productType.value : undefined,
+        title: title.value.trim(),
+        body: content.value.trim(),
+      },
+    })
+    const typeLabel = TYPE_OPTIONS.find(t => t.value === inquiryType.value)?.label ?? ''
+    const prodLabel = PRODUCTS.find(p => p.value === productType.value)?.label ?? ''
+    const fullType = inquiryType.value === 'product' && prodLabel
+      ? `${typeLabel} - ${prodLabel}`
+      : typeLabel
+    router.push({
+      path: '/account/inquiry/complete',
+      query: { id: String(res.data.id), type: fullType, title: title.value.trim(), content: content.value.trim() },
+    })
+  }
+  catch (e) {
+    const msg = (e as { data?: { message?: string } })?.data?.message
+    toast.add({ title: msg || '문의 등록에 실패했습니다.', color: 'error', icon: 'i-lucide-octagon-alert' })
+    submitting.value = false
+  }
 }
 </script>
 
@@ -170,9 +191,9 @@ function onSubmit() {
         <button type="button" class="btn btn-neutral" @click="router.push('/account/inquiries')">
           취소
         </button>
-        <button type="button" class="btn btn-primary btn-lg" @click="onSubmit">
+        <button type="button" class="btn btn-primary btn-lg" :disabled="submitting" @click="onSubmit">
           <UIcon name="i-lucide-message-circle" class="text-[length:var(--fz-lg)]" />
-          문의하기
+          {{ submitting ? '등록 중…' : '문의하기' }}
         </button>
       </div>
     </div>
