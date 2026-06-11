@@ -49,9 +49,15 @@ async function onLogin() {
     }
 
     toast.add({ title: '로그인되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-    // 사업자등록증 심사 미승인이면 계약 관리 페이지로 자동 이동 (사용자 정책)
-    const state = auth.tenant?.approvalState
-    navigateTo(state && state !== 'approved' ? '/account/contract' : redirect)
+    // 최초 로그인 멤버(joinState!=='joined')는 온보딩으로 강제 이동(약관·정보·비번).
+    if (auth.needsOnboarding) {
+      navigateTo('/onboarding')
+    }
+    else {
+      // 사업자등록증 심사 미승인이면 계약 관리 페이지로 자동 이동 (사용자 정책)
+      const state = auth.tenant?.approvalState
+      navigateTo(state && state !== 'approved' ? '/account/contract' : redirect)
+    }
   }
   catch (e: unknown) {
     const status = (e as { response?: { status?: number } })?.response?.status

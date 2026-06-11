@@ -149,6 +149,8 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthed: (s): boolean => s.user !== null,
     creditBalance: (s): number => Number(s.tenant?.creditBalance ?? 0),
+    /** 최초 로그인 멤버(joinState='invited' 등) — 온보딩 강제 대상. */
+    needsOnboarding: (s): boolean => s.user !== null && s.user.joinState !== 'joined',
   },
   actions: {
     /** 회원가입 — 성공 시 토큰 저장 + 사용자/고객사 메모리 채움. */
@@ -300,6 +302,24 @@ export const useAuthStore = defineStore('auth', {
       useAuthToken().value = null
       this.user = null
       this.tenant = null
+    },
+
+    /**
+     * 멤버 최초 로그인 온보딩 완료 — 비밀번호 교체 + 프로필(name/phone) + 약관 동의를
+     * 한 번에 처리(백엔드 트랜잭션). 성공 시 joinState='joined'로 수렴, 메모리 갱신.
+     * 멱등 — 이미 joined여도 재호출 가능.
+     */
+    async onboard(payload: { newPassword: string, name: string, phone?: string, agreedTerms: true }) {
+      const api = useApi()
+      const res = await api<{ data: { joinState: string, name: string | null, phone: string | null, termsAgreedAt: string } }>(
+        '/me/onboarding',
+        { method: 'POST', body: payload },
+      )
+      if (this.user) {
+        this.user.joinState = res.data.joinState
+        this.user.name = res.data.name
+        this.user.phone = res.data.phone
+      }
     },
 
     /** 로그아웃 — 토큰 삭제 + 메모리 클리어 + /login 이동. */

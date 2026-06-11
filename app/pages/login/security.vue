@@ -135,9 +135,15 @@ async function verify() {
     // 2차 코드 검증 → 정식 토큰 발급 + /me 페치(로그인 완료).
     await auth.verifyTwoFactor({ pendingToken: pendingToken.value, code: fullCode.value })
     toast.add({ title: '보안 인증이 완료되었습니다.', color: 'success', icon: 'i-lucide-circle-check' })
-    // 사업자등록증 심사 미승인이면 계약 관리 페이지로(로그인 페이지와 동일 정책).
-    const state = auth.tenant?.approvalState
-    navigateTo(state && state !== 'approved' ? '/account/contract' : redirect.value)
+    // 최초 로그인 멤버는 온보딩 우선(로그인 페이지와 동일 정책).
+    if (auth.needsOnboarding) {
+      navigateTo('/onboarding')
+    }
+    else {
+      // 사업자등록증 심사 미승인이면 계약 관리 페이지로(로그인 페이지와 동일 정책).
+      const state = auth.tenant?.approvalState
+      navigateTo(state && state !== 'approved' ? '/account/contract' : redirect.value)
+    }
   }
   catch (e: unknown) {
     const data = (e as { data?: { message?: string } })?.data

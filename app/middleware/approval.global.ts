@@ -24,6 +24,10 @@ export default defineNuxtRouteMiddleware((to) => {
   if (to.meta.auth === false) return
 
   const auth = useAuthStore()
+  // 온보딩 미완료(joinState!=='joined') 멤버는 온보딩 게이트(onboarding.global.ts)가 우선 처리 —
+  // 여기서 /account/contract로 가로채지 않도록 조기 통과.
+  if (auth.user && auth.user.joinState !== 'joined') return
+
   const state = auth.tenant?.approvalState
   // 미hydrate면 통과 — 클라이언트 hydrate 후 재진입 시 작동
   if (!state || state === 'approved') return
