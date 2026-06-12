@@ -3,7 +3,7 @@
 > **정본(SoT)**: `design_handoff_malgn_noti` 핸드오프 — Relay-inspired Design System **v1.0**.
 > **"Less chrome, more clarity."** — Linear · Vercel · Nuxt UI 영감의 저밀도 라이트 모드. 색은 의미가 있을 때만, 라인은 1px, 숫자는 모노스페이스.
 >
-> 코딩 컨벤션 → [FRONTEND.md](./FRONTEND.md) · 기술 스택 → [STACK.md](./STACK.md)
+> 코딩 컨벤션 → [FRONTEND.md](./FRONTEND.md) · 기술 스택 → [STACK.md (mng)](../../malgn-noti-mng/docs/STACK.md)
 >
 > ⚠️ 2026-05-18: 기존 malgn-notifications 시안 기반 디자인(indigo/sky/Noto Sans KR)에서 **이 핸드오프 디자인으로 전면 피벗**. 시안은 IA(페이지 목록/라우트)에 한해 참조하되, 디자인 언어의 정본은 이 문서다.
 

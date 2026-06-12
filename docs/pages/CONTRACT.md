@@ -3,7 +3,7 @@
 > **목적**: 사업자등록증 등록·심사·이용계약 전자체결·가입 서류 첨부를 한 화면에서 관리.
 > 회원가입한 사업자(`corp`/`sole`)의 **미승인 상태 메인 진입점** + 승인 후 계약 갱신·서류 관리 화면.
 >
-> **연관**: [./SIGNUP.md](./SIGNUP.md) §3·§4 / [../MEMBERSHIP.md](../MEMBERSHIP.md) §1.2·§2·§8 /
+> **연관**: [./SIGNUP.md](./SIGNUP.md) §3·§4 / [MEMBERSHIP.md (mng)](../../../malgn-noti-mng/docs/MEMBERSHIP.md) §1.2·§2·§8 /
 > [../history/history.20260602.md](../history/history.20260602.md) §7·§10·§11·§12·§13·§14·§15
 >
 > **마지막 현행화**: 2026-06-02 (§15 반영)

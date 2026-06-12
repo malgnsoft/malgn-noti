@@ -4,7 +4,7 @@
 > - 시안 정책 표(사용자 제공 이미지) — 신청 서류·결제 방식·승인 흐름의 기획 정본
 > - [`app/pages/signup.vue`](../../app/pages/signup.vue) — 5단계 마법사 실제 구현 (사용자단)
 > - [`../malgn-noti-api/src/routes/auth.ts`](../../../malgn-noti-api/src/routes/auth.ts) — 백엔드 `/auth/signup`·`/auth/login` 라우트
-> - [`./WBS.md`](../WBS.md) §2-4(회원·결제·계약 정책), §2-6-1(계약관리 정책)
+> - [`WBS.md` (mng)](../../../malgn-noti-mng/docs/WBS.md) §2-4(회원·결제·계약 정책), §2-6-1(계약관리 정책)
 > - [`./history/history.20260601.md`](../history/history.20260601.md) §4 — 사용자단 인증 백엔드 연동 (배포 #49)
 >
 > **마지막 현행화**: 2026-06-01
