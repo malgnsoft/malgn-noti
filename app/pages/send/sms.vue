@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import type { Recipient } from '~/types/recipient'
+import type { SmsSendRecipient, SmsSendResult } from '~/types/send'
 
 useHead({ title: '문자메시지 발송' })
 
 const toast = useToast()
 const router = useRouter()
+const api = useApi()
 
 interface Tpl { id: number, name: string, subject?: string, body: string, vars: string[], type?: string, images?: { name: string, size: number }[] }
 
-const senderNumber = ref('')
+// 발신번호 — GET /sender-phones 실데이터
+const { phones: senderPhones, load: loadSenderPhones, pending: sendersPending, error: sendersError } = useSenderPhones()
+const senderPhoneId = ref<number | null>(null)
+const selectedSender = computed(() => senderPhones.value.find(p => p.id === senderPhoneId.value) ?? null)
+onMounted(loadSenderPhones)
 const useTemplate = ref<'off' | 'on'>('off')
 const template = ref<Tpl | null>(null)
 const purpose = ref<'info' | 'ad' | 'auth'>('info')
@@ -52,7 +58,13 @@ const counterMax = computed(() => smsType.value === 'sms' ? 90 : 2000)
 const tplLock = computed(() => useTemplate.value === 'on')
 // MMS 템플릿이 적용되면 첨부 이미지는 템플릿 값으로 자동 설정 · 수정 불가
 const attachLocked = computed(() => tplLock.value && template.value?.type === 'mms')
-const pricePerUnit = computed(() => smsType.value === 'mms' ? 22 : smsType.value === 'lms' ? 14 : 9.9)
+// 백엔드 SMS_PRICING 과 일치 (sms 9.9 / lms 30 / mms 100)
+const pricePerUnit = computed(() => smsType.value === 'mms' ? 100 : smsType.value === 'lms' ? 30 : 9.9)
+
+// SMS 90바이트 / LMS·MMS 제목 필수 — 백엔드 검증과 일치하는 인라인 안내
+const bodyByteLen = computed(() => byteLen(body.value))
+const smsOverByte = computed(() => smsType.value === 'sms' && bodyByteLen.value > 90)
+const subjectMissing = computed(() => (smsType.value === 'lms' || smsType.value === 'mms') && !subject.value.trim())
 
 // 발송 목적이 광고용이면 제목 앞에 (광고)를 자동·강제로 부착
 const AD_PREFIX = '(광고)'
@@ -136,7 +148,7 @@ function handleReset() {
   substitutionMode.value = 'common'
   commonVars.value = {}
   sendOptions.value = { mode: 'now', date: '', hour: '09', minute: '00' }
-  senderNumber.value = ''
+  senderPhoneId.value = null
   openReset.value = false
   toast.add({ title: '입력 내용을 초기화했습니다.', color: 'info', icon: 'i-lucide-info' })
 }
@@ -190,10 +202,102 @@ function onPickImages(e: Event) {
   }
 }
 
-function send() {
-  openConfirm.value = false
-  toast.add({ title: `${recipients.value.length}명에게 SMS 발송을 시작했습니다.`, color: 'success', icon: 'i-lucide-circle-check' })
-  setTimeout(() => router.push('/history/sms'), 1200)
+// 수신자별 치환변수 매핑 — 공통/개별 모드 반영. 치환자가 없으면 vars 생략.
+function buildVars(r: Recipient): Record<string, string> | undefined {
+  if (varKeys.value.length === 0) return undefined
+  const out: Record<string, string> = {}
+  if (substitutionMode.value === 'common') {
+    for (const k of varKeys.value) out[k] = commonVars.value[k] ?? ''
+  }
+  else {
+    for (const k of varKeys.value) out[k] = r.vars?.[k] ?? ''
+  }
+  return out
+}
+
+interface ApiErrorData { code?: string, message?: string, details?: unknown }
+function extractError(e: unknown): ApiErrorData {
+  const data = (e as { data?: ApiErrorData })?.data
+  return data ?? { message: '발송에 실패했습니다. 잠시 후 다시 시도하세요.' }
+}
+
+const sending = ref(false)
+
+async function send() {
+  if (sending.value) return
+
+  // 프론트 선검증 (백엔드 검증과 일치)
+  if (!senderPhoneId.value) {
+    toast.add({ title: '발신 번호를 선택하세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
+    return
+  }
+  if (smsType.value === 'mms') {
+    toast.add({ title: 'MMS는 준비 중입니다. SMS 또는 LMS로 발송하세요.', color: 'warning', icon: 'i-lucide-triangle-alert' })
+    return
+  }
+  if (subjectMissing.value) {
+    toast.add({ title: 'LMS는 제목이 필요합니다.', color: 'error', icon: 'i-lucide-octagon-alert' })
+    return
+  }
+  if (smsOverByte.value) {
+    toast.add({ title: 'SMS는 90바이트 이하만 가능합니다. LMS로 전환하세요.', color: 'error', icon: 'i-lucide-octagon-alert' })
+    return
+  }
+
+  const payload = {
+    senderPhoneId: senderPhoneId.value,
+    purpose: purpose.value,
+    smsType: smsType.value,
+    subject: showSubject.value ? subject.value : undefined,
+    body: body.value,
+    hasAttachment: false,
+    recipients: recipients.value
+      .filter(r => !!r.phone)
+      .map<SmsSendRecipient>(r => ({
+        name: r.name || undefined,
+        phone: r.phone as string,
+        vars: buildVars(r),
+      })),
+  }
+
+  if (payload.recipients.length === 0) {
+    toast.add({ title: '휴대폰 번호가 있는 수신자가 없습니다.', color: 'error', icon: 'i-lucide-octagon-alert' })
+    return
+  }
+
+  sending.value = true
+  try {
+    const res = await api<{ data: SmsSendResult }>('/send/sms', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+      body: payload,
+    })
+    const r = res.data
+    openConfirm.value = false
+    const optoutNote = r.optoutFiltered > 0 ? ` (수신거부 ${r.optoutFiltered}건 제외)` : ''
+    toast.add({
+      title: `${r.recipientCount.toLocaleString()}명에게 발송 접수되었습니다${optoutNote}`,
+      description: `차감 크레딧 ${r.totalCredit.toLocaleString()} C · 단가 ${r.unitPrice} C`,
+      color: 'success',
+      icon: 'i-lucide-circle-check',
+    })
+    setTimeout(() => router.push('/history/sms'), 1000)
+  }
+  catch (e) {
+    const err = extractError(e)
+    const detail = err.details && typeof err.details === 'object'
+      ? Object.values(err.details as Record<string, string>)[0]
+      : undefined
+    toast.add({
+      title: '발송 실패',
+      description: detail || err.message || '발송에 실패했습니다.',
+      color: 'error',
+      icon: 'i-lucide-octagon-alert',
+    })
+  }
+  finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -266,20 +370,31 @@ function send() {
               required
               help="전기통신사업법 관련 고시 준수를 위해 발신 번호 등록 시 발신 번호에 대한 명의자 인증이 필요합니다. [발신 정보 > 발신 번호 관리] 메뉴에서 발신 번호를 사전 등록하세요."
             >
-              <select v-model="senderNumber" class="select" style="max-width: 340px">
+              <select
+                class="select"
+                style="max-width: 340px"
+                :disabled="sendersPending"
+                :value="senderPhoneId ?? ''"
+                @change="senderPhoneId = Number(($event.target as HTMLSelectElement).value) || null"
+              >
                 <option value="">
-                  선택하세요
+                  {{ sendersPending ? '불러오는 중…' : '선택하세요' }}
                 </option>
-                <option value="1588-1234">
-                  1588-1234 (몰리몰리 대표)
-                </option>
-                <option value="02-555-1234">
-                  02-555-1234 (서울 본사)
-                </option>
-                <option value="031-444-5678">
-                  031-444-5678 (분당 지점)
+                <option
+                  v-for="p in senderPhones"
+                  :key="p.id"
+                  :value="p.id"
+                  :disabled="p.approvalState !== '승인'"
+                >
+                  {{ p.number }}{{ p.type ? ` (${p.type})` : '' }}{{ p.approvalState === '승인' ? '' : ` · ${p.approvalState}` }}
                 </option>
               </select>
+              <div v-if="sendersError" class="inline-help" style="color: var(--danger-ink); margin-top: 6px">
+                {{ sendersError }}
+              </div>
+              <div v-else-if="!sendersPending && senderPhones.length === 0" class="inline-help" style="margin-top: 6px">
+                등록된 발신 번호가 없습니다. [발신 정보 &gt; 발신 번호 관리]에서 먼저 등록하세요.
+              </div>
             </AppFormRow>
             <AppFormRow
               label="발송 목적"
@@ -315,7 +430,7 @@ function send() {
                 :options="[
                   { value: 'sms', label: 'SMS' },
                   { value: 'lms', label: 'LMS' },
-                  { value: 'mms', label: 'MMS' },
+                  { value: 'mms', label: 'MMS', disabled: true, hint: '준비중' },
                 ]"
                 @update:model-value="(v) => { smsType = v as 'sms' | 'lms' | 'mms'; if (v !== 'mms') files = [] }"
               />
@@ -324,6 +439,9 @@ function send() {
               <div style="position: relative">
                 <input v-model="subject" class="input" placeholder="LMS/MMS 제목 (40 byte 이내)" style="padding-right: 110px">
                 <AppByteCounter :value="subject" :max="40" />
+              </div>
+              <div v-if="subjectMissing" class="inline-help" style="color: var(--danger-ink); margin-top: 6px">
+                {{ smsType.toUpperCase() }}는 제목이 필요합니다.
               </div>
             </AppFormRow>
             <AppFormRow label="내용" required>
@@ -344,6 +462,9 @@ function send() {
                   <div>국내 SMS {{ byteLen(body) }}/{{ counterMax }}Bytes(EUC-KR)</div>
                   <div>국제 SMS {{ body.length }}/765자(GSM-7)</div>
                 </div>
+              </div>
+              <div v-if="smsOverByte" class="inline-help" style="color: var(--danger-ink); margin-top: 6px">
+                SMS 본문이 90바이트({{ bodyByteLen }}B)를 초과했습니다. LMS로 전환하세요.
               </div>
             </AppFormRow>
             <AppFormRow
@@ -388,7 +509,7 @@ function send() {
               미리보기
             </div>
             <div style="display: grid; place-items: center">
-              <AppPhonePreview :sender-name="senderNumber || '발신번호'" :message="body" :images="showAttach ? files : []" />
+              <AppPhonePreview :sender-name="selectedSender?.number || '발신번호'" :message="body" :images="showAttach ? files : []" />
             </div>
             <div class="row" style="justify-content: center; margin-top: 10px; gap: 8px">
               <AppBadge :tone="smsType === 'sms' ? 'primary' : 'neutral'">
@@ -405,12 +526,12 @@ function send() {
         </div>
       </AppSendFormCard>
 
-      <!-- 발송 설정 -->
-      <AppSendOptionsCard v-model="sendOptions" :step="4" />
+      <!-- 발송 설정 (v1 — 예약 발송 준비중, 즉시 발송만) -->
+      <AppSendOptionsCard v-model="sendOptions" :step="4" schedule-disabled />
     </div>
 
     <AppSendActionsBar
-      :send-disabled="recipients.length === 0 || !body"
+      :send-disabled="recipients.length === 0 || !body || !senderPhoneId || sending"
       @reset="openReset = true"
       @send="openConfirm = true"
     />
@@ -438,7 +559,7 @@ function send() {
     <AppAIRewriteDialog
       :open="openAi"
       :value="body"
-      :sender-name="senderNumber"
+      :sender-name="selectedSender?.number || ''"
       @close="openAi = false"
       @apply="body = $event"
     />
@@ -461,8 +582,9 @@ function send() {
       :channel="`SMS (${smsType.toUpperCase()})`"
       :count="recipients.length"
       :price-per-unit="pricePerUnit"
-      :schedule-at="sendOptions.mode === 'schedule' ? `${sendOptions.date} ${sendOptions.hour}:${sendOptions.minute}` : null"
-      @close="openConfirm = false"
+      :loading="sending"
+      :schedule-at="null"
+      @close="!sending && (openConfirm = false)"
       @confirm="send"
     />
   </div>

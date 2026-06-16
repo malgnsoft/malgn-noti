@@ -4,7 +4,9 @@ interface SendOptions { mode: 'now' | 'schedule', date?: string, hour?: string, 
 const props = withDefaults(defineProps<{
   modelValue: SendOptions
   step?: number
-}>(), { step: 4 })
+  /** 예약 발송 비활성(v1 — 즉시 발송만 지원) */
+  scheduleDisabled?: boolean
+}>(), { step: 4, scheduleDisabled: false })
 
 const emit = defineEmits<{ 'update:modelValue': [SendOptions] }>()
 
@@ -24,11 +26,11 @@ function patch(p: Partial<SendOptions>) {
         :model-value="modelValue.mode"
         :options="[
           { value: 'now', label: '즉시 발송' },
-          { value: 'schedule', label: '예약 발송' },
+          { value: 'schedule', label: '예약 발송', disabled: scheduleDisabled, hint: scheduleDisabled ? '준비중' : undefined },
         ]"
         @update:model-value="patch({ mode: $event as SendOptions['mode'] })"
       />
-      <div v-if="modelValue.mode === 'schedule'" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
+      <div v-if="modelValue.mode === 'schedule' && !scheduleDisabled" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
         <input
           type="date"
           class="input"

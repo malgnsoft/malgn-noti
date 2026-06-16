@@ -6,7 +6,8 @@ const props = withDefaults(defineProps<{
   pricePerUnit?: number
   currentBalance?: number
   scheduleAt?: string | null
-}>(), { channel: 'SMS', count: 0, pricePerUnit: 9.9, currentBalance: 245800, scheduleAt: null })
+  loading?: boolean
+}>(), { channel: 'SMS', count: 0, pricePerUnit: 9.9, currentBalance: 245800, scheduleAt: null, loading: false })
 
 const emit = defineEmits<{ close: [], confirm: [] }>()
 
@@ -46,11 +47,11 @@ const cells = computed(() => [
       </span>
     </div>
     <template #footer>
-      <button type="button" class="btn btn-outline-dark" @click="emit('close')">
+      <button type="button" class="btn btn-outline-dark" :disabled="loading" @click="emit('close')">
         취소
       </button>
-      <button type="button" class="btn btn-primary" @click="emit('confirm')">
-        발송하기
+      <button type="button" class="btn btn-primary" :disabled="loading" @click="emit('confirm')">
+        {{ loading ? '발송 중…' : '발송하기' }}
       </button>
     </template>
   </AppModal>
